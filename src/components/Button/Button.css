@@ -1,0 +1,25 @@
+/* Button Styles */
+.cio-asa-button {
+  width: 200px;
+  padding: 8px;
+  border-radius: 12px;
+  border: none;
+  background: #12B886;
+  color: #FFFFFF;
+  box-shadow: 0px 2px 0px 0px #099268;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.cio-asa-button:hover {
+  background: #0CA678;
+  box-shadow: 0px 2px 0px 0px #099268;
+}
+
+.cio-asa-button:active {
+  background: #099268;
+  color: #087F5B;
+}
