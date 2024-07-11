@@ -28,12 +28,22 @@ export interface AsaContextValue {
   urlHelpers: UrlHelpers;
 }
 
-export interface RequestConfigs extends IAssistantParameters {}
+export interface RequestConfigs extends IAssistantParameters {
+  intent?: string;
+}
 
 export interface ItemFieldGetters {}
-export interface Formatters {}
+export interface Formatters {
+  formatPrice: (price?: number) => string;
+}
 export interface Callbacks {}
-export interface UrlHelpers {}
+export interface UrlHelpers {
+  getUrl: () => string | undefined;
+  setUrl: (newUrlWithEncodedState: string) => void;
+  getStateFromUrl: (urlString: string) => RequestConfigs;
+  getUrlFromState: (state: RequestConfigs, options: QueryParamEncodingOptions) => string;
+  defaultQueryStringMap: Readonly<DefaultQueryStringMap>;
+}
 
 // eslint-disable-next-line prettier/prettier
 export interface CioAsaProviderProps
@@ -48,7 +58,7 @@ export interface UseCioClientProps {
 
 export type DefaultQueryStringMap = {
   intent: 'q';
-  resultsPerPod: 'resultsPerPod'; // The API parameter is `num_results_per_pod`. We transform this when setting requestConfigs
+  numResultsPerPage: 'resultsPerPod'; // The API parameter is `num_results_per_page`. We transform this when setting requestConfigs
   filters: 'filters';
 };
 

@@ -3,7 +3,8 @@ import type { RequestConfigs, QueryParamEncodingOptions, DefaultQueryStringMap }
 export const defaultQueryStringMap: Readonly<DefaultQueryStringMap> = Object.freeze({
   intent: 'q',
   page: 'page',
-  resultsPerPod: 'resultsPerPod',
+  numResultsPerPage: 'resultsPerPod',
+  domain: 'domain',
   filters: 'filters', // do special encoding/decoding
 });
 
@@ -66,10 +67,10 @@ export function getStateFromUrl(url: string): RequestConfigs {
 
   const filters = extractFiltersFromUrl(urlParams);
 
-  const { page, resultsPerPod, ...rest } = rawState;
+  const { page, numResultsPerPage, ...rest } = rawState;
 
   const state = { ...rest } as RequestConfigs;
-  if (resultsPerPod) state.numResultsPerPage = Number(resultsPerPod);
+  if (numResultsPerPage) state.numResultsPerPage = Number(numResultsPerPage);
   if (filters) state.filters = filters;
 
   return state;
