@@ -9,7 +9,7 @@ interface UseRequestConfigsReturn {
 export default function useRequestConfigs(): UseRequestConfigsReturn {
   const context = useCioAsaContext();
   if (!context) {
-    throw new Error('This Hook needs to be called within the C.io PLP Context Provider.');
+    throw new Error('This Hook needs to be called within the C.io ASA Context Provider.');
   }
 
   const { urlHelpers, staticRequestConfigs } = context;
