@@ -37,7 +37,7 @@ describe('Testing Hook: useRequestConfigs', () => {
       const { requestConfigs, setRequestConfigs } = useRequestConfigs();
       expect(requestConfigs).toEqual({ domain: 'assistant' });
       expect(typeof setRequestConfigs).toEqual('function');
-      return <div>hello</div>;
+      return <div>test</div>;
     }
 
     render(
@@ -56,7 +56,7 @@ describe('Testing Hook: useRequestConfigs', () => {
         intent: 'how do I make an ice cream?',
       });
 
-      return <div>hello</div>;
+      return <div>test</div>;
     }
 
     render(
@@ -75,7 +75,7 @@ describe('Testing Hook: useRequestConfigs', () => {
 
       expect(requestConfigs).toEqual(testRequestState);
 
-      return <div>hello</div>;
+      return <div>test</div>;
     }
 
     render(
@@ -95,7 +95,7 @@ describe('Testing Hook: useRequestConfigs', () => {
 
       expect(requestConfigs).toEqual(decodedRequestState);
 
-      return <div>hello</div>;
+      return <div>test</div>;
     }
 
     render(
@@ -123,7 +123,7 @@ describe('Testing Hook: useRequestConfigs', () => {
         oldUrlObj.searchParams.get(defaultQueryStringMap.intent),
       );
 
-      return <div>hello</div>;
+      return <div>test</div>;
     }
 
     render(
