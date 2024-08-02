@@ -1,0 +1,11 @@
+{
+  "intent": "how do I pack for a picnic?",
+  "numResultsPerPage": 20,
+  "domain": "recipes",
+  "filters": {
+    "price": ["5-100"],
+    "color": ["Gold"],
+    "test": ["testValue", "testValue2", "testValue3"],
+    "lowestPrice": ["100", "300"]
+  }
+}
