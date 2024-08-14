@@ -79,3 +79,10 @@ export type PropsWithChildren<P> = P & { children?: ReactNode };
 export type IncludeRenderProps<ComponentProps, ChildrenFunctionProps> = ComponentProps & {
   children?: ((props: ChildrenFunctionProps) => ReactNode) | React.ReactNode;
 };
+
+export interface ProductInfo {
+  itemName: string;
+  itemPrice: number;
+  itemUrl: string | undefined;
+  itemImageUrl: string | undefined;
+}
