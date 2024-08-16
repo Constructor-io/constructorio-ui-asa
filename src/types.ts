@@ -81,8 +81,8 @@ export type IncludeRenderProps<ComponentProps, ChildrenFunctionProps> = Componen
 };
 
 export interface ProductInfo {
-  itemName: string;
-  itemPrice: number;
-  itemUrl: string | undefined;
-  itemImageUrl: string | undefined;
+  name: string;
+  price: number;
+  url: string | undefined;
+  imageUrl: string | undefined;
 }

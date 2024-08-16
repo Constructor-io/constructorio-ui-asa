@@ -1,11 +1,18 @@
 import { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
-import Button from '../../../components/Button/Button';
 import ProductCard from '../../../components/ProductCard/ProductCard';
+import productInfo from './items.json';
 
 const meta = {
   title: 'Components/ProductCard',
   component: ProductCard,
+  decorators: [
+    (Story) => (
+      <div style={{ width: '360px' }}>
+        <Story />
+      </div>
+    ),
+  ],
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/react/configure/story-layout
     layout: 'centered',
@@ -19,13 +26,7 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
   args: {
     formatPrice: (number) => `$${number}`,
-    productInfo: {
-      itemName: 'Wonder Bread Classic White Round Top - 20 Oz',
-      itemPrice: 12.34,
-      itemImageUrl:
-        'https://target.scene7.com/is/image/Target/GUEST_7cbc889d-798a-4cb9-838a-680613e59678?wid=1200&hei=1200&qlt=80&fmt=webp',
-      itemUrl: '',
-    },
+    productInfo,
   },
   decorators: [(Story) => <Story />],
 };

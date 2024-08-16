@@ -4,7 +4,7 @@ import './ProductCard.css';
 import '../../styles.css';
 import Button from '../Button/Button';
 
-export interface ProductCardRenderProps {
+export interface ProductCardProps {
   /**
    * Function to format the price.
    */
@@ -15,19 +15,19 @@ export interface ProductCardRenderProps {
   productInfo: ProductInfo;
 }
 
-export default function ProductCard(props: ProductCardRenderProps) {
+export default function ProductCard(props: ProductCardProps) {
   const { productInfo, formatPrice } = props;
-  const { itemName, itemPrice, itemImageUrl, itemUrl } = productInfo;
+  const { name, price, imageUrl, url } = productInfo;
 
   return (
-    <a className='cio-product-card' href={itemUrl}>
+    <a className='cio-product-card' href={url}>
       <div className='cio-image-container'>
-        <img alt={itemName} src={itemImageUrl} className='cio-image' />
+        <img alt={name} src={imageUrl} className='cio-image' />
       </div>
 
       <div className='cio-content'>
-        <div className='cio-item-name'>{itemName}</div>
-        <div className='cio-item-price'>{formatPrice(itemPrice)}</div>
+        <div className='cio-item-name'>{name}</div>
+        <div className='cio-item-price'>{formatPrice(price)}</div>
       </div>
 
       <div>

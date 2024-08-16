@@ -4,8 +4,8 @@
 }
 
 .cio-image-container {
-  width: 336px;
-  height: 306px;
+  width: 100%;
+  height: auto;
   background-color: #F8F9FA;
   border-radius: 16px;
 }
