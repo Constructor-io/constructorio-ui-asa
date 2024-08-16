@@ -1,7 +1,5 @@
 import React from 'react';
 import { ProductInfo } from '../../types';
-import './ProductCard.css';
-import '../../styles.css';
 import Button from '../Button/Button';
 
 export interface ProductCardProps {
