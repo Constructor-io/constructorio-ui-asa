@@ -9,8 +9,7 @@ export default function Button({ text, fullWidth }: ButtonProps) {
   return (
     <button
       type='button'
-      className='cio-asa-button'
-      style={fullWidth ? { width: '100%' } : undefined}>
+      className={`cio-asa-button ${fullWidth ? 'cio-asa-button-full-width' : ''}`}>
       {text || 'Click Me'}
     </button>
   );
