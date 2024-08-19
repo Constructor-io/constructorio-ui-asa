@@ -1,7 +1,7 @@
 import { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import ProductCard from '../../../components/ProductCard/ProductCard';
-import productInfo from './items.json';
+import productInfo from '../../../../spec/local_examples/items.json';
 
 const meta = {
   title: 'Components/ProductCard',
