@@ -20,6 +20,6 @@ describe('Product Card', () => {
     expect(container).toHaveTextContent('$4321');
     expect(container.querySelector('a')).toHaveAttribute('href', 'item url');
     expect(container.querySelector('img')).toHaveAttribute('src', 'image url');
-    expect(container.querySelector('button')).toHaveTextContent('Add to Cart');
+    expect(container.querySelector('button')).toHaveTextContent('Addy to Cart');
   });
 });
