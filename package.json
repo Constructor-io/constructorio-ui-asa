@@ -114,5 +114,9 @@
     "vite": "^4.5.3",
     "vite-plugin-css-injected-by-js": "^3.1.0",
     "webpack": "^5.75.0"
+  },
+  "dependencies": {
+    "react-slick": "^0.30.2",
+    "slick-carousel": "^1.8.1"
   }
 }

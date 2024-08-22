@@ -4,7 +4,7 @@ type Direction = 'Prev' | 'Next';
 
 interface NavArrowProps {
   direction: Direction;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 export default function NavArrow(props: NavArrowProps) {
