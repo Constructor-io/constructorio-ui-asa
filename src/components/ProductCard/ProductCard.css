@@ -1,11 +1,20 @@
+.cio-product-card-wrapper {
+  margin: 10px;
+  height: calc(100% - 20px);
+}
+
 .cio-product-card {
+  height: 100%;
   text-decoration: none;
   font-family: 'Inter';
+  display: flex;
+  flex-direction: column;
 }
 
 .cio-image-container {
   width: 100%;
   height: auto;
+  aspect-ratio: 1;
   background-color: #F8F9FA;
   border-radius: 16px;
 }
@@ -38,4 +47,8 @@
   font-weight: 300;
   font-size: 18px;
   color: black;
+}
+
+.cio-cart-button {
+  margin-top: auto;
 }
