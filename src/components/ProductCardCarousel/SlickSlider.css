@@ -1,5 +1,10 @@
 @charset 'UTF-8';
 
+/*
+Note: This CSS is copied from the slick-slider package. We don't need the whole package since we're
+using react-slick, so using just this CSS file will cut down on the bundle size
+*/
+
 /* Slider */
 .slick-slider
 {
