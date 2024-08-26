@@ -3,6 +3,7 @@
 @import './components/ProductCard/ProductCard.css';
 @import './components/ProductCardCarousel/ProductCardCarousel.css';
 @import './components/NavArrow/NavArrow.css';
+@import './components/ProductCardCarousel/SlickSlider.css';
 
 .cio-asa,
 .cio-asa * {
