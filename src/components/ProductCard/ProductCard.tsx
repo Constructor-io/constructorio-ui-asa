@@ -18,21 +18,19 @@ export default function ProductCard(props: ProductCardProps) {
   const { name, price, imageUrl, url } = productInfo;
 
   return (
-    <div className='cio-product-card-wrapper'>
-      <a className='cio-product-card' href={url}>
-        <div className='cio-image-container'>
-          <img alt={name} src={imageUrl} className='cio-image' />
-        </div>
+    <a className='cio-product-card' href={url}>
+      <div className='cio-image-container'>
+        <img alt={name} src={imageUrl} className='cio-image' />
+      </div>
 
-        <div className='cio-content'>
-          <div className='cio-item-name'>{name}</div>
-          <div className='cio-item-price'>{formatPrice(price)}</div>
-        </div>
+      <div className='cio-content'>
+        <div className='cio-item-name'>{name}</div>
+        <div className='cio-item-price'>{formatPrice(price)}</div>
+      </div>
 
-        <div className='cio-cart-button'>
-          <Button text='Add to Cart' fullWidth />
-        </div>
-      </a>
-    </div>
+      <div className='cio-cart-button'>
+        <Button text='Add to Cart' fullWidth />
+      </div>
+    </a>
   );
 }
