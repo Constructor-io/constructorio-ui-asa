@@ -1,8 +1,3 @@
-.cio-product-card-wrapper {
-  margin: 10px;
-  height: calc(100% - 20px);
-}
-
 .cio-product-card {
   height: 100%;
   text-decoration: none;
@@ -14,14 +9,13 @@
 .cio-image-container {
   width: 100%;
   height: auto;
-  aspect-ratio: 1;
   background-color: #F8F9FA;
   border-radius: 16px;
 }
 
 .cio-image {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
   border-radius: 16px;
   mix-blend-mode: multiply;
@@ -33,8 +27,8 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  
-  width: 336px;
+  width: 100%;
+  height: 100%;
 }
 
 .cio-item-price {

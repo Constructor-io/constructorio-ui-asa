@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import Slider, { Settings } from 'react-slick';
-import NavArrow from '../NavArrow/NavArrow';
+import NavArrow, { Direction } from '../NavArrow/NavArrow';
 
 const defaultSettings: Settings = {
   infinite: true,
   speed: 500,
   slidesToShow: 3,
   slidesToScroll: 1,
-  prevArrow: <NavArrow direction='Prev' />,
-  nextArrow: <NavArrow direction='Next' />,
+  prevArrow: <NavArrow direction={Direction.PREV} />,
+  nextArrow: <NavArrow direction={Direction.NEXT} />,
 };
 
 interface ProductCardCarouselProps {
