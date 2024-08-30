@@ -4,17 +4,14 @@
     margin-right: 10px;
 }
 
-.slick-track
-{
+.slick-track {
     display: flex !important;
 }
 
-.slick-slide
-{
+.slick-slide {
     height: inherit !important;
 }
 
-.slick-slide > div
-{
+.slick-slide>div {
     height: 100%;
 }
