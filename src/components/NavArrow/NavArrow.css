@@ -1,0 +1,24 @@
+.cio-nav-arrow {
+    color: #495057;
+    border: 1px #E9ECEF solid;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 4px 1px #E9ECEF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.cio-nav-arrow-prev {
+    position: absolute;
+    left: -70px;
+    top: calc(50% - 20px);
+}
+
+.cio-nav-arrow-next {
+    position: absolute;
+    right: -70px;
+    top: calc(50% - 20px);
+}

@@ -28,7 +28,7 @@ export default function ProductCard(props: ProductCardProps) {
         <div className='cio-item-price'>{formatPrice(price)}</div>
       </div>
 
-      <div>
+      <div className='cio-cart-button'>
         <Button text='Add to Cart' fullWidth />
       </div>
     </a>
