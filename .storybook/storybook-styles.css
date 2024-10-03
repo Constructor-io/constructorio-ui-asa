@@ -1,3 +1,5 @@
+@import '../src/styles.css';
+
 #storybook-root {
   background-color: #F6F9FC;
   padding: 0 !important;
