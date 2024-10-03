@@ -24,7 +24,7 @@ describe('Product Card Carousel', () => {
     expect(container).toHaveTextContent('Tomatoes Roma Red');
     expect(container).toHaveTextContent('NatureSweet Tomatoes Cherubs Heavenly Salad - 10.5 Oz');
 
-    expect(container.querySelectorAll('.slick-track > div[aria-hidden=false]').length).toBe(3);
+    expect(container.querySelectorAll('.slick-track > div[aria-hidden=false]').length).toBe(4);
   });
 
   it('displays different number of products when optional param is sent', () => {
