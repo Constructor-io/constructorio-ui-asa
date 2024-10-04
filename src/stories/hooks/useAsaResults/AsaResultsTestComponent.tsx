@@ -1,33 +1,21 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import useAsaResults from '../../../hooks/useAsaResults';
 import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
 import { DEMO_API_KEY } from '../../../constants';
 
 function AsaResultsDisplay(props: { intent: string }) {
   const { intent } = props;
-  const { nextGroup } = useAsaResults({ intent });
-  const [values, setValues] = useState<string[]>([]);
-
-  const readNextValue = useCallback(() => {
-    nextGroup().then((res) => {
-      if (res.group) {
-        setValues((vs) => [...vs, JSON.stringify(res.group)]);
-      }
-      if (!res.done) {
-        readNextValue();
-      }
-    });
-  }, [nextGroup]);
-
-  useEffect(() => {
-    setValues([]);
-    readNextValue();
-  }, [readNextValue, nextGroup]);
+  const { groups } = useAsaResults({ intent });
 
   return (
     <ul>
-      {values.map((v) => (
-        <li key={v}>{v}</li>
+      {groups.map((g) => (
+        <>
+          <li key={g.group}>{JSON.stringify(g.group).slice(0, 200)}...</li>
+          {g.searchResults.map((r) => (
+            <li key={r}>{JSON.stringify(r).slice(0, 400)}...</li>
+          ))}
+        </>
       ))}
     </ul>
   );

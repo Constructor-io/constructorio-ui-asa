@@ -1,5 +1,5 @@
 import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
 
 export interface UseAsaResultsProps {
@@ -7,68 +7,75 @@ export interface UseAsaResultsProps {
 }
 
 export interface UseAsaResultsReturn {
-  nextGroup: () => Promise<{ group: any; done: boolean }>;
+  groups: AsaResultGroup[];
 }
 
-const fetchSearchResults = (
+interface AsaResultGroup {
+  group: any;
+  searchResults: any[];
+}
+
+const useFetchSearchResults = (
   client: ConstructorIOClient,
   intent: string,
   domain: string,
 ): UseAsaResultsReturn => {
-  const readableStream = client.assistant.getAssistantResultsStream(intent, { domain });
+  const [groups, setGroups] = useState<AsaResultGroup[]>([]);
 
-  const reader = readableStream.getReader();
+  useEffect(() => {
+    setGroups([]);
+  }, [client, intent, domain]);
 
-  let nextGroup: any;
+  const readableStream = useMemo(
+    () => client.assistant.getAssistantResultsStream(intent, { domain }),
+    [client, domain, intent],
+  );
 
-  return {
-    nextGroup: async () => {
-      let group: any = nextGroup;
+  const reader = useMemo(() => readableStream.getReader(), [readableStream]);
 
-      // The logic for nextGroup is essentially:
-      // 1) Keep reading until a group is found
-      // 2) Store all search results into the group
-      // 3) Once we find the next group we can return the current group (and store the next one)
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
+  useEffect(() => {
+    let killSwitch = false;
+    async function fetchData() {
+      while (!killSwitch) {
         // eslint-disable-next-line no-await-in-loop
         const res = await reader.read();
         if (res.done) {
-          return {
-            group,
-            done: true,
-          };
+          break;
         }
         if (res.value.type === 'group') {
-          if (!group) {
-            // If this is the first group we just store it and continue
-            group = { group: res.value, searchResults: [] };
-          } else {
-            // If we already have an active group, we store the next group until the hook is called again
-            nextGroup = { group: res.value, searchResults: [] };
-            break;
-          }
+          setGroups((oldGroups) => [...oldGroups, { group: res.value, searchResults: [] }]);
         }
-        if (res.value.type === 'search_result' && group) {
-          group.searchResults = [...group.searchResults, res.value];
+        if (res.value.type === 'search_result') {
+          setGroups((oldGroups) => {
+            if (oldGroups.length === 0) {
+              return oldGroups;
+            }
+            const oldLastGroup = oldGroups[oldGroups.length - 1];
+            const newLastGroup = {
+              group: oldLastGroup.group,
+              searchResults: [...oldLastGroup.searchResults, res.value],
+            };
+
+            return [...oldGroups.slice(0, oldGroups.length - 1), newLastGroup];
+          });
         }
       }
+    }
+    fetchData();
 
-      return {
-        group,
-        done: false,
-      };
-    },
-  };
+    return () => {
+      killSwitch = true;
+    };
+  }, [reader]);
+
+  return { groups };
 };
 
 /* eslint-disable max-len */
 /**
- * A React Hook to call to utilize Constructor.io Search
+ * A React Hook to call to utilize Asa Search Results
  * @param {Object} [props] - The component props.
- * @param {object} [props.initialSearchResponse] Initial value for search results
- * (Would be useful when passing initial state for the first render from the server
- *  to the client via something like getServerSideProps)
+ * @param {object} [props.intent] - The search intent
  * @returns {status, data, pagination, refetch}
  */
 /* eslint-enable max-len */
@@ -86,10 +93,5 @@ export default function useAsaResults(props: UseAsaResultsProps): UseAsaResultsR
     throw Error('Missing domain');
   }
 
-  const results = useMemo(
-    () => fetchSearchResults(cioClient, intent, domain),
-    [cioClient, intent, domain],
-  );
-
-  return results;
+  return useFetchSearchResults(cioClient, intent, domain);
 }
