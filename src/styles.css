@@ -2,6 +2,7 @@
 @import './components/Button/Button.css';
 @import './components/ProductCard/ProductCard.css';
 @import './components/ProductCardCarousel/ProductCardCarousel.css';
+@import './components/ProductGrid/ProductGrid.css';
 @import './components/NavArrow/NavArrow.css';
 @import './components/ProductCardCarousel/SlickSlider.css';
 

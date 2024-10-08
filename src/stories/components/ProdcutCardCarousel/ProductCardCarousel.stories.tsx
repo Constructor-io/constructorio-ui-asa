@@ -7,6 +7,13 @@ import ProductCardCarousel from '../../../components/ProductCardCarousel/Product
 const meta = {
   title: 'Components/ProductCardCarousel',
   component: ProductCardCarousel,
+  decorators: [
+    (Story) => (
+      <div style={{ width: 1100 }}>
+        <Story />
+      </div>
+    ),
+  ],
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/react/configure/story-layout
     layout: 'centered',
@@ -27,6 +34,9 @@ export const Primary: Story = {
         productInfo={{ ...productInfo, url: 'javascript:void(0)' }}
       />
     )),
+    title: 'Tomatoes',
+    subText:
+      'Fresh, juicy tomatoes full of flavor. Ideal for salads, sauces, and more. Packed with vitamins and antioxidants',
   },
   decorators: [(Story) => <Story />],
 };

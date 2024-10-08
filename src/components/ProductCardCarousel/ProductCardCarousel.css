@@ -59,3 +59,23 @@
   color: #12B886 !important; /* Hover color */
   opacity: 1 !important; /* Full opacity on hover */
 }
+
+.cio-carousel-title {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 36px;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  padding: 0 0 10px 10px;
+  margin-left: 110px;
+}
+
+.cio-carousel-subtext {
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 20px;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  padding: 0 0 15px 10px;
+  margin-left: 110px;
+}

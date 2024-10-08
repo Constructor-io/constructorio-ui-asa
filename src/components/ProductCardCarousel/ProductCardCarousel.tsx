@@ -41,12 +41,14 @@ const defaultSettings: Settings = {
 interface ProductCardCarouselProps {
   productDisplayCount?: number;
   productCountPerScroll?: number;
+  title?: string;
+  subText?: string;
 }
 
 export default function ProductCardCarousel(
   props: React.PropsWithChildren & ProductCardCarouselProps,
 ) {
-  const { children, productDisplayCount, productCountPerScroll } = props;
+  const { children, productDisplayCount, productCountPerScroll, title, subText } = props;
 
   const settings = useMemo(
     () => ({
@@ -57,5 +59,11 @@ export default function ProductCardCarousel(
     [productCountPerScroll, productDisplayCount],
   );
 
-  return <Slider {...settings}>{children}</Slider>;
+  return (
+    <div>
+      {title && <div className='cio-carousel-title'>{title}</div>}
+      {subText && <div className='cio-carousel-subtext'>{subText}</div>}
+      <Slider {...settings}>{children}</Slider>
+    </div>
+  );
 }
