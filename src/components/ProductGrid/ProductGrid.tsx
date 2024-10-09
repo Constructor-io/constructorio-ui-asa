@@ -12,6 +12,7 @@ export default function ProductGrid(props: React.PropsWithChildren & ProductGrid
     <div className='cio-grid'>
       {title && <div className='cio-grid-title'>{title}</div>}
       {subText && <div className='cio-grid-subtext'>{subText}</div>}
+      <div className='cio-line-break' />
       <div className='cio-carousel-container'>{children}</div>
     </div>
   );
