@@ -43,7 +43,8 @@ const useFetchSearchResults = (
           break;
         }
         if (res.value.type === 'group') {
-          setGroups((oldGroups) => [...oldGroups, { group: res.value, searchResults: [] }]);
+         const newGroup = res.value;
+          setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
         }
         if (res.value.type === 'search_result') {
           setGroups((oldGroups) => {
