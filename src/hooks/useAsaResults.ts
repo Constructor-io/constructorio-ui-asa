@@ -36,37 +36,44 @@ const useFetchSearchResults = (
   useEffect(() => {
     let killSwitch = false;
     async function fetchData() {
-      while (!killSwitch) {
-        // eslint-disable-next-line no-await-in-loop
-        const res = await reader.read();
-        if (res.done) {
-          break;
-        }
-        if (res.value.type === 'group') {
-         const newGroup = res.value;
-          setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
-        }
-        if (res.value.type === 'search_result') {
-          setGroups((oldGroups) => {
-            if (oldGroups.length === 0) {
-              return oldGroups;
-            }
-            const lastGroup = oldGroups[oldGroups.length - 1];
-            const newSearchResults = res.value
-            const updatedLastGroup = {
-              group: lastGroup.group,
-              searchResults: [...lastGroup.searchResults, newSearchResults],
-            };
+      try {
+        while (!killSwitch) {
+          // eslint-disable-next-line no-await-in-loop
+          const res = await reader.read();
+          if (res.done) {
+            break;
+          }
+          if (res.value.type === 'group') {
+            const newGroup = res.value;
+            setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
+          }
+          if (res.value.type === 'search_result') {
+            setGroups((oldGroups) => {
+              if (oldGroups.length === 0) {
+                return oldGroups;
+              }
+              const lastGroup = oldGroups[oldGroups.length - 1];
+              const newSearchResults = res.value;
+              const updatedLastGroup = {
+                group: lastGroup.group,
+                searchResults: [...lastGroup.searchResults, newSearchResults],
+              };
 
-            return [...oldGroups.slice(0, oldGroups.length - 1), updatedLastGroup];
-          });
+              return [...oldGroups.slice(0, oldGroups.length - 1), updatedLastGroup];
+            });
+          }
         }
+      } catch (e) {
+        // fail gracefully
+      } finally {
+        reader.cancel();
       }
     }
     fetchData();
 
     return () => {
       killSwitch = true;
+      reader.cancel();
     };
   }, [reader]);
 
