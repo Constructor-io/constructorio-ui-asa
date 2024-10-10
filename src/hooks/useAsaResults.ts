@@ -58,7 +58,7 @@ const useFetchSearchResults = (
               searchResults: [...lastGroup.searchResults, newSearchResults],
             };
 
-            return [...oldGroups.slice(0, oldGroups.length - 1), newLastGroup];
+            return [...oldGroups.slice(0, oldGroups.length - 1), updatedLastGroup];
           });
         }
       }
