@@ -51,10 +51,11 @@ const useFetchSearchResults = (
             if (oldGroups.length === 0) {
               return oldGroups;
             }
-            const oldLastGroup = oldGroups[oldGroups.length - 1];
-            const newLastGroup = {
-              group: oldLastGroup.group,
-              searchResults: [...oldLastGroup.searchResults, res.value],
+            const lastGroup = oldGroups[oldGroups.length - 1];
+            const newSearchResults = res.value
+            const updatedLastGroup = {
+              group: lastGroup.group,
+              searchResults: [...lastGroup.searchResults, newSearchResults],
             };
 
             return [...oldGroups.slice(0, oldGroups.length - 1), newLastGroup];
