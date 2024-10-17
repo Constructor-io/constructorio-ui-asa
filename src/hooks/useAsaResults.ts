@@ -80,16 +80,7 @@ const useFetchSearchResults = (
   return { groups };
 };
 
-/* eslint-disable max-len */
-/**
- * A React Hook to call to utilize Asa Search Results
- * @param {Object} [props] - The component props.
- * @param {object} [props.intent] - The search intent
- * @returns {status, data, pagination, refetch}
- */
-/* eslint-enable max-len */
-export default function useAsaResults(props: UseAsaResultsProps): UseAsaResultsReturn {
-  const { intent } = props;
+export default function useAsaResults(intent: string): UseAsaResultsReturn {
   const contextValue = useCioAsaContext();
 
   const { cioClient, staticRequestConfigs } = contextValue || {};
@@ -100,6 +91,9 @@ export default function useAsaResults(props: UseAsaResultsProps): UseAsaResultsR
   }
   if (!domain) {
     throw Error('Missing domain');
+  }
+  if (!intent) {
+    throw Error('Missing intent');
   }
 
   return useFetchSearchResults(cioClient, intent, domain);

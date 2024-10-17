@@ -5,7 +5,7 @@ import { DEMO_API_KEY } from '../../../constants';
 
 function AsaResultsDisplay(props: { intent: string }) {
   const { intent } = props;
-  const { groups } = useAsaResults({ intent });
+  const { groups } = useAsaResults(intent);
 
   return (
     <ul>
