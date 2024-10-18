@@ -15,7 +15,7 @@ interface AsaResultGroup {
   searchResults: any[];
 }
 
-const useFetchSearchResults = (
+const useFetchAsaResults = (
   client: ConstructorIOClient,
   intent: string,
   domain: string,
@@ -43,22 +43,28 @@ const useFetchSearchResults = (
           if (res.done) {
             break;
           }
+          // if the value is a group, we will append a new empty group to the end of 'groups'
           if (res.value.type === 'group') {
             const newGroup = res.value;
             setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
           }
+          // if the value is a search result, we will find the most recent group (which will be the last in the list)
+          // and we will append this search result to the last group's list of results
           if (res.value.type === 'search_result') {
             setGroups((oldGroups) => {
+              // this shouldn't happen but if the API returns a search result before any groups, we will ignore it
               if (oldGroups.length === 0) {
                 return oldGroups;
               }
               const lastGroup = oldGroups[oldGroups.length - 1];
               const newSearchResults = res.value;
+              // update the last group to include the new search result
               const updatedLastGroup = {
                 group: lastGroup.group,
                 searchResults: [...lastGroup.searchResults, newSearchResults],
               };
 
+              // slice off the old last group and replace it with the updated last group
               return [...oldGroups.slice(0, oldGroups.length - 1), updatedLastGroup];
             });
           }
@@ -87,7 +93,7 @@ export default function useAsaResults(intent: string): UseAsaResultsReturn {
   const { domain } = staticRequestConfigs || {};
 
   if (!cioClient) {
-    throw Error('Could not initialize CIO Client');
+    throw Error('CioClient required');
   }
   if (!domain) {
     throw Error('Missing domain');
@@ -96,5 +102,5 @@ export default function useAsaResults(intent: string): UseAsaResultsReturn {
     throw Error('Missing intent');
   }
 
-  return useFetchSearchResults(cioClient, intent, domain);
+  return useFetchAsaResults(cioClient, intent, domain);
 }
