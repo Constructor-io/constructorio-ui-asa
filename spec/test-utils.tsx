@@ -14,9 +14,4 @@ const customRenderHook: typeof renderHook = (callback, options) =>
     ),
   });
 
-const delay = (ms) =>
-  new Promise((r) => {
-    setTimeout(r, ms);
-  });
-
-export { customRender as renderWithCioAsa, customRenderHook as renderHookWithCioAsa, delay };
+export { customRender as renderWithCioAsa, customRenderHook as renderHookWithCioAsa };

@@ -10,12 +10,19 @@ function AsaResultsDisplay(props: { intent: string }) {
   return (
     <ul>
       {groups.map((g) => (
-        <>
-          <li key={g.group}>{JSON.stringify(g.group).slice(0, 200)}...</li>
-          {g.searchResults.map((r) => (
-            <li key={r}>{JSON.stringify(r).slice(0, 400)}...</li>
-          ))}
-        </>
+        <div>
+          <li key={g.group.data.display_name}>
+            Group: <b>{g.group.data.display_name}</b>
+          </li>
+          <ul>
+            {g.searchResults.map((searchResult) => (
+              <li key={searchResult.data.result_id}>
+                <b>{searchResult.data.response.search_request.display_name}</b>:{' '}
+                {searchResult.data.response.results.length} Results
+              </li>
+            ))}
+          </ul>
+        </div>
       ))}
     </ul>
   );
