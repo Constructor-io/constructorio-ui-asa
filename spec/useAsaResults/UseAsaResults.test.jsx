@@ -41,6 +41,12 @@ describe('Testing Hook: useAsaResults', () => {
     expect(() => renderHookWithCioAsa(() => useAsaResults(''))).toThrow();
   });
 
+  it('Should throw error when domain is not set', () => {
+    const spy = jest.spyOn(console, 'error');
+    spy.mockImplementation(() => {});
+    expect(() => renderHookWithCioAsa(() => useAsaResults('picnic'), { initialProps: { staticRequestConfigs: { domain: '' } } })).toThrow();
+  });
+
   test('Should throw error if used outside Context Provider', () => {
     const spy = jest.spyOn(console, 'error');
     spy.mockImplementation(() => {});
