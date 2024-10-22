@@ -1,14 +1,14 @@
 import { Meta, StoryObj } from '@storybook/react';
-import AsaResultsTestComponent from './AsaResultsTestComponent';
+import AsaResultsTemplateComponent from './AsaResultsTemplateComponent';
 
 const meta = {
   title: 'Components/useAsaResults',
-  component: AsaResultsTestComponent,
+  component: AsaResultsTemplateComponent,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/react/configure/story-layout
     layout: 'centered',
   },
-} satisfies Meta<typeof AsaResultsTestComponent>;
+} satisfies Meta<typeof AsaResultsTemplateComponent>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

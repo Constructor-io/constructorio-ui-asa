@@ -8,11 +8,18 @@ export interface UseAsaResultsProps {
 
 export interface UseAsaResultsReturn {
   groups: AsaResultGroup[];
+  status: Status;
 }
 
 interface AsaResultGroup {
   group: any;
   searchResults: any[];
+}
+
+enum Status {
+  LOADING = 'loading',
+  SUCCESS = 'success',
+  ERROR = 'error',
 }
 
 const useFetchAsaResults = (
@@ -21,6 +28,7 @@ const useFetchAsaResults = (
   domain: string,
 ): UseAsaResultsReturn => {
   const [groups, setGroups] = useState<AsaResultGroup[]>([]);
+  const [status, setStatus] = useState<Status>(Status.LOADING);
 
   useEffect(() => {
     setGroups([]);
@@ -41,6 +49,7 @@ const useFetchAsaResults = (
           // eslint-disable-next-line no-await-in-loop
           const res = await reader.read();
           if (res.done) {
+            setStatus(Status.SUCCESS);
             break;
           }
           // if the value is a group, we will append a new empty group to the end of 'groups'
@@ -70,6 +79,7 @@ const useFetchAsaResults = (
           }
         }
       } catch (e) {
+        setStatus(Status.ERROR);
         // fail gracefully
       } finally {
         reader.cancel();
@@ -83,7 +93,7 @@ const useFetchAsaResults = (
     };
   }, [reader]);
 
-  return { groups };
+  return { groups, status };
 };
 
 export default function useAsaResults(intent: string): UseAsaResultsReturn {
