@@ -16,7 +16,7 @@ interface AsaResultGroup {
   searchResults: any[];
 }
 
-enum Status {
+export enum Status {
   LOADING = 'loading',
   SUCCESS = 'success',
   ERROR = 'error',
