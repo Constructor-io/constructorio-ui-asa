@@ -5,7 +5,7 @@ interface ProductGridProps {
   subText?: string;
 }
 
-export default function ProductGrid(props: React.PropsWithChildren & ProductGridProps) {
+export default function AsaGroup(props: React.PropsWithChildren & ProductGridProps) {
   const { children, title, subText } = props;
 
   return (

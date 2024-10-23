@@ -68,6 +68,7 @@
   font-family: 'Inter', sans-serif;
   padding: 0 0 10px 10px;
   margin-left: 110px;
+  margin-right: 10px;
 }
 
 .cio-carousel-subtext {
@@ -78,4 +79,5 @@
   font-family: 'Inter', sans-serif;
   padding: 0 0 15px 10px;
   margin-left: 110px;
+  margin-right: 10px;
 }

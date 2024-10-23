@@ -2,24 +2,17 @@ import { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import carouselItems from '../../../../spec/local_examples/carouselItems.json';
 import ProductCard from '../../../components/ProductCard/ProductCard';
-import ProductGrid from '../../../components/ProductGrid/ProductGrid';
+import AsaGroup from '../../../components/AsaGroup/AsaGroup';
 import ProductCardCarousel from '../../../components/ProductCardCarousel/ProductCardCarousel';
 
 const meta = {
-  title: 'Components/ProductGrid',
-  component: ProductGrid,
-  decorators: [
-    (Story) => (
-      <div style={{ width: 1100, height: 800 }}>
-        <Story />
-      </div>
-    ),
-  ],
+  title: 'Components/AsaGroup',
+  component: AsaGroup,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/react/configure/story-layout
     layout: 'centered',
   },
-} satisfies Meta<typeof ProductGrid>;
+} satisfies Meta<typeof AsaGroup>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
