@@ -12,6 +12,13 @@ const meta = {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/react/configure/story-layout
     layout: 'centered',
   },
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: '90%', maxHeight: '90%' }}>
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof AsaGroup>;
 
 export default meta;
