@@ -11,9 +11,35 @@ export interface UseAsaResultsReturn {
   status: Status;
 }
 
-interface AsaResultGroup {
-  group: any;
-  searchResults: any[];
+interface AsaGroup {
+  display_name: string;
+  text: string;
+}
+
+interface AsaSearchResultProduct {
+  value: string;
+  data: {
+    id: string;
+    url: string;
+    image_url: string;
+    price: number;
+  };
+}
+
+export interface AsaSearchResult {
+  text?: string | null;
+  result_id: string;
+  response: {
+    search_request: {
+      display_name: string;
+    };
+    results: AsaSearchResultProduct[];
+  };
+}
+
+export interface AsaResultGroup {
+  group: AsaGroup;
+  searchResults: AsaSearchResult[];
 }
 
 export enum Status {
@@ -54,7 +80,7 @@ const useFetchAsaResults = (
           }
           // if the value is a group, we will append a new empty group to the end of 'groups'
           if (res.value.type === 'group') {
-            const newGroup = res.value;
+            const newGroup = res.value.data;
             setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
           }
           // if the value is a search result, we will find the most recent group (which will be the last in the list)
@@ -66,7 +92,7 @@ const useFetchAsaResults = (
                 return oldGroups;
               }
               const lastGroup = oldGroups[oldGroups.length - 1];
-              const newSearchResults = res.value;
+              const newSearchResults = res.value.data;
               // update the last group to include the new search result
               const updatedLastGroup = {
                 group: lastGroup.group,

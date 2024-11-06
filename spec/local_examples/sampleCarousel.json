@@ -1,0 +1,310 @@
+{
+    "intent_result_id": "169975b0-4a34-4ac0-9f9f-16652e4a3934",
+    "result_id": "21b8dc72-c1d1-4746-bbc2-13c0efc1161f",
+    "text": null,
+    "response": {
+        "search_request": {
+            "display_name": "Signature Home Sandwich Bags 4 Assorted Colors - 40 Count",
+            "search_term": "Signature Home Sandwich Bags 4 Assorted Colors - 40 Count",
+            "params": {}
+        },
+        "alternative_search_requests": [],
+        "results": [
+            {
+                "value": "Signature Home Garbage Bags Flex Tall Kitchen Elasti-Fit Drawstring Odor Control - 45 Count",
+                "matched_terms": [],
+                "data": {
+                    "id": "960018175",
+                    "url": "/",
+                    "image_url": "https://d17bbgoo3npfov.cloudfront.net/images/farmstand-960018175.png",
+                    "variation_id": null,
+                    "facets": [
+                        {
+                            "name": "Brand",
+                            "values": [
+                                "Signature Home"
+                            ]
+                        },
+                        {
+                            "name": "Inventory",
+                            "values": [
+                                104
+                            ]
+                        },
+                        {
+                            "name": "Margin",
+                            "values": [
+                                0.44
+                            ]
+                        },
+                        {
+                            "name": "price",
+                            "values": [
+                                9.09
+                            ]
+                        }
+                    ],
+                    "groups": [
+                        {
+                            "group_id": "Paper%2C%20Cleaning%20%26%20Home",
+                            "display_name": "Paper, Cleaning & Home",
+                            "path": "/all",
+                            "path_list": [
+                                {
+                                    "id": "all",
+                                    "display_name": "All"
+                                }
+                            ]
+                        }
+                    ],
+                    "price": 9.09,
+                    "keywords": [
+                        "bags",
+                        "trash"
+                    ],
+                    "description": "1 ft 11 in x 2 ft 4-5/8 in x 1.0 mil (58.4 cm x 72.7 cm x 25.4 um). 13-gallon (49.2 lt) capacity. Quality guaranteed. Fits & grips. Flex. www.betterlivingbrandsLLC.com. Our Promise: Quality & satisfaction 100% guaranteed or your money back. Product of China."
+                },
+                "variations": null,
+                "variations_map": null,
+                "is_slotted": false,
+                "labels": {}
+            },
+            {
+                "value": "Signature Home Garbage Bags Tall Kitchen Handle-Tie Odor Control 13 Gallon - 45 Count",
+                "matched_terms": [],
+                "data": {
+                    "id": "173500040",
+                    "url": "/",
+                    "image_url": "https://d17bbgoo3npfov.cloudfront.net/images/farmstand-173500040.png",
+                    "variation_id": null,
+                    "facets": [
+                        {
+                            "name": "Brand",
+                            "values": [
+                                "Signature Home"
+                            ]
+                        },
+                        {
+                            "name": "Inventory",
+                            "values": [
+                                985
+                            ]
+                        },
+                        {
+                            "name": "Margin",
+                            "values": [
+                                0.27
+                            ]
+                        },
+                        {
+                            "name": "price",
+                            "values": [
+                                9.09
+                            ]
+                        }
+                    ],
+                    "groups": [
+                        {
+                            "group_id": "Paper%2C%20Cleaning%20%26%20Home",
+                            "display_name": "Paper, Cleaning & Home",
+                            "path": "/all",
+                            "path_list": [
+                                {
+                                    "id": "all",
+                                    "display_name": "All"
+                                }
+                            ]
+                        }
+                    ],
+                    "price": 9.09,
+                    "keywords": [
+                        "bags",
+                        "trash"
+                    ],
+                    "description": "1 ft 4 in x 8 in x 2 ft 4 in x 0.8 mil (40.6 cm x 20.3 cm x 71.1 cm x 20.3 um). 13-gallon (49.2 lt). Quality guaranteed. ww.betterlivingbrandsLLC.com. Our Promise: Quality & satisfaction 100% guaranteed or your money back. Product of China."
+                },
+                "variations": null,
+                "variations_map": null,
+                "is_slotted": false,
+                "labels": {}
+            },
+            {
+                "value": "Signature Home Garbage Bags Tall Kitchen Elasti-Fit Drawstring 13 Gallon Capacity - 85 Count",
+                "matched_terms": [],
+                "data": {
+                    "id": "960023798",
+                    "url": "/",
+                    "image_url": "https://d17bbgoo3npfov.cloudfront.net/images/farmstand-960023798.png",
+                    "variation_id": null,
+                    "facets": [
+                        {
+                            "name": "Brand",
+                            "values": [
+                                "Signature Home"
+                            ]
+                        },
+                        {
+                            "name": "Inventory",
+                            "values": [
+                                697
+                            ]
+                        },
+                        {
+                            "name": "Margin",
+                            "values": [
+                                0.36
+                            ]
+                        },
+                        {
+                            "name": "price",
+                            "values": [
+                                12.49
+                            ]
+                        }
+                    ],
+                    "groups": [
+                        {
+                            "group_id": "Paper%2C%20Cleaning%20%26%20Home",
+                            "display_name": "Paper, Cleaning & Home",
+                            "path": "/all",
+                            "path_list": [
+                                {
+                                    "id": "all",
+                                    "display_name": "All"
+                                }
+                            ]
+                        }
+                    ],
+                    "price": 12.49,
+                    "keywords": [
+                        "bags",
+                        "trash"
+                    ],
+                    "description": "1 ft 11 in x 2 ft 4-5/8 in x 0.8 mil (58.4 cm x 72.7 cm x 20.3 um). 13-gallon (49.2 lt) capacity. Quality guaranteed. Fits & grips. www.betterlivingbrandsLLC.com. Our Promise: Quality & satisfaction 100% guaranteed or your money back. Product of China."
+                },
+                "variations": null,
+                "variations_map": null,
+                "is_slotted": false,
+                "labels": {}
+            },
+            {
+                "value": "Signature Home Garbage Bags Tall Kitchen Elasti-Fit Drawstring Odor Control - 45 Count",
+                "matched_terms": [],
+                "data": {
+                    "id": "960019788",
+                    "url": "/",
+                    "image_url": "https://d17bbgoo3npfov.cloudfront.net/images/farmstand-960019788.png",
+                    "variation_id": null,
+                    "facets": [
+                        {
+                            "name": "Brand",
+                            "values": [
+                                "Signature Home"
+                            ]
+                        },
+                        {
+                            "name": "Inventory",
+                            "values": [
+                                645
+                            ]
+                        },
+                        {
+                            "name": "Margin",
+                            "values": [
+                                0.3
+                            ]
+                        },
+                        {
+                            "name": "price",
+                            "values": [
+                                9.09
+                            ]
+                        }
+                    ],
+                    "groups": [
+                        {
+                            "group_id": "Paper%2C%20Cleaning%20%26%20Home",
+                            "display_name": "Paper, Cleaning & Home",
+                            "path": "/all",
+                            "path_list": [
+                                {
+                                    "id": "all",
+                                    "display_name": "All"
+                                }
+                            ]
+                        }
+                    ],
+                    "price": 9.09,
+                    "keywords": [
+                        "bags",
+                        "trash"
+                    ],
+                    "description": "1 ft 11 in x 2 ft 4-5/8 in x 0.8 mil (58.4 cm x 72.7 cm x 20.3 um). 13-gallon (49.2 lt) capacity. Quality guaranteed. Fits & grips. www.betterlivingbrandsLLC.com. Our Promise: Quality & satisfaction 100% guaranteed or your money back. Product of China."
+                },
+                "variations": null,
+                "variations_map": null,
+                "is_slotted": false,
+                "labels": {}
+            },
+            {
+                "value": "Signature Home Garbage Bags Tall Kitchen Elasti-Fit Drawstring Lemon Scented - 45 Count",
+                "matched_terms": [],
+                "data": {
+                    "id": "960086435",
+                    "url": "/",
+                    "image_url": "https://d17bbgoo3npfov.cloudfront.net/images/farmstand-960086435.png",
+                    "variation_id": null,
+                    "facets": [
+                        {
+                            "name": "Brand",
+                            "values": [
+                                "Signature Home"
+                            ]
+                        },
+                        {
+                            "name": "Inventory",
+                            "values": [
+                                79
+                            ]
+                        },
+                        {
+                            "name": "Margin",
+                            "values": [
+                                0.31
+                            ]
+                        },
+                        {
+                            "name": "price",
+                            "values": [
+                                9.09
+                            ]
+                        }
+                    ],
+                    "groups": [
+                        {
+                            "group_id": "Paper%2C%20Cleaning%20%26%20Home",
+                            "display_name": "Paper, Cleaning & Home",
+                            "path": "/all",
+                            "path_list": [
+                                {
+                                    "id": "all",
+                                    "display_name": "All"
+                                }
+                            ]
+                        }
+                    ],
+                    "price": 9.09,
+                    "keywords": [
+                        "bags",
+                        "trash"
+                    ],
+                    "description": "1 ft 11 in x 2 ft 4-5/8 in x 0.8 mil (58.4 cm x 72.7 cm x 20.3 um). 13-gallon (49.2 lt) capacity. Quality guaranteed. Fits & grips. www.betterlivingbrandsLLC.com. Our Promise: Quality & satisfaction 100% guaranteed or your money back. Product of China."
+                },
+                "variations": null,
+                "variations_map": null,
+                "is_slotted": false,
+                "labels": {}
+            }
+        ]
+    }
+}

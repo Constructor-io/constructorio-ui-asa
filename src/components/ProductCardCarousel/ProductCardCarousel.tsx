@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import Slider, { Settings } from 'react-slick';
 import NavArrow, { Direction } from '../NavArrow/NavArrow';
+import ProductCard from '../ProductCard/ProductCard';
+import { AsaSearchResult } from '../../hooks/useAsaResults';
 
 const defaultSettings: Settings = {
   infinite: true,
@@ -41,14 +43,13 @@ const defaultSettings: Settings = {
 interface ProductCardCarouselProps {
   productDisplayCount?: number;
   productCountPerScroll?: number;
-  title?: string;
-  subText?: string;
+  searchResult: AsaSearchResult;
 }
 
 export default function ProductCardCarousel(
   props: React.PropsWithChildren & ProductCardCarouselProps,
 ) {
-  const { children, productDisplayCount, productCountPerScroll, title, subText } = props;
+  const { children, productDisplayCount, productCountPerScroll, searchResult } = props;
 
   const settings = useMemo(
     () => ({
@@ -59,11 +60,28 @@ export default function ProductCardCarousel(
     [productCountPerScroll, productDisplayCount],
   );
 
-  return (
-    <div>
+  const title = searchResult.response.search_request.display_name;
+  const subText = searchResult.text;
+
+  const defaultMarkup = (
+    <>
       {title && <div className='cio-carousel-title'>{title}</div>}
       {subText && <div className='cio-carousel-subtext'>{subText}</div>}
-      <Slider {...settings}>{children}</Slider>
-    </div>
+      <Slider {...settings}>
+        {searchResult.response.results.map((product) => (
+          <ProductCard
+            productInfo={{
+              name: product.value,
+              price: product.data.price,
+              url: product.data.url,
+              imageUrl: product.data.image_url,
+            }}
+            formatPrice={(number) => `$${number}`}
+          />
+        ))}
+      </Slider>
+    </>
   );
+
+  return <div>{children || defaultMarkup}</div>;
 }

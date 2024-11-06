@@ -13,14 +13,14 @@ function AsaResultsDisplay(props: { intent: string }) {
       <ul>
         {groups.map((g) => (
           <div>
-            <li key={g.group.data.display_name}>
-              Group: <b>{g.group.data.display_name}</b>
+            <li key={g.group.display_name}>
+              Group: <b>{g.group.display_name}</b>
             </li>
             <ul>
               {g.searchResults.map((searchResult) => (
-                <li key={searchResult.data.result_id}>
-                  <b>{searchResult.data.response.search_request.display_name}</b>:{' '}
-                  {searchResult.data.response.results.length} Results
+                <li key={searchResult.result_id}>
+                  <b>{searchResult.response.search_request.display_name}</b>:{' '}
+                  {searchResult.response.results.length} Results
                 </li>
               ))}
             </ul>
