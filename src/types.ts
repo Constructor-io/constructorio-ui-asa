@@ -5,7 +5,7 @@ import {
   ConstructorClientOptions,
   Nullable,
 } from '@constructor-io/constructorio-client-javascript/lib/types';
-import { IAssistantParameters } from '@constructor-io/constructorio-client-javascript/lib/types/assistant';
+import { IAgentParameters } from '@constructor-io/constructorio-client-javascript/lib/types/agent';
 
 export { Nullable, ConstructorIOClient };
 
@@ -28,7 +28,7 @@ export interface AsaContextValue {
   urlHelpers: UrlHelpers;
 }
 
-export interface RequestConfigs extends IAssistantParameters {
+export interface RequestConfigs extends IAgentParameters {
   intent?: string;
 }
 

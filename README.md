@@ -1,10 +1,10 @@
-# Constructor.io AI Shopping Assistant (ASA) UI Library
+# Constructor.io AI Shopping Agent (ASA) UI Library
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Constructor-io/constructorio-ui-asa/blob/main/LICENSE)
 
 ## Introduction
 
-A UI Library that provides React components to manage the fetching and rendering logic for [AI Shopping Assistant](https://constructor.io/products/ai-shopping-assistant/) powered by Constructor.io. Typescript support is available.
+A UI Library that provides React components to manage the fetching and rendering logic for [AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/) powered by Constructor.io. Typescript support is available.
 
 Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/general-introduction--documentation) are the best place to explore the behavior and the available configuration options for this UI Library.
 
