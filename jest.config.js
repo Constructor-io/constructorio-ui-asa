@@ -5,6 +5,7 @@ module.exports = {
       displayName: 'client',
       testEnvironment: 'jsdom',
       testMatch: ['**/**/*.test.(js|jsx|ts|tsx)', '!**/**/*.server.test.(js|jsx|ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/spec/setupTests.ts'],
     },
     {
       displayName: 'server',

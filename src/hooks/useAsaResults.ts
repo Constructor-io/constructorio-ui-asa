@@ -35,7 +35,7 @@ const useFetchAsaResults = (
   }, [client, intent, domain]);
 
   const readableStream = useMemo(
-    () => client.assistant.getAssistantResultsStream(intent, { domain }),
+    () => client.agent.getAgentResultsStream(intent, { domain }),
     [client, domain, intent],
   );
 

@@ -5,8 +5,8 @@ import { expectedGroups, mockGroups } from '../local_examples/asaApiMocks';
 
 // mock client made to feed the mockGroups in the same way as the real client
 const mockClient = {
-  assistant: {
-    getAssistantResultsStream: () => ({
+  agent: {
+    getAgentResultsStream: () => ({
       getReader: () => {
         let readIndex = -1;
 
@@ -24,11 +24,13 @@ const mockClient = {
 
 // mock client made to throw an error on read
 const failClient = {
-  assistant: {
-    getAssistantResultsStream: () => ({
+  agent: {
+    getAgentResultsStream: () => ({
       getReader: () => ({
-        read: () => { throw Error('could not read') },
-        cancel: () => { },
+        read: () => {
+          throw Error('could not read');
+        },
+        cancel: () => {},
       }),
     }),
   },
@@ -54,7 +56,7 @@ describe('Testing Hook: useAsaResults', () => {
     const res = renderHookWithCioAsa(() => useAsaResults('picnic'), {
       initialProps: { cioClient: failClient },
     });
-    
+
     res.rerender();
 
     await waitFor(() => {
@@ -71,7 +73,11 @@ describe('Testing Hook: useAsaResults', () => {
   it('Should throw error when domain is not set', () => {
     const spy = jest.spyOn(console, 'error');
     spy.mockImplementation(() => {});
-    expect(() => renderHookWithCioAsa(() => useAsaResults('picnic'), { initialProps: { staticRequestConfigs: { domain: '' } } })).toThrow();
+    expect(() =>
+      renderHookWithCioAsa(() => useAsaResults('picnic'), {
+        initialProps: { staticRequestConfigs: { domain: '' } },
+      }),
+    ).toThrow();
   });
 
   test('Should throw error if used outside Context Provider', () => {
