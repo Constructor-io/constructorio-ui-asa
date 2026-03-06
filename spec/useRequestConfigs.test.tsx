@@ -7,22 +7,24 @@ import testUrl from './local_examples/testJsonEncodedUrl.json';
 import { TEST_API_KEY } from './local_examples/constants';
 import { defaultQueryStringMap } from '../src/utils/urlHelpers';
 import { RequestConfigs } from '../src/types';
+import * as urlHelpers from '../src/utils/urlHelpers';
 
 describe('Testing Hook: useRequestConfigs', () => {
-  let location;
-  const mockLocation = new URL('https://example.com/asa');
+  let mockHref = 'https://example.com/';
+  let getUrlSpy: jest.SpyInstance;
+  let setUrlSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    location = window.location;
-    // @ts-ignore
-    delete window.location;
-    // @ts-ignore
-    window.location = mockLocation;
-    mockLocation.href = 'https://example.com/';
+    mockHref = 'https://example.com/';
+    getUrlSpy = jest.spyOn(urlHelpers, 'getUrl').mockImplementation(() => mockHref);
+    setUrlSpy = jest.spyOn(urlHelpers, 'setUrl').mockImplementation((url: string) => {
+      mockHref = url;
+    });
   });
 
   afterEach(() => {
-    window.location = location;
+    getUrlSpy.mockRestore();
+    setUrlSpy.mockRestore();
   });
 
   it('Should throw error if called outside of AsaContext', () => {
@@ -48,7 +50,7 @@ describe('Testing Hook: useRequestConfigs', () => {
   });
 
   it('Should return configurations set as defaults at Asa Context', () => {
-    window.location.href = 'https://example.com/asa?q=how%20do%20I%20make%20an%20ice%20cream%3F';
+    mockHref = 'https://example.com/asa?q=how%20do%20I%20make%20an%20ice%20cream%3F';
     function TestReactComponent() {
       const { requestConfigs } = useRequestConfigs();
       expect(requestConfigs).toEqual({
@@ -70,7 +72,7 @@ describe('Testing Hook: useRequestConfigs', () => {
 
   it('Should return configurations set in the URL path/query parameters', () => {
     function TestReactComponent() {
-      window.location.href = testUrl;
+      mockHref = testUrl;
       const { requestConfigs } = useRequestConfigs();
 
       expect(requestConfigs).toEqual(testRequestState);
@@ -87,7 +89,7 @@ describe('Testing Hook: useRequestConfigs', () => {
 
   it('Should return merged configurations with the URL query parameters taking priority', () => {
     function TestReactComponent() {
-      window.location.href = 'https://www.example.com/asa?q=fire&resultsPerPod=15';
+      mockHref = 'https://www.example.com/asa?q=fire&resultsPerPod=15';
       const { requestConfigs } = useRequestConfigs();
       const decodedRequestState: RequestConfigs = testRequestState;
       decodedRequestState.numResultsPerPage = 15;
@@ -109,12 +111,12 @@ describe('Testing Hook: useRequestConfigs', () => {
 
   test('Using setRequestConfigs should work', () => {
     function TestReactComponent() {
-      window.location.href = 'https://www.example.com/asa?q=fire&resultsPerPod=15';
+      mockHref = 'https://www.example.com/asa?q=fire&resultsPerPod=15';
       const { setRequestConfigs } = useRequestConfigs();
 
-      const oldUrlObj = new URL(window.location.href);
+      const oldUrlObj = new URL(mockHref);
       setRequestConfigs({ numResultsPerPage: 12 });
-      const newUrlObj = new URL(window.location.href);
+      const newUrlObj = new URL(mockHref);
 
       expect(newUrlObj.searchParams.get(defaultQueryStringMap.numResultsPerPage)).toEqual('12');
 
