@@ -8,7 +8,6 @@ const CioAsa = ({ selector, includeCSS = true, ...rest }) => {
     const containerElement = document.querySelector(selector);
 
     if (!containerElement) {
-      // eslint-disable-next-line no-console
       console.error(`CioAsa: There were no elements found for the provided selector`);
 
       return;

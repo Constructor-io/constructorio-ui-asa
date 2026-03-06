@@ -45,10 +45,8 @@ export interface UrlHelpers {
   defaultQueryStringMap: Readonly<DefaultQueryStringMap>;
 }
 
-// eslint-disable-next-line prettier/prettier
 export interface CioAsaProviderProps
-  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions'>,
-    UseCioClientProps {}
+  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions'>, UseCioClientProps {}
 
 export interface UseCioClientProps {
   apiKey?: string;

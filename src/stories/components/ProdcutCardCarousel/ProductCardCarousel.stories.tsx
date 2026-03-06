@@ -21,9 +21,10 @@ export const Primary: Story = {
   args: {
     children: carouselItems.map((productInfo) => (
       <ProductCard
+        key={productInfo.name}
         formatPrice={(number) => `$${number}`}
         // disable the clicking behavior on product cards because it's annoying
-        // eslint-disable-next-line no-script-url
+
         productInfo={{ ...productInfo, url: 'javascript:void(0)' }}
       />
     )),

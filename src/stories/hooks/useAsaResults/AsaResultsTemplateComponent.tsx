@@ -12,8 +12,8 @@ function AsaResultsDisplay(props: { intent: string }) {
       Status: {status}
       <ul>
         {groups.map((g) => (
-          <div>
-            <li key={g.group.data.display_name}>
+          <div key={g.group.data.display_name}>
+            <li>
               Group: <b>{g.group.data.display_name}</b>
             </li>
             <ul>

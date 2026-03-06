@@ -67,7 +67,7 @@ export function getStateFromUrl(url: string): RequestConfigs {
 
   const filters = extractFiltersFromUrl(urlParams);
 
-  const { page, numResultsPerPage, ...rest } = rawState;
+  const { page: _page, numResultsPerPage, ...rest } = rawState;
 
   const state = { ...rest } as RequestConfigs;
   if (numResultsPerPage) state.numResultsPerPage = Number(numResultsPerPage);

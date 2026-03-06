@@ -46,7 +46,6 @@ const useFetchAsaResults = (
     async function fetchData() {
       try {
         while (!killSwitch) {
-          // eslint-disable-next-line no-await-in-loop
           const res = await reader.read();
           if (res.done) {
             setStatus(Status.SUCCESS);
@@ -78,7 +77,7 @@ const useFetchAsaResults = (
             });
           }
         }
-      } catch (e) {
+      } catch (_e) {
         setStatus(Status.ERROR);
         // fail gracefully
       } finally {
