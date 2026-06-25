@@ -3,21 +3,105 @@ import type { Meta, StoryObj } from '@storybook/react';
 import Button from '../../../components/Button/Button';
 import '../../../styles.css';
 
-// More on how to set up stories at: https://storybook.js.org/docs/react/writing-stories/introduction#default-export
 const meta = {
   title: 'Components/Button',
   component: Button,
   parameters: {
-    // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/react/configure/story-layout
     layout: 'centered',
   },
+  tags: ['autodocs'],
 } satisfies Meta<typeof Button>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// More on writing stories with args: https://storybook.js.org/docs/react/writing-stories/args
-export const Primary: Story = {
-  args: {},
-  decorators: [(Story) => <Story />],
+export const Default: Story = {
+  args: {
+    label: 'Shopping assistant',
+    theme: 'dark',
+    size: 'sm',
+  },
+  tags: ['!autodocs'],
+};
+
+export const ThemeDark: Story = {
+  args: {
+    theme: 'dark',
+  },
+  name: 'theme - Dark',
+  tags: ['!dev'],
+};
+
+export const ThemeLight: Story = {
+  args: {
+    theme: 'light',
+  },
+  name: 'theme - Light',
+  tags: ['!dev'],
+};
+
+export const SizeSmall: Story = {
+  args: {
+    size: 'sm',
+  },
+  name: 'size - Small',
+  tags: ['!dev'],
+};
+
+export const SizeLarge: Story = {
+  args: {
+    size: 'lg',
+  },
+  name: 'size - Large',
+  tags: ['!dev'],
+};
+
+export const CustomLabel: Story = {
+  args: {
+    label: 'My custom button name',
+  },
+  name: 'label - Custom',
+  tags: ['!dev'],
+};
+
+export const PlacementDesktop: Story = {
+  name: 'Placement - Desktop',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Button is placed in the bottom-right edge of the viewport. Recommended offset: 32px from both edges.',
+      },
+    },
+  },
+  render: () => (
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', width: '700px', height: '450px', border: '1px solid #e0e0e0', borderRadius: '12px', background: '#fff' }}>
+        <div style={{ position: 'absolute', bottom: '32px', right: '32px' }}>
+          <Button />
+        </div>
+      </div>
+    </div>
+  ),
+  tags: ['!dev'],
+};
+
+export const PlacementMobile: Story = {
+  name: 'Placement - Mobile',
+  parameters: {
+    docs: {
+      description: {
+        story: 'On mobile, button is centered at the bottom of the viewport. Recommended offset: 24px from bottom. It displays initially with a slide-up animation.',
+      },
+    },
+  },
+  render: () => (
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', width: '375px', height: '600px', border: '1px solid #e0e0e0', borderRadius: '24px', background: '#fff' }}>
+        <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)' }}>
+          <Button />
+        </div>
+      </div>
+    </div>
+  ),
+  tags: ['!dev'],
 };
