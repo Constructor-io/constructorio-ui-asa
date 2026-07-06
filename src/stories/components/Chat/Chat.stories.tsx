@@ -7,8 +7,15 @@ import { DEMO_API_KEY } from '../../../constants';
 const termsText = (
   <>
     By submitting a search via the virtual style assistant, you agree to the information being
-    processed according to our <a href='https://example.com/terms'>Terms &amp; Conditions</a> and{' '}
-    <a href='https://example.com/privacy'>Privacy Notice</a>.
+    processed according to our{' '}
+    <a href='#terms' onClick={(e) => e.preventDefault()}>
+      Terms &amp; Conditions
+    </a>{' '}
+    and{' '}
+    <a href='#privacy' onClick={(e) => e.preventDefault()}>
+      Privacy Notice
+    </a>
+    .
   </>
 );
 
