@@ -2,7 +2,8 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import ResultsBlock from '../../../components/ResultsBlock/ResultsBlock';
 
-const PRODUCT_IMAGE = 'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
+const PRODUCT_IMAGE =
+  'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
 
 const mockGroups = [
   {
@@ -92,7 +93,8 @@ const meta: Meta<typeof ResultsBlock> = {
     cardsToShow: {
       control: 'radio',
       options: [3, 5],
-      description: 'Number of cards in the list. Last card is partially visible to hint scrollability.',
+      description:
+        'Number of cards in the list. Last card is partially visible to hint scrollability.',
       table: { category: 'Appearance' },
     },
     showTitle: {

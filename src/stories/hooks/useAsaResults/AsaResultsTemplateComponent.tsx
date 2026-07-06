@@ -14,7 +14,8 @@ function AsaResultsDisplay({ defaultPrompt }: AsaResultsDisplayProps) {
     if (defaultPrompt) {
       result.sendMessage(defaultPrompt);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultPrompt]);
 
   return <pre>{JSON.stringify(result, null, 2)}</pre>;
 }

@@ -12,8 +12,7 @@ export default function ChatHeader({ onClose }: ChatHeaderProps) {
           type='button'
           className='cio-asa-chat-header__close'
           onClick={onClose}
-          aria-label='Close'
-        >
+          aria-label='Close'>
           ✕
         </button>
       )}

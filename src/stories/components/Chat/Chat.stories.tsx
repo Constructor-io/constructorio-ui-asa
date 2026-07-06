@@ -7,8 +7,8 @@ import { DEMO_API_KEY } from '../../../constants';
 const termsText = (
   <>
     By submitting a search via the virtual style assistant, you agree to the information being
-    processed according to our <a href='#'>Terms &amp; Conditions</a> and{' '}
-    <a href='#'>Privacy Notice</a>.
+    processed according to our <a href='https://example.com/terms'>Terms &amp; Conditions</a> and{' '}
+    <a href='https://example.com/privacy'>Privacy Notice</a>.
   </>
 );
 
@@ -80,7 +80,8 @@ export const Desktop: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Panel slides in from the right side with an overlay blocking content below. Container width: 504px.',
+        story:
+          'Panel slides in from the right side with an overlay blocking content below. Container width: 504px.',
       },
     },
   },
@@ -90,7 +91,16 @@ export const Desktop: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ position: 'relative', width: '900px', height: '700px', border: '1px solid #e0e0e0', borderRadius: '12px', background: '#f9fafb', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'relative',
+          width: '900px',
+          height: '700px',
+          border: '1px solid #e0e0e0',
+          borderRadius: '12px',
+          background: '#f9fafb',
+          overflow: 'hidden',
+        }}>
         <div style={{ padding: '40px', color: '#999' }}>
           <p>Page content behind the overlay...</p>
         </div>
@@ -118,7 +128,14 @@ export const Mobile: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: '366px', height: '700px', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e0e0e0' }}>
+      <div
+        style={{
+          width: '366px',
+          height: '700px',
+          borderRadius: '24px',
+          overflow: 'hidden',
+          border: '1px solid #e0e0e0',
+        }}>
         <Story />
       </div>
     ),

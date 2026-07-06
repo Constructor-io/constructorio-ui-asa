@@ -10,7 +10,8 @@ import '../../../components/Chat/ChatMessageList.css';
 import '../../../components/ResultsBlock/ResultsBlock.css';
 import { ChatMessage } from '../../../types';
 
-const PRODUCT_IMAGE = 'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
+const PRODUCT_IMAGE =
+  'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
 
 const meta: Meta = {
   title: 'Components/Chat/Dialogue',
@@ -33,7 +34,13 @@ const meta: Meta = {
   tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div style={{ width: '508px', background: 'rgba(248, 249, 252, 1)', padding: '20px', borderRadius: '12px' }}>
+      <div
+        style={{
+          width: '508px',
+          background: 'rgba(248, 249, 252, 1)',
+          padding: '20px',
+          borderRadius: '12px',
+        }}>
         <Story />
       </div>
     ),
@@ -59,7 +66,8 @@ export const UserLongReply: StoryObj = {
   parameters: {
     docs: {
       description: {
-        story: 'A multi-line reply from the shopper. The bubble fills the container horizontally while hugging content vertically.',
+        story:
+          'A multi-line reply from the shopper. The bubble fills the container horizontally while hugging content vertically.',
       },
     },
   },
@@ -73,15 +81,12 @@ export const AiLoading: StoryObj = {
   parameters: {
     docs: {
       description: {
-        story: 'Displays the typing indicator in a bubble. Shown while waiting for the AI response.',
+        story:
+          'Displays the typing indicator in a bubble. Shown while waiting for the AI response.',
       },
     },
   },
-  render: () => (
-    <AiMessage
-      message={{ id: '1', role: 'assistant', text: '', status: 'loading' }}
-    />
-  ),
+  render: () => <AiMessage message={{ id: '1', role: 'assistant', text: '', status: 'loading' }} />,
 };
 
 export const AiTextReply: StoryObj = {
@@ -110,7 +115,8 @@ export const AiWithProducts: StoryObj = {
   parameters: {
     docs: {
       description: {
-        story: 'AI reply bubble with a product results section below. You can swap this list with a customized version.',
+        story:
+          'AI reply bubble with a product results section below. You can swap this list with a customized version.',
       },
     },
   },
@@ -125,9 +131,15 @@ export const AiWithProducts: StoryObj = {
           {
             group: { display_name: 'Work Essentials', data: { display_name: 'Work Essentials' } },
             searchResults: [
-              { value: 'Classic Fit Blazer', data: { id: '1', image_url: PRODUCT_IMAGE, price: 150 } },
+              {
+                value: 'Classic Fit Blazer',
+                data: { id: '1', image_url: PRODUCT_IMAGE, price: 150 },
+              },
               { value: 'Slim Dress Pants', data: { id: '2', image_url: PRODUCT_IMAGE, price: 89 } },
-              { value: 'Oxford Button-Down Shirt', data: { id: '3', image_url: PRODUCT_IMAGE, price: 65 } },
+              {
+                value: 'Oxford Button-Down Shirt',
+                data: { id: '3', image_url: PRODUCT_IMAGE, price: 65 },
+              },
               { value: 'Leather Belt', data: { id: '4', image_url: PRODUCT_IMAGE, price: 45 } },
             ],
           },
@@ -151,7 +163,10 @@ const conversationMessages: ChatMessage[] = [
         searchResults: [
           { value: 'Classic Fit Blazer', data: { id: '1', image_url: PRODUCT_IMAGE, price: 150 } },
           { value: 'Slim Dress Pants', data: { id: '2', image_url: PRODUCT_IMAGE, price: 89 } },
-          { value: 'Oxford Button-Down Shirt', data: { id: '3', image_url: PRODUCT_IMAGE, price: 65 } },
+          {
+            value: 'Oxford Button-Down Shirt',
+            data: { id: '3', image_url: PRODUCT_IMAGE, price: 65 },
+          },
           { value: 'Leather Belt', data: { id: '4', image_url: PRODUCT_IMAGE, price: 45 } },
         ],
       },
@@ -166,7 +181,8 @@ export const FullConversation: StoryObj = {
   parameters: {
     docs: {
       description: {
-        story: 'A full conversation flow showing user messages, AI text replies, product results, and loading state.',
+        story:
+          'A full conversation flow showing user messages, AI text replies, product results, and loading state.',
       },
     },
   },

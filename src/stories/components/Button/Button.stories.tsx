@@ -99,13 +99,22 @@ export const PlacementDesktop: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Button is placed in the bottom-right edge of the viewport. Recommended offset: 32px from both edges.',
+        story:
+          'Button is placed in the bottom-right edge of the viewport. Recommended offset: 32px from both edges.',
       },
     },
   },
   render: () => (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
-      <div style={{ position: 'relative', width: '700px', height: '450px', border: '1px solid #e0e0e0', borderRadius: '12px', background: '#fff' }}>
+      <div
+        style={{
+          position: 'relative',
+          width: '700px',
+          height: '450px',
+          border: '1px solid #e0e0e0',
+          borderRadius: '12px',
+          background: '#fff',
+        }}>
         <div style={{ position: 'absolute', bottom: '32px', right: '32px' }}>
           <Button />
         </div>
@@ -120,14 +129,29 @@ export const PlacementMobile: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'On mobile, button is centered at the bottom of the viewport. Recommended offset: 24px from bottom. It displays initially with a slide-up animation.',
+        story:
+          'On mobile, button is centered at the bottom of the viewport. Recommended offset: 24px from bottom. It displays initially with a slide-up animation.',
       },
     },
   },
   render: () => (
     <div style={{ display: 'flex', justifyContent: 'center' }}>
-      <div style={{ position: 'relative', width: '375px', height: '600px', border: '1px solid #e0e0e0', borderRadius: '24px', background: '#fff' }}>
-        <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)' }}>
+      <div
+        style={{
+          position: 'relative',
+          width: '375px',
+          height: '600px',
+          border: '1px solid #e0e0e0',
+          borderRadius: '24px',
+          background: '#fff',
+        }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+          }}>
           <Button />
         </div>
       </div>
