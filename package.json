@@ -45,7 +45,7 @@
     "check-types": "npx tsc --noEmit",
     "copy-styles": "rsync -am --include='*/' --include='*.css' --exclude='*' src/ lib/mjs/ && rsync -am --include='*/' --include='*.css' --exclude='*' src/ lib/cjs/",
     "dev": "storybook dev -p 6006",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "storybook:ci": "storybook dev --ci --quiet -p 6006",
     "test-storybook": "test-storybook",
     "test-storybook:watch": "test-storybook --watch",

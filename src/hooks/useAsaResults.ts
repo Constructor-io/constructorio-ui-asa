@@ -15,6 +15,7 @@ export default function useAsaResults(): UseChatReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const killSwitchRef = useRef(false);
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
+  const threadIdRef = useRef<string | null>(null);
 
   const contextValue = useCioAsaContext();
   const { cioClient, staticRequestConfigs } = contextValue || {};
@@ -48,7 +49,11 @@ export default function useAsaResults(): UseChatReturn {
         AgentClass.EventTypes.MESSAGE = 'message';
       }
 
-      const stream = cioClient.agent.getAgentResultsStream(text.trim(), { domain });
+      const params: any = { domain };
+      if (threadIdRef.current) {
+        params.thread_id = threadIdRef.current;
+      }
+      const stream = cioClient.agent.getAgentResultsStream(text.trim(), params);
       const reader = stream.getReader();
       readerRef.current = reader;
 
@@ -68,6 +73,10 @@ export default function useAsaResults(): UseChatReturn {
             }
 
             const { type, data } = res.value;
+
+            if (type === 'start' && data?.thread_id) {
+              threadIdRef.current = data.thread_id;
+            }
 
             if (type === 'search_result') {
               setMessages((prev) =>
@@ -136,6 +145,7 @@ export default function useAsaResults(): UseChatReturn {
       readerRef.current.cancel();
       readerRef.current = null;
     }
+    threadIdRef.current = null;
     setMessages([]);
     setIsStreaming(false);
   }, []);
