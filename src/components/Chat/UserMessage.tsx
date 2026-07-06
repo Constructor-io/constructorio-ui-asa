@@ -11,3 +11,5 @@ export default function UserMessage({ text }: UserMessageProps) {
     </div>
   );
 }
+
+UserMessage.displayName = 'UserMessage';

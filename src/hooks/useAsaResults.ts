@@ -4,18 +4,14 @@ import { ResultGroup, ChatMessage, UseChatReturn } from '../types';
 
 const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
 
-let messageIdCounter = 0;
-function generateId(): string {
-  messageIdCounter += 1;
-  return `msg-${messageIdCounter}-${Date.now()}`;
-}
-
 export default function useAsaResults(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const isStreamingRef = useRef(false);
   const killSwitchRef = useRef(false);
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
   const threadIdRef = useRef<string | null>(null);
+  const idCounterRef = useRef(0);
 
   const contextValue = useCioAsaContext();
   const { cioClient, staticRequestConfigs } = contextValue || {};
@@ -23,17 +19,19 @@ export default function useAsaResults(): UseChatReturn {
 
   const sendMessage = useCallback(
     (text: string) => {
-      if (!cioClient || !domain || !text.trim() || isStreaming) return;
+      if (!cioClient || !domain || !text.trim() || isStreamingRef.current) return;
 
+      idCounterRef.current += 1;
       const userMessage: ChatMessage = {
-        id: generateId(),
+        id: `msg-${idCounterRef.current}-${Date.now()}`,
         role: 'user',
         text: text.trim(),
         status: 'done',
       };
 
+      idCounterRef.current += 1;
       const assistantMessage: ChatMessage = {
-        id: generateId(),
+        id: `msg-${idCounterRef.current}-${Date.now()}`,
         role: 'assistant',
         text: '',
         groups: [],
@@ -42,12 +40,8 @@ export default function useAsaResults(): UseChatReturn {
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsStreaming(true);
+      isStreamingRef.current = true;
       killSwitchRef.current = false;
-
-      const AgentClass = (cioClient.agent as any).constructor;
-      if (AgentClass?.EventTypes && !AgentClass.EventTypes.MESSAGE) {
-        AgentClass.EventTypes.MESSAGE = 'message';
-      }
 
       const stream = cioClient.agent.getAgentResultsStream(text.trim(), {
         domain,
@@ -132,10 +126,11 @@ export default function useAsaResults(): UseChatReturn {
           reader.cancel();
           readerRef.current = null;
           setIsStreaming(false);
+          isStreamingRef.current = false;
         }
       })();
     },
-    [cioClient, domain, isStreaming],
+    [cioClient, domain],
   );
 
   const clearHistory = useCallback(() => {
@@ -147,6 +142,7 @@ export default function useAsaResults(): UseChatReturn {
     threadIdRef.current = null;
     setMessages([]);
     setIsStreaming(false);
+    isStreamingRef.current = false;
   }, []);
 
   return { messages, sendMessage, isStreaming, clearHistory };

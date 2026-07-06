@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { ChatMessage } from '../../types';
+import { ChatMessage, ResultGroupMeta } from '../../types';
+import { Product } from '../../utils/productNormalizer';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
-  onProductClick?: (product: any) => void;
-  onViewMore?: (group: any) => void;
+  onProductClick?: (product: Product) => void;
+  onViewMore?: (group: ResultGroupMeta) => void;
 }
 
 export default function ChatMessageList({
@@ -58,3 +59,5 @@ export default function ChatMessageList({
     </div>
   );
 }
+
+ChatMessageList.displayName = 'ChatMessageList';

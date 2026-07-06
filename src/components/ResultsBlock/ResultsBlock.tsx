@@ -1,6 +1,6 @@
 import React from 'react';
 import { Carousel } from '@constructor-io/constructorio-ui-components';
-import { ResultGroup } from '../../types';
+import { ResultGroup, ResultGroupMeta } from '../../types';
 import { normalizeItemToProduct, Product } from '../../utils/productNormalizer';
 import { PLACEHOLDER_IMAGE } from '../../constants';
 import './ResultsBlock.css';
@@ -13,9 +13,11 @@ interface ResultsBlockProps {
   cardsToShow?: 3 | 5;
   showTitle?: boolean;
   showLink?: boolean;
+  viewMoreText?: string;
+  addToCartText?: string;
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
-  onViewMore?: (group: ResultGroup['group']) => void;
+  onViewMore?: (group: ResultGroupMeta) => void;
 }
 
 const slidesConfig: Record<3 | 5, number> = {
@@ -42,11 +44,18 @@ function NextButton() {
 interface ProductCardProps {
   product: Product;
   imageStyle: React.CSSProperties;
+  addToCartText?: string;
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
 }
 
-function ProductCard({ product, imageStyle, onProductClick, onAddToCart }: ProductCardProps) {
+function ProductCard({
+  product,
+  imageStyle,
+  addToCartText,
+  onProductClick,
+  onAddToCart,
+}: ProductCardProps) {
   return (
     <div
       className='cio-asa-product-card'
@@ -107,7 +116,7 @@ function ProductCard({ product, imageStyle, onProductClick, onAddToCart }: Produ
               <circle cx='20' cy='21' r='1' />
               <path d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6' />
             </svg>
-            Add to cart
+            {addToCartText}
           </button>
         )}
       </div>
@@ -115,12 +124,14 @@ function ProductCard({ product, imageStyle, onProductClick, onAddToCart }: Produ
   );
 }
 
-export default function ResultsBlock({
+function ResultsBlock({
   groups,
   aspectRatio = '3:4',
   cardsToShow = 3,
   showTitle = true,
   showLink = true,
+  viewMoreText = 'View more products',
+  addToCartText = 'Add to cart',
   onProductClick,
   onAddToCart,
   onViewMore,
@@ -135,6 +146,7 @@ export default function ResultsBlock({
       <ProductCard
         product={product}
         imageStyle={imageStyle}
+        addToCartText={addToCartText}
         onProductClick={onProductClick}
         onAddToCart={onAddToCart}
       />
@@ -172,7 +184,7 @@ export default function ResultsBlock({
                 type='button'
                 className='cio-asa-results-group__view-more'
                 onClick={() => onViewMore(groupData.group)}>
-                View more products
+                {viewMoreText}
               </button>
             )}
           </div>
@@ -181,3 +193,6 @@ export default function ResultsBlock({
     </div>
   );
 }
+
+ResultsBlock.displayName = 'ResultsBlock';
+export default ResultsBlock;

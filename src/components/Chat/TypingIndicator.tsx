@@ -11,3 +11,5 @@ export default function TypingIndicator() {
     </div>
   );
 }
+
+TypingIndicator.displayName = 'TypingIndicator';

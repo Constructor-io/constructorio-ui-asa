@@ -19,3 +19,5 @@ export default function ChatHeader({ onClose }: ChatHeaderProps) {
     </div>
   );
 }
+
+ChatHeader.displayName = 'ChatHeader';

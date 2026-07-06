@@ -15,17 +15,26 @@
   "main": "lib/cjs/index.js",
   "module": "lib/mjs/index.js",
   "exports": {
+    ".": {
+      "import": "./lib/mjs/index.js",
+      "require": "./lib/cjs/index.js",
+      "types": "./lib/types/index.d.ts"
+    },
     "./styles.css": {
       "import": "./lib/mjs/styles.css",
       "require": "./lib/cjs/styles.css"
     },
+    "./components/Chat/styles.css": {
+      "import": "./lib/mjs/components/Chat/Chat.css",
+      "require": "./lib/cjs/components/Chat/Chat.css"
+    },
+    "./components/ResultsBlock/styles.css": {
+      "import": "./lib/mjs/components/ResultsBlock/ResultsBlock.css",
+      "require": "./lib/cjs/components/ResultsBlock/ResultsBlock.css"
+    },
     "./constructorio-ui-asa-bundled": {
       "import": "./dist/constructorio-ui-asa-bundled.js",
       "require": "./dist/constructorio-ui-asa-bundled.js"
-    },
-    ".": {
-      "import": "./lib/mjs/index.js",
-      "require": "./lib/cjs/index.js"
     },
     "./cjs": {
       "import": "./lib/cjs/index.js",
@@ -61,6 +70,7 @@
   },
   "peerDependencies": {
     "@constructor-io/constructorio-client-javascript": "^2.88.0",
+    "@constructor-io/constructorio-ui-components": "^1.6.0",
     "react": ">=16.12.0",
     "react-dom": ">=16.12.0",
     "tslib": "^2.4.0"
@@ -115,9 +125,7 @@
     "vite-plugin-css-injected-by-js": "^3.1.0",
     "webpack": "^5.105.4"
   },
-  "dependencies": {
-    "@constructor-io/constructorio-ui-components": "^1.6.0"
-  },
+  "dependencies": {},
   "volta": {
     "node": "22.18.0",
     "npm": "10.9.3"

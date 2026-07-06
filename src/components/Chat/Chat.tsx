@@ -1,20 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
+import { ResultGroupMeta } from '../../types';
+import { Product } from '../../utils/productNormalizer';
 import ChatHeader from './ChatHeader';
 import WelcomeScreen from './WelcomeScreen';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ChatProps {
   onClose?: () => void;
   className?: string;
   initialSuggestions?: string[];
   termsText?: React.ReactNode;
-  onProductClick?: (product: any) => void;
-  onViewMore?: (group: any) => void;
+  ariaLabel?: string;
+  onProductClick?: (product: Product) => void;
+  onViewMore?: (group: ResultGroupMeta) => void;
 }
 
 export default function Chat({
@@ -22,13 +22,14 @@ export default function Chat({
   className,
   initialSuggestions,
   termsText,
+  ariaLabel = 'Shopping assistant chat',
   onProductClick,
   onViewMore,
 }: ChatProps) {
   const { messages, sendMessage, isStreaming } = useAsaResults();
   const [view, setView] = useState<'welcome' | 'chat'>('welcome');
   const chatViewRef = useRef<HTMLDivElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (view === 'chat') {
@@ -38,26 +39,12 @@ export default function Chat({
   }, [view]);
 
   useEffect(() => {
-    const container = chatContainerRef.current;
+    const container = containerRef.current;
     if (!container) return undefined;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onClose) {
         onClose();
-        return;
-      }
-      if (e.key === 'Tab') {
-        const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
       }
     };
 
@@ -75,10 +62,10 @@ export default function Chat({
   return (
     <div
       className={`cio-asa cio-asa-chat ${className || ''}`}
+      ref={containerRef}
       role='dialog'
-      aria-modal='true'
-      aria-label='Shopping assistant chat'
-      ref={chatContainerRef}>
+      aria-modal='false'
+      aria-label={ariaLabel}>
       <ChatHeader onClose={onClose} />
       <div className='cio-asa-chat-body'>
         {view === 'welcome' ? (
@@ -103,3 +90,5 @@ export default function Chat({
     </div>
   );
 }
+
+Chat.displayName = 'Chat';

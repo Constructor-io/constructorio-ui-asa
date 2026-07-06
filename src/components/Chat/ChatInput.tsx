@@ -4,12 +4,14 @@ interface ChatInputProps {
   onSubmit: (text: string) => void;
   isDisabled?: boolean;
   placeholder?: string;
+  sendAriaLabel?: string;
 }
 
 export default function ChatInput({
   onSubmit,
   isDisabled = false,
   placeholder = 'Ask a question about this product',
+  sendAriaLabel = 'Send message',
 }: ChatInputProps) {
   const [value, setValue] = useState('');
 
@@ -43,7 +45,7 @@ export default function ChatInput({
         className='cio-asa-chat-input__send'
         onClick={handleSubmit}
         disabled={isDisabled || !value.trim()}
-        aria-label='Send message'>
+        aria-label={sendAriaLabel}>
         <svg
           width='10'
           height='11'
@@ -63,3 +65,5 @@ export default function ChatInput({
     </div>
   );
 }
+
+ChatInput.displayName = 'ChatInput';

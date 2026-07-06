@@ -1,12 +1,13 @@
 import React from 'react';
-import { ChatMessage } from '../../types';
+import { ChatMessage, ResultGroupMeta } from '../../types';
+import { Product } from '../../utils/productNormalizer';
 import TypingIndicator from './TypingIndicator';
 import ResultsBlock from '../ResultsBlock/ResultsBlock';
 
 interface AiMessageProps {
   message: ChatMessage;
-  onProductClick?: (product: any) => void;
-  onViewMore?: (group: any) => void;
+  onProductClick?: (product: Product) => void;
+  onViewMore?: (group: ResultGroupMeta) => void;
 }
 
 export default function AiMessage({ message, onProductClick, onViewMore }: AiMessageProps) {
@@ -32,3 +33,5 @@ export default function AiMessage({ message, onProductClick, onViewMore }: AiMes
     </div>
   );
 }
+
+AiMessage.displayName = 'AiMessage';

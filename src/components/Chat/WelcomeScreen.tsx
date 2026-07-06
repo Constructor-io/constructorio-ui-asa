@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 
 interface WelcomeScreenProps {
+  title?: string;
   suggestions?: string[];
   onSend: (text: string) => void;
   termsText?: React.ReactNode;
   placeholder?: string;
+  sendButtonText?: string;
   disabled?: boolean;
 }
 
@@ -16,10 +18,12 @@ const DEFAULT_SUGGESTIONS = [
 ];
 
 export default function WelcomeScreen({
+  title = 'Shopping Assistant',
   suggestions = DEFAULT_SUGGESTIONS,
   onSend,
   termsText,
   placeholder = 'Ask anything',
+  sendButtonText = 'Chat',
   disabled = false,
 }: WelcomeScreenProps) {
   const [inputValue, setInputValue] = useState('');
@@ -40,7 +44,7 @@ export default function WelcomeScreen({
   return (
     <div className='cio-asa-welcome-screen'>
       <div className='cio-asa-welcome-screen__content'>
-        <h2 className='cio-asa-welcome-screen__title'>Shopping Assistant</h2>
+        <h2 className='cio-asa-welcome-screen__title'>{title}</h2>
         <div
           className={`cio-asa-welcome-screen__input-row${disabled ? ' cio-asa-welcome-screen__input-row--disabled' : ''}`}>
           <input
@@ -59,7 +63,7 @@ export default function WelcomeScreen({
             onClick={handleSubmit}
             disabled={!inputValue.trim()}
             aria-label='Send message'>
-            Chat
+            {sendButtonText}
             <svg
               width='16'
               height='16'
@@ -90,3 +94,5 @@ export default function WelcomeScreen({
     </div>
   );
 }
+
+WelcomeScreen.displayName = 'WelcomeScreen';

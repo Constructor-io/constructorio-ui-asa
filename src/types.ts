@@ -98,9 +98,14 @@ export interface ChatMessage {
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 
+export interface ResultGroupMeta {
+  display_name: string;
+  value: string;
+}
+
 export interface ResultGroup {
-  group: any;
-  searchResults: any[];
+  group: ResultGroupMeta;
+  searchResults: Record<string, unknown>[];
 }
 
 export interface UseChatReturn {
