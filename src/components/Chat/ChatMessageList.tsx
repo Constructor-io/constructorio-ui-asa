@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { ChatMessage } from '../../types';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
@@ -14,14 +14,28 @@ export default function ChatMessageList({
   onProductClick,
   onViewMore,
 }: ChatMessageListProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const threshold = 100;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!isNearBottomRef.current) return;
+    const el = listRef.current;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    });
   }, [messages]);
 
   return (
-    <div className='cio-asa-chat-message-list'>
+    <div className='cio-asa-chat-message-list' ref={listRef} onScroll={handleScroll}>
       {messages.map((message) => {
         if (message.role === 'user') {
           return <UserMessage key={message.id} text={message.text} />;
@@ -35,7 +49,6 @@ export default function ChatMessageList({
           />
         );
       })}
-      <div ref={bottomRef} />
     </div>
   );
 }

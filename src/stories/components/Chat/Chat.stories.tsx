@@ -71,6 +71,7 @@ export const Default: Story = {
   },
   args: {
     onClose: () => alert('Close clicked'),
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     termsText,
   },
 };
@@ -87,6 +88,7 @@ export const Desktop: Story = {
   },
   args: {
     onClose: () => alert('Close clicked'),
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     termsText,
   },
   decorators: [
@@ -124,6 +126,7 @@ export const Mobile: Story = {
   },
   args: {
     onClose: () => alert('Close clicked'),
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     termsText,
   },
   decorators: [
@@ -145,6 +148,7 @@ export const Mobile: Story = {
 export const WithCustomSuggestions: Story = {
   args: {
     onClose: () => alert('Close clicked'),
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     initialSuggestions: [
       'Show me summer dresses',
       'Best running shoes under $100',

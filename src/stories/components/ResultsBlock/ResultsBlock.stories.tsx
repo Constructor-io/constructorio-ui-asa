@@ -137,6 +137,7 @@ export const Square1x1: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '1:1',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -147,6 +148,7 @@ export const Portrait3x4: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '3:4',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -157,6 +159,7 @@ export const Portrait9x16: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '9:16',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -167,6 +170,7 @@ export const Landscape4x3: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '4:3',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -177,6 +181,7 @@ export const Landscape16x9: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '16:9',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -186,6 +191,7 @@ export const MultipleGroups: Story = {
   args: {
     groups: mockGroupsMultiple,
     aspectRatio: '1:1',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -196,6 +202,7 @@ export const HiddenTitle: Story = {
   args: {
     groups: mockGroups,
     showTitle: false,
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
@@ -206,6 +213,7 @@ export const HiddenLink: Story = {
   args: {
     groups: mockGroups,
     showLink: false,
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
