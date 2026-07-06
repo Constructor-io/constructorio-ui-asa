@@ -15,7 +15,7 @@ export default function AiMessage({ message, onProductClick, onViewMore }: AiMes
   const hasGroups = message.groups && message.groups.length > 0;
 
   return (
-    <div className='cio-asa-ai-message'>
+    <div className='cio-asa-ai-message' role='group' aria-label='Assistant said'>
       {isLoading && !hasText && !hasGroups && <TypingIndicator />}
       {hasText && (
         <div className='cio-asa-ai-message__bubble'>

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
 import ChatHeader from './ChatHeader';
 import WelcomeScreen from './WelcomeScreen';
 import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ChatProps {
   onClose?: () => void;
@@ -24,6 +26,40 @@ export default function Chat({
 }: ChatProps) {
   const { messages, sendMessage, isStreaming } = useAsaResults();
   const [view, setView] = useState<'welcome' | 'chat'>('welcome');
+  const chatViewRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (view === 'chat') {
+      const input = chatViewRef.current?.querySelector('input');
+      input?.focus();
+    }
+  }, [view]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const container = chatContainerRef.current;
+        if (!container) return;
+        const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    },
+    [onClose]
+  );
 
   const handleSend = (text: string) => {
     if (view === 'welcome') {
@@ -33,7 +69,13 @@ export default function Chat({
   };
 
   return (
-    <div className={`cio-asa cio-asa-chat ${className || ''}`}>
+    <div
+      className={`cio-asa cio-asa-chat ${className || ''}`}
+      role='dialog'
+      aria-modal='true'
+      aria-label='Shopping assistant chat'
+      ref={chatContainerRef}
+      onKeyDown={handleKeyDown}>
       <ChatHeader onClose={onClose} />
       <div className='cio-asa-chat-body'>
         {view === 'welcome' ? (
@@ -45,7 +87,7 @@ export default function Chat({
             />
           </div>
         ) : (
-          <div className='cio-asa-chat-view cio-asa-chat-view--chat'>
+          <div className='cio-asa-chat-view cio-asa-chat-view--chat' ref={chatViewRef}>
             <ChatMessageList
               messages={messages}
               onProductClick={onProductClick}

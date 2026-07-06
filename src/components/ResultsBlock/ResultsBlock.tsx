@@ -31,7 +31,13 @@ const aspectRatioMap: Record<AspectRatio, string> = {
   '16:9': '16 / 9',
 };
 
-const emptyOverride = () => null;
+function PreviousButton() {
+  return null;
+}
+
+function NextButton() {
+  return null;
+}
 
 interface ProductCardProps {
   product: Product;
@@ -48,7 +54,10 @@ function ProductCard({ product, imageStyle, onProductClick, onAddToCart }: Produ
       tabIndex={0}
       onClick={() => onProductClick?.(product)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onProductClick?.(product);
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onProductClick?.(product);
+        }
       }}>
       <div className='cio-asa-product-card__image-wrapper' style={imageStyle}>
         {product.badge && <span className='cio-asa-product-card__badge'>{product.badge}</span>}
@@ -64,8 +73,12 @@ function ProductCard({ product, imageStyle, onProductClick, onAddToCart }: Produ
           <div className='cio-asa-product-card__price'>
             {product.salePrice ? (
               <>
-                <span className='cio-asa-product-card__price--sale'>${product.salePrice}</span>
-                <span className='cio-asa-product-card__price--original'>${product.price}</span>
+                <span className='cio-asa-product-card__price--sale'>
+                  <span className='cio-sr-only'>Sale price: </span>${product.salePrice}
+                </span>
+                <span className='cio-asa-product-card__price--original'>
+                  <span className='cio-sr-only'>Original price: </span>${product.price}
+                </span>
               </>
             ) : (
               <span className='cio-asa-product-card__price--current'>${product.price}</span>
@@ -88,7 +101,8 @@ function ProductCard({ product, imageStyle, onProductClick, onAddToCart }: Produ
               stroke='currentColor'
               strokeWidth='2'
               strokeLinecap='round'
-              strokeLinejoin='round'>
+              strokeLinejoin='round'
+              aria-hidden='true'>
               <circle cx='9' cy='21' r='1' />
               <circle cx='20' cy='21' r='1' />
               <path d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6' />
@@ -144,8 +158,8 @@ export default function ResultsBlock({
                 0: { gap: 12, slidesToShow: slidesConfig[cardsToShow] },
               }}
               componentOverrides={{
-                previous: { reactNode: emptyOverride },
-                next: { reactNode: emptyOverride },
+                previous: { reactNode: PreviousButton },
+                next: { reactNode: NextButton },
                 item: {
                   productCard: {
                     reactNode: renderProductCard,
@@ -158,7 +172,7 @@ export default function ResultsBlock({
                 type='button'
                 className='cio-asa-results-group__view-more'
                 onClick={() => onViewMore(groupData.group)}>
-                View more products &nbsp;→
+                View more products
               </button>
             )}
           </div>

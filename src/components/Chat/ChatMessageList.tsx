@@ -35,7 +35,7 @@ export default function ChatMessageList({
   }, [messages]);
 
   return (
-    <div className='cio-asa-chat-message-list' ref={listRef} onScroll={handleScroll}>
+    <div className='cio-asa-chat-message-list' ref={listRef} onScroll={handleScroll} role='log' aria-live='polite' aria-label='Chat messages'>
       {messages.map((message) => {
         if (message.role === 'user') {
           return <UserMessage key={message.id} text={message.text} />;
