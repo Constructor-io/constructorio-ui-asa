@@ -1,0 +1,210 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="General/Integration Guide" />
+
+<style>
+{`
+  .guide-wrapper {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    color: #1a1a2e;
+  }
+
+  .guide-wrapper h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .guide-wrapper h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 40px;
+    margin-bottom: 12px;
+    color: #1a1a2e;
+  }
+
+  .guide-wrapper p {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #4a4a68;
+    margin-bottom: 16px;
+  }
+
+  .guide-wrapper code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .guide-wrapper pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0 24px;
+  }
+
+  .guide-wrapper pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #6366f1;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  .step-heading {
+    display: flex;
+    align-items: center;
+    margin-top: 40px;
+    margin-bottom: 12px;
+  }
+
+  .step-heading h2 {
+    margin: 0;
+  }
+`}
+</style>
+
+<div className="guide-wrapper">
+
+# Integration Guide
+
+Get up and running with Constructor's AI Shopping Assistant UI in minutes.
+
+<div className="step-heading">
+  <span className="step-number">1</span>
+  <h2>Installation</h2>
+</div>
+
+Install the package via npm:
+
+```bash
+npm install @constructor-io/constructorio-ui-asa
+```
+
+<div className="step-heading">
+  <span className="step-number">2</span>
+  <h2>Provider Setup</h2>
+</div>
+
+Wrap your application (or the relevant subtree) with `CioAsaProvider`. This provides the Constructor client and configuration to all child components.
+
+```jsx
+import { CioAsaProvider } from '@constructor-io/constructorio-ui-asa';
+
+function App() {
+  return (
+    <CioAsaProvider apiKey="YOUR_API_KEY">
+      {/* Your app content */}
+    </CioAsaProvider>
+  );
+}
+```
+
+The provider accepts the following props:
+
+- `apiKey` — Your Constructor.io API key (required)
+- `cioClientOptions` — Additional client configuration options
+- `staticRequestConfigs` — Request-level config including `domain`
+
+<div className="step-heading">
+  <span className="step-number">3</span>
+  <h2>Rendering the Chat</h2>
+</div>
+
+Use the `Chat` component for a full-featured conversational UI:
+
+```jsx
+import { Chat } from '@constructor-io/constructorio-ui-asa';
+
+function ShoppingAssistant() {
+  return (
+    <Chat
+      onClose={() => console.log('closed')}
+      onProductClick={(product) => {
+        window.location.href = product.url;
+      }}
+    />
+  );
+}
+```
+
+<div className="step-heading">
+  <span className="step-number">4</span>
+  <h2>Using the Hook Directly</h2>
+</div>
+
+For custom UI implementations, use the `useAsaResults` hook:
+
+```jsx
+import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
+
+function CustomChat() {
+  const { messages, sendMessage, isStreaming } = useAsaResults();
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong> {msg.text}
+        </div>
+      ))}
+      <button onClick={() => sendMessage('Show me running shoes')}>
+        Send
+      </button>
+    </div>
+  );
+}
+```
+
+The hook returns:
+
+- `messages` — Array of chat messages (user and assistant)
+- `sendMessage(text)` — Send a new message to the AI agent
+- `isStreaming` — Whether a response is currently streaming
+- `clearHistory()` — Reset the conversation
+
+<div className="step-heading">
+  <span className="step-number">5</span>
+  <h2>Customization</h2>
+</div>
+
+All components use BEM-style class names prefixed with `cio-asa-` for easy style overrides:
+
+```css
+.cio-asa-chat {
+  /* Chat container */
+}
+
+.cio-asa-product-card {
+  /* Product card in results */
+}
+
+.cio-asa-product-card__image {
+  /* Product image */
+}
+```
+
+</div>

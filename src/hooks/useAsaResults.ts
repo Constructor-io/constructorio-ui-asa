@@ -1,116 +1,144 @@
-import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
+import { ResultGroup, ChatMessage, UseChatReturn } from '../types';
 
-export interface UseAsaResultsProps {
-  intent: string;
+const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
+
+let messageIdCounter = 0;
+function generateId(): string {
+  messageIdCounter += 1;
+  return `msg-${messageIdCounter}-${Date.now()}`;
 }
 
-export interface UseAsaResultsReturn {
-  groups: AsaResultGroup[];
-  status: Status;
-}
+export default function useAsaResults(): UseChatReturn {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const killSwitchRef = useRef(false);
+  const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
 
-interface AsaResultGroup {
-  group: any;
-  searchResults: any[];
-}
-
-export enum Status {
-  LOADING = 'loading',
-  SUCCESS = 'success',
-  ERROR = 'error',
-}
-
-const useFetchAsaResults = (
-  client: ConstructorIOClient,
-  intent: string,
-  domain: string,
-): UseAsaResultsReturn => {
-  const [groups, setGroups] = useState<AsaResultGroup[]>([]);
-  const [status, setStatus] = useState<Status>(Status.LOADING);
-
-  useEffect(() => {
-    setGroups([]);
-  }, [client, intent, domain]);
-
-  const readableStream = useMemo(
-    () => client.agent.getAgentResultsStream(intent, { domain }),
-    [client, domain, intent],
-  );
-
-  const reader = useMemo(() => readableStream.getReader(), [readableStream]);
-
-  useEffect(() => {
-    let killSwitch = false;
-    async function fetchData() {
-      try {
-        while (!killSwitch) {
-          // eslint-disable-next-line no-await-in-loop
-          const res = await reader.read();
-          if (res.done) {
-            setStatus(Status.SUCCESS);
-            break;
-          }
-          // if the value is a group, we will append a new empty group to the end of 'groups'
-          if (res.value.type === 'group') {
-            const newGroup = res.value;
-            setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
-          }
-          // if the value is a search result, we will find the most recent group (which will be the last in the list)
-          // and we will append this search result to the last group's list of results
-          if (res.value.type === 'search_result') {
-            setGroups((oldGroups) => {
-              // this shouldn't happen but if the API returns a search result before any groups, we will ignore it
-              if (oldGroups.length === 0) {
-                return oldGroups;
-              }
-              const lastGroup = oldGroups[oldGroups.length - 1];
-              const newSearchResults = res.value;
-              // update the last group to include the new search result
-              const updatedLastGroup = {
-                group: lastGroup.group,
-                searchResults: [...lastGroup.searchResults, newSearchResults],
-              };
-
-              // slice off the old last group and replace it with the updated last group
-              return [...oldGroups.slice(0, oldGroups.length - 1), updatedLastGroup];
-            });
-          }
-        }
-      } catch (e) {
-        setStatus(Status.ERROR);
-        // fail gracefully
-      } finally {
-        reader.cancel();
-      }
-    }
-    fetchData();
-
-    return () => {
-      killSwitch = true;
-      reader.cancel();
-    };
-  }, [reader]);
-
-  return { groups, status };
-};
-
-export default function useAsaResults(intent: string): UseAsaResultsReturn {
   const contextValue = useCioAsaContext();
-
   const { cioClient, staticRequestConfigs } = contextValue || {};
   const { domain } = staticRequestConfigs || {};
 
-  if (!cioClient) {
-    throw Error('CioClient required');
-  }
-  if (!domain) {
-    throw Error('Missing domain');
-  }
-  if (!intent) {
-    throw Error('Missing intent');
-  }
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!cioClient || !domain || !text.trim() || isStreaming) return;
 
-  return useFetchAsaResults(cioClient, intent, domain);
+      const userMessage: ChatMessage = {
+        id: generateId(),
+        role: 'user',
+        text: text.trim(),
+        status: 'done',
+      };
+
+      const assistantMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        text: '',
+        groups: [],
+        status: 'loading',
+      };
+
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setIsStreaming(true);
+      killSwitchRef.current = false;
+
+      const AgentClass = (cioClient.agent as any).constructor;
+      if (AgentClass?.EventTypes && !AgentClass.EventTypes.MESSAGE) {
+        AgentClass.EventTypes.MESSAGE = 'message';
+      }
+
+      const stream = cioClient.agent.getAgentResultsStream(text.trim(), { domain });
+      const reader = stream.getReader();
+      readerRef.current = reader;
+
+      (async () => {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          while (!killSwitchRef.current) {
+            // eslint-disable-next-line no-await-in-loop
+            const res = await reader.read();
+            if (res.done) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessage.id ? { ...msg, status: 'done' } : msg,
+                ),
+              );
+              break;
+            }
+
+            const { type, data } = res.value;
+
+            if (type === 'search_result') {
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id !== assistantMessage.id) return msg;
+                  const response = data?.response;
+                  const results = response?.results || [];
+                  const searchRequest = response?.search_request;
+                  const group = {
+                    display_name: searchRequest?.display_name || data?.title || '',
+                    value: searchRequest?.search_term || data?.title || '',
+                  };
+                  const newGroup: ResultGroup = { group, searchResults: results };
+                  return {
+                    ...msg,
+                    status: 'streaming' as const,
+                    groups: [...(msg.groups || []), newGroup],
+                  };
+                }),
+              );
+            }
+
+            if (type === 'message') {
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id !== assistantMessage.id) return msg;
+                  return {
+                    ...msg,
+                    status: 'streaming' as const,
+                    text: (msg.text || '') + (data?.text || ''),
+                  };
+                }),
+              );
+            }
+
+            if (type === 'server_error') {
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id !== assistantMessage.id) return msg;
+                  return { ...msg, text: ERROR_FALLBACK_TEXT, status: 'error' as const };
+                }),
+              );
+              break;
+            }
+          }
+        } catch (e) {
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id !== assistantMessage.id) return msg;
+              return { ...msg, text: msg.text || ERROR_FALLBACK_TEXT, status: 'error' as const };
+            }),
+          );
+        } finally {
+          reader.cancel();
+          readerRef.current = null;
+          setIsStreaming(false);
+        }
+      })();
+    },
+    [cioClient, domain, isStreaming],
+  );
+
+  const clearHistory = useCallback(() => {
+    killSwitchRef.current = true;
+    if (readerRef.current) {
+      readerRef.current.cancel();
+      readerRef.current = null;
+    }
+    setMessages([]);
+    setIsStreaming(false);
+  }, []);
+
+  return { messages, sendMessage, isStreaming, clearHistory };
 }

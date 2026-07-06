@@ -86,3 +86,26 @@ export interface ProductInfo {
   url: string | undefined;
   imageUrl: string | undefined;
 }
+
+// Chat types
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  groups?: ResultGroup[];
+  status: ChatMessageStatus;
+}
+
+export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
+
+export interface ResultGroup {
+  group: any;
+  searchResults: any[];
+}
+
+export interface UseChatReturn {
+  messages: ChatMessage[];
+  sendMessage: (text: string) => void;
+  isStreaming: boolean;
+  clearHistory: () => void;
+}

@@ -1,0 +1,88 @@
+.cio-asa-chat-input {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 8px 8px 12px;
+  gap: 12px;
+  height: 40px;
+  margin: 0 20px 16px;
+  max-width: 508px;
+  width: calc(100% - 40px);
+  align-self: center;
+  background: #ffffff;
+  border: 1px solid #DEE0E3;
+  box-shadow: inset 1px 1px 2px rgba(18, 18, 105, 0.1), inset 0px 1px 4px rgba(18, 18, 105, 0.05), inset 1px 1px 1px rgba(18, 18, 105, 0.05);
+  border-radius: 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.cio-asa-chat-input:hover {
+  border-color: #C8CAD0;
+}
+
+.cio-asa-chat-input:focus-within {
+  border-color: #A980FF;
+  box-shadow: 0px 0px 0px 2px rgba(201, 176, 254, 0.7);
+}
+
+.cio-asa-chat-input__field {
+  flex: 1;
+  padding: 0;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: -0.005em;
+  color: #0F1324;
+  outline: none;
+  background: transparent;
+}
+
+.cio-asa-chat-input__field::placeholder {
+  color: rgba(15, 19, 36, 0.7);
+}
+
+.cio-asa-chat-input__field:disabled {
+  cursor: not-allowed;
+}
+
+.cio-asa-chat-input__send {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+  height: 24px;
+  background: #14151A;
+  box-shadow: 0px 0.4px 1px rgba(18, 18, 105, 0.13), 0px 0.9px 6px rgba(18, 18, 105, 0.05), 0px 1px 3px rgba(18, 18, 105, 0.05);
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 16px;
+  letter-spacing: -0.005em;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+  color: #ffffff;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cio-asa-chat-input__send:hover:not(:disabled) {
+  background: #333;
+}
+
+.cio-asa-chat-input__send:disabled {
+  background: #E9EAEC;
+  box-shadow: none;
+  color: rgba(10, 15, 41, 0.25);
+  cursor: default;
+}
+
+.cio-asa-chat-input__send:disabled svg path {
+  fill: rgba(10, 15, 41, 0.25);
+}

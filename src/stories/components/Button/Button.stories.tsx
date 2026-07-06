@@ -8,8 +8,38 @@ const meta = {
   component: Button,
   parameters: {
     layout: 'centered',
+    docs: {
+      description: {
+        component:
+          'Floating action button that opens the AI Shopping Assistant chat.\n\n' +
+          'Place it fixed in the corner of the viewport. Supports dark/light themes and two sizes.',
+      },
+    },
   },
   tags: ['autodocs'],
+  argTypes: {
+    label: {
+      control: 'text',
+      description: 'Button text content.',
+      table: { category: 'Appearance' },
+    },
+    theme: {
+      control: 'radio',
+      options: ['dark', 'light'],
+      description: 'Color scheme: `dark` for light backgrounds, `light` for dark backgrounds.',
+      table: { category: 'Appearance' },
+    },
+    size: {
+      control: 'radio',
+      options: ['sm', 'lg'],
+      description: 'Button size: `sm` (small) or `lg` (large).',
+      table: { category: 'Appearance' },
+    },
+    onClick: {
+      description: 'Click handler. Use this to open the chat window.',
+      table: { category: 'Callbacks' },
+    },
+  },
 } satisfies Meta<typeof Button>;
 
 export default meta;

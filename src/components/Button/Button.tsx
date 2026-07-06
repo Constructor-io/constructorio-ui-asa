@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface AsaButtonProps {
+export interface ButtonProps {
   /** Button text content */
   label?: string;
   /** Color scheme: dark (for light backgrounds) or light (for dark backgrounds) */
@@ -16,7 +16,7 @@ export default function Button({
   theme = 'dark',
   size = 'sm',
   onClick,
-}: AsaButtonProps) {
+}: ButtonProps) {
   return (
     <button
       type='button'

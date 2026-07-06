@@ -1,0 +1,17 @@
+.cio-asa-chat-message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 508px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  scrollbar-width: none;
+}
+
+.cio-asa-chat-message-list::-webkit-scrollbar {
+  display: none;
+}

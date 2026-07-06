@@ -1,4 +1,6 @@
 import type { StorybookConfig } from "@storybook/react-vite";
+import path from 'path';
+
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|ts|tsx)"],
   addons: [
@@ -13,8 +15,18 @@ const config: StorybookConfig = {
   },
   docs: {
     autodocs: "tag",
-    defaultName: 'Documentation'
+    defaultName: 'Variants'
   },
-  staticDirs: ['./assets'],
+  viteFinal: async (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@constructor-io/constructorio-ui-components/styles.css': path.resolve(
+        __dirname,
+        '../node_modules/@constructor-io/constructorio-ui-components/lib/mjs/styles.css'
+      ),
+    };
+    return config;
+  },
 };
 export default config;
