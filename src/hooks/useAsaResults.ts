@@ -49,11 +49,10 @@ export default function useAsaResults(): UseChatReturn {
         AgentClass.EventTypes.MESSAGE = 'message';
       }
 
-      const params: any = { domain };
-      if (threadIdRef.current) {
-        params.thread_id = threadIdRef.current;
-      }
-      const stream = cioClient.agent.getAgentResultsStream(text.trim(), params);
+      const stream = cioClient.agent.getAgentResultsStream(text.trim(), {
+        domain,
+        ...(threadIdRef.current && { threadId: threadIdRef.current }),
+      });
       const reader = stream.getReader();
       readerRef.current = reader;
 
