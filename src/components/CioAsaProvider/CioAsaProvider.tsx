@@ -15,7 +15,7 @@ export default function CioAsaProvider(
     callbacks,
     itemFieldGetters,
     urlHelpers,
-    staticRequestConfigs = { domain: 'assistant' },
+    staticRequestConfigs = { domain: 'chatbot' },
     cioClient: customCioClient,
     children,
   } = props;
