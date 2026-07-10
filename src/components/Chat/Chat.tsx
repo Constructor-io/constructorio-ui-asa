@@ -21,7 +21,7 @@ interface ChatProps {
   initialSuggestions?: string[];
   /** Legal/terms text displayed below the welcome screen input */
   termsText?: React.ReactNode;
-/** Called when a product card is clicked */
+  /** Called when a product card is clicked */
   onProductClick?: (product: Product) => void;
   /** Called when "View more" link is clicked in a results group */
   onViewMore?: (group: ResultGroupMeta) => void;

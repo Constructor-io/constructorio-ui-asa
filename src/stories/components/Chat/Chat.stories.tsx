@@ -27,12 +27,14 @@ const meta: Meta<typeof Chat> = {
   tags: ['autodocs'],
   argTypes: {
     initialSuggestions: {
-      description: 'Static suggestion chips shown on the welcome screen. If the array is empty or not provided, the suggestions section is hidden.',
+      description:
+        'Static suggestion chips shown on the welcome screen. If the array is empty or not provided, the suggestions section is hidden.',
       control: 'object',
       table: { category: 'Content' },
     },
     termsText: {
-      description: 'Legal disclaimer content shown at the bottom of the welcome screen. Accepts HTML string with links.',
+      description:
+        'Legal disclaimer content shown at the bottom of the welcome screen. Accepts HTML string with links.',
       control: 'text',
       table: { category: 'Content' },
     },
@@ -72,8 +74,7 @@ const meta: Meta<typeof Chat> = {
       table: { category: 'Callbacks' },
     },
     onViewMore: {
-      description:
-        'Called when "View more" link is clicked. If not provided, the link is hidden.',
+      description: 'Called when "View more" link is clicked. If not provided, the link is hidden.',
       table: { category: 'Callbacks' },
     },
   },
@@ -232,11 +233,18 @@ export const WithCustomSuggestions: Story = {
   ],
 };
 
-const DesktopIntegrationExample = () => {
+function DesktopIntegrationExample() {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '99vh', background: '#f9fafb', overflow: 'hidden' }}>
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '99vh',
+        background: '#f9fafb',
+        overflow: 'hidden',
+      }}>
       <div style={{ position: 'absolute', bottom: '32px', right: '32px' }}>
         <Button onClick={() => setIsOpen(true)} />
       </div>
@@ -261,7 +269,7 @@ const DesktopIntegrationExample = () => {
       )}
     </div>
   );
-};
+}
 
 export const Integration: Story = {
   name: 'Integration - Desktop',
@@ -271,7 +279,7 @@ export const Integration: Story = {
   render: () => <DesktopIntegrationExample />,
 };
 
-const MobileIntegrationExample = () => {
+function MobileIntegrationExample() {
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
@@ -321,7 +329,7 @@ const MobileIntegrationExample = () => {
       )}
     </div>
   );
-};
+}
 
 export const IntegrationMobile: Story = {
   name: 'Integration - Mobile',
