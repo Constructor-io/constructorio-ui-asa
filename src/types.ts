@@ -100,7 +100,8 @@ export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'err
 
 export interface ResultGroupMeta {
   display_name: string;
-  value: string;
+  value?: string;
+  data?: { display_name?: string; [key: string]: unknown };
 }
 
 export interface ResultGroup {

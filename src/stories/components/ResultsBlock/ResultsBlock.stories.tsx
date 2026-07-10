@@ -14,7 +14,7 @@ const mockGroups = [
         data: { id: '1', image_url: PRODUCT_IMAGE, price: 150, sale_price: 75, badge: 'Sale' },
       },
       {
-        value: 'Tracefinder Trail Running Shoes',
+        value: 'Tracefinder Trail Running Shoes Ultralight Premium Edition With Extra Cushioning',
         data: { id: '2', image_url: PRODUCT_IMAGE, price: 120 },
       },
       {
@@ -84,17 +84,12 @@ const meta: Meta<typeof ResultsBlock> = {
       description: 'Array of product groups returned from the ASA API.',
       table: { category: 'Data' },
     },
+    minCardWidth: { table: { disable: true } },
+    gap: { table: { disable: true } },
     aspectRatio: {
       control: 'select',
       options: ['1:1', '3:4', '9:16', '4:3', '16:9'],
       description: 'Controls the image aspect ratio for product cards.',
-      table: { category: 'Appearance' },
-    },
-    cardsToShow: {
-      control: 'radio',
-      options: [3, 5],
-      description:
-        'Number of cards in the list. Last card is partially visible to hint scrollability.',
       table: { category: 'Appearance' },
     },
     showTitle: {
@@ -102,21 +97,18 @@ const meta: Meta<typeof ResultsBlock> = {
       description: 'If true, displays a title on top of the products list.',
       table: { category: 'Appearance' },
     },
-    showLink: {
-      control: 'boolean',
-      description: 'If true, displays a "View more" link at the bottom.',
-      table: { category: 'Appearance' },
-    },
     onProductClick: {
       description: 'Called when a product card is clicked.',
       table: { category: 'Callbacks' },
     },
     onAddToCart: {
-      description: 'Called when "Add to cart" button is clicked on a product card.',
+      description:
+        'Called when "Add to cart" button is clicked on a product card. If not provided, the "Add to Cart" button will not be displayed.',
       table: { category: 'Callbacks' },
     },
     onViewMore: {
-      description: 'Called when "View more products" link is clicked.',
+      description:
+        'Called when "View more products" link is clicked. If not provided, the "View more" link will not be displayed.',
       table: { category: 'Callbacks' },
     },
   },
@@ -137,6 +129,7 @@ export const Square1x1: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '1:1',
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -148,6 +141,7 @@ export const Portrait3x4: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '3:4',
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -159,6 +153,7 @@ export const Portrait9x16: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '9:16',
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -170,6 +165,7 @@ export const Landscape4x3: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '4:3',
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -181,6 +177,7 @@ export const Landscape16x9: Story = {
   args: {
     groups: mockGroups,
     aspectRatio: '16:9',
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -191,6 +188,7 @@ export const MultipleGroups: Story = {
   args: {
     groups: mockGroupsMultiple,
     aspectRatio: '1:1',
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -202,19 +200,11 @@ export const HiddenTitle: Story = {
   args: {
     groups: mockGroups,
     showTitle: false,
+    currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
 };
 
-export const HiddenLink: Story = {
-  name: 'showLink = False',
-  args: {
-    groups: mockGroups,
-    showLink: false,
-    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
-    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
-    onViewMore: (group) => alert(`View more: ${group.display_name}`),
-  },
-};
+

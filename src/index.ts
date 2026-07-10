@@ -1,6 +1,7 @@
 // Components
 export { default as Button } from './components/Button/Button';
 export { default as Chat } from './components/Chat/Chat';
+export type { ChatHandle } from './components/Chat/Chat';
 export { default as ChatHeader } from './components/Chat/ChatHeader';
 export { default as WelcomeScreen } from './components/Chat/WelcomeScreen';
 export { default as ChatMessageList } from './components/Chat/ChatMessageList';

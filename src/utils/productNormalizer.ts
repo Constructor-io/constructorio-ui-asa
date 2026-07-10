@@ -2,8 +2,8 @@ export interface Product {
   id: string;
   name: string;
   imageUrl?: string;
-  price?: number;
-  salePrice?: number;
+  price?: string | number;
+  salePrice?: string | number;
   description?: string;
   badge?: string;
 }
@@ -17,6 +17,6 @@ export function normalizeItemToProduct(item: any): Product {
     price: data.price,
     salePrice: data.sale_price,
     description: data.description,
-    badge: data.badge,
+    badge: data.sale_price ? 'Sale' : undefined,
   };
 }

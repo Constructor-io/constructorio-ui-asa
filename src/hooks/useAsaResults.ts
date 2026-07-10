@@ -56,6 +56,7 @@ export default function useAsaResults(): UseChatReturn {
           while (!killSwitchRef.current) {
             // eslint-disable-next-line no-await-in-loop
             const res = await reader.read();
+            if (killSwitchRef.current) break;
             if (res.done) {
               setMessages((prev) =>
                 prev.map((msg) =>

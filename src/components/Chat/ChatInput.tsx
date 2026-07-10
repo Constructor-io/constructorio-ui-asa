@@ -5,6 +5,7 @@ interface ChatInputProps {
   isDisabled?: boolean;
   placeholder?: string;
   sendAriaLabel?: string;
+  sendButtonText?: string;
 }
 
 export default function ChatInput({
@@ -12,6 +13,7 @@ export default function ChatInput({
   isDisabled = false,
   placeholder = 'Ask a question about this product',
   sendAriaLabel = 'Send message',
+  sendButtonText,
 }: ChatInputProps) {
   const [value, setValue] = useState('');
 
@@ -46,6 +48,7 @@ export default function ChatInput({
         onClick={handleSubmit}
         disabled={isDisabled || !value.trim()}
         aria-label={sendAriaLabel}>
+        {sendButtonText && <span>{sendButtonText}</span>}
         <svg
           width='10'
           height='11'

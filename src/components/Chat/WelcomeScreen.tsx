@@ -4,7 +4,7 @@ interface WelcomeScreenProps {
   title?: string;
   suggestions?: string[];
   onSend: (text: string) => void;
-  termsText?: React.ReactNode;
+  termsText?: string;
   placeholder?: string;
   sendButtonText?: string;
   disabled?: boolean;

@@ -4,20 +4,8 @@ import Chat from '../../../components/Chat/Chat';
 import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
 import { DEMO_API_KEY } from '../../../constants';
 
-const termsText = (
-  <>
-    By submitting a search via the virtual style assistant, you agree to the information being
-    processed according to our{' '}
-    <a href='#terms' onClick={(e) => e.preventDefault()}>
-      Terms &amp; Conditions
-    </a>{' '}
-    and{' '}
-    <a href='#privacy' onClick={(e) => e.preventDefault()}>
-      Privacy Notice
-    </a>
-    .
-  </>
-);
+const termsText =
+  'By submitting a search via the virtual style assistant, you agree to the information being processed according to our Terms & Conditions and Privacy Notice.';
 
 const meta: Meta<typeof Chat> = {
   title: 'Components/Chat',
@@ -42,11 +30,19 @@ const meta: Meta<typeof Chat> = {
       table: { category: 'Content' },
     },
     termsText: {
-      description: 'Legal disclaimer shown at the bottom of the welcome screen.',
+      description: 'Legal disclaimer text shown at the bottom of the welcome screen. Plain string.',
+      control: 'text',
       table: { category: 'Content' },
     },
+    ariaLabel: {
+      description:
+        'Accessible label for the chat dialog element. Used by screen readers to identify the dialog.',
+      control: 'text',
+      table: { category: 'Accessibility' },
+    },
     onClose: {
-      description: 'Called when the close button (✕) is clicked.',
+      description:
+        'Called when the close button (✕) is clicked. The consumer controls component visibility.',
       table: { category: 'Callbacks' },
     },
     onProductClick: {
