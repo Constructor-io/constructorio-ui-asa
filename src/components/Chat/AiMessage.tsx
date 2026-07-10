@@ -2,15 +2,29 @@ import React from 'react';
 import { ChatMessage, ResultGroupMeta } from '../../types';
 import { Product } from '../../utils/productNormalizer';
 import TypingIndicator from './TypingIndicator';
-import ResultsBlock from '../ResultsBlock/ResultsBlock';
+import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 
 interface AiMessageProps {
   message: ChatMessage;
   onProductClick?: (product: Product) => void;
   onViewMore?: (group: ResultGroupMeta) => void;
+  onAddToCart?: (product: Product) => void;
+  aspectRatio?: AspectRatio;
+  currency?: string;
+  addToCartText?: string;
+  viewMoreText?: string;
 }
 
-export default function AiMessage({ message, onProductClick, onViewMore }: AiMessageProps) {
+export default function AiMessage({
+  message,
+  onProductClick,
+  onViewMore,
+  onAddToCart,
+  aspectRatio,
+  currency,
+  addToCartText,
+  viewMoreText,
+}: AiMessageProps) {
   const isLoading = message.status === 'loading';
   const hasText = message.text && message.text.length > 0;
   const hasGroups = message.groups && message.groups.length > 0;
@@ -28,6 +42,11 @@ export default function AiMessage({ message, onProductClick, onViewMore }: AiMes
           groups={message.groups!}
           onProductClick={onProductClick}
           onViewMore={onViewMore}
+          onAddToCart={onAddToCart}
+          aspectRatio={aspectRatio}
+          currency={currency}
+          addToCartText={addToCartText}
+          viewMoreText={viewMoreText}
         />
       )}
     </div>

@@ -4,18 +4,13 @@ interface WelcomeScreenProps {
   title?: string;
   suggestions?: string[];
   onSend: (text: string) => void;
-  termsText?: string;
+  termsText?: React.ReactNode;
   placeholder?: string;
   sendButtonText?: string;
   disabled?: boolean;
 }
 
-const DEFAULT_SUGGESTIONS = [
-  'I need luggage suitable for holiday travel',
-  "I'm looking for stylish gifts that fit my budget",
-  "What's good, quality watch to invest in?",
-  'What should I wear to a holiday party?',
-];
+const DEFAULT_SUGGESTIONS: string[] = [];
 
 export default function WelcomeScreen({
   title = 'Shopping Assistant',
@@ -78,17 +73,19 @@ export default function WelcomeScreen({
             </svg>
           </button>
         </div>
-        <nav className='cio-asa-welcome-screen__suggestions' aria-label='Suggested questions'>
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type='button'
-              className='cio-asa-welcome-screen__suggestion-chip'
-              onClick={() => onSend(suggestion)}>
-              {suggestion}
-            </button>
-          ))}
-        </nav>
+        {suggestions.length > 0 && (
+          <nav className='cio-asa-welcome-screen__suggestions' aria-label='Suggested questions'>
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type='button'
+                className='cio-asa-welcome-screen__suggestion-chip'
+                onClick={() => onSend(suggestion)}>
+                {suggestion}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
       {termsText && <div className='cio-asa-welcome-screen__terms'>{termsText}</div>}
     </div>

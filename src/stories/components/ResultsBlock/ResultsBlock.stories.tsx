@@ -206,5 +206,3 @@ export const HiddenTitle: Story = {
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
   },
 };
-
-

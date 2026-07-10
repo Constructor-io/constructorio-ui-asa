@@ -86,3 +86,24 @@
     transform: translateX(0);
   }
 }
+
+@keyframes cio-asa-slide-in-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.cio-asa-chat-fullscreen {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  animation: cio-asa-slide-in-up 0.3s ease;
+}
+
+.cio-asa-chat-fullscreen--right {
+  animation: cio-asa-slide-in-right 0.3s ease;
+}

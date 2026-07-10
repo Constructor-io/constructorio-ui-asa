@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { ChatMessage, ResultGroupMeta } from '../../types';
 import { Product } from '../../utils/productNormalizer';
+import { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
 
@@ -8,12 +9,22 @@ interface ChatMessageListProps {
   messages: ChatMessage[];
   onProductClick?: (product: Product) => void;
   onViewMore?: (group: ResultGroupMeta) => void;
+  onAddToCart?: (product: Product) => void;
+  aspectRatio?: AspectRatio;
+  currency?: string;
+  addToCartText?: string;
+  viewMoreText?: string;
 }
 
 export default function ChatMessageList({
   messages,
   onProductClick,
   onViewMore,
+  onAddToCart,
+  aspectRatio,
+  currency,
+  addToCartText,
+  viewMoreText,
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -53,6 +64,11 @@ export default function ChatMessageList({
             message={message}
             onProductClick={onProductClick}
             onViewMore={onViewMore}
+            onAddToCart={onAddToCart}
+            aspectRatio={aspectRatio}
+            currency={currency}
+            addToCartText={addToCartText}
+            viewMoreText={viewMoreText}
           />
         );
       })}

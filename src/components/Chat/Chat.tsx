@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } f
 import useAsaResults from '../../hooks/useAsaResults';
 import { ResultGroupMeta } from '../../types';
 import { Product } from '../../utils/productNormalizer';
+import { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import ChatHeader from './ChatHeader';
 import WelcomeScreen from './WelcomeScreen';
 import ChatMessageList from './ChatMessageList';
@@ -19,13 +20,21 @@ interface ChatProps {
   /** Suggestion chips shown on the welcome screen */
   initialSuggestions?: string[];
   /** Legal/terms text displayed below the welcome screen input */
-  termsText?: string;
-  /** Accessible label for the chat dialog */
-  ariaLabel?: string;
-  /** Called when a product card is clicked */
+  termsText?: React.ReactNode;
+/** Called when a product card is clicked */
   onProductClick?: (product: Product) => void;
   /** Called when "View more" link is clicked in a results group */
   onViewMore?: (group: ResultGroupMeta) => void;
+  /** Called when "Add to cart" button is clicked. If not provided, the button is hidden. */
+  onAddToCart?: (product: Product) => void;
+  /** Image aspect ratio for product cards */
+  aspectRatio?: AspectRatio;
+  /** Currency symbol for product prices */
+  currency?: string;
+  /** Custom text for the "Add to cart" button */
+  addToCartText?: string;
+  /** Custom text for the "View more" link */
+  viewMoreText?: string;
 }
 
 const Chat = forwardRef<ChatHandle, ChatProps>(
@@ -35,9 +44,13 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       className,
       initialSuggestions,
       termsText,
-      ariaLabel = 'Shopping assistant chat',
       onProductClick,
       onViewMore,
+      onAddToCart,
+      aspectRatio,
+      currency,
+      addToCartText,
+      viewMoreText,
     },
     ref,
   ) => {
@@ -87,7 +100,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         ref={containerRef}
         role='dialog'
         aria-modal='true'
-        aria-label={ariaLabel}>
+        aria-label='Shopping assistant chat'>
         <ChatHeader onClose={onClose} />
         <div className='cio-asa-chat-body'>
           {view === 'welcome' ? (
@@ -104,6 +117,11 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 messages={messages}
                 onProductClick={onProductClick}
                 onViewMore={onViewMore}
+                onAddToCart={onAddToCart}
+                aspectRatio={aspectRatio}
+                currency={currency}
+                addToCartText={addToCartText}
+                viewMoreText={viewMoreText}
               />
               <ChatInput onSubmit={handleSend} isDisabled={isStreaming} />
             </div>

@@ -1,11 +1,12 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import Chat from '../../../components/Chat/Chat';
+import Button from '../../../components/Button/Button';
 import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
 import { DEMO_API_KEY } from '../../../constants';
 
-const termsText =
-  'By submitting a search via the virtual style assistant, you agree to the information being processed according to our Terms & Conditions and Privacy Notice.';
+const defaultTermsHtml =
+  'By submitting a search via the virtual style assistant, you agree to the information being processed according to our <a href="https://example.com/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> and <a href="https://example.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</a>.';
 
 const meta: Meta<typeof Chat> = {
   title: 'Components/Chat',
@@ -26,19 +27,35 @@ const meta: Meta<typeof Chat> = {
   tags: ['autodocs'],
   argTypes: {
     initialSuggestions: {
-      description: 'Array of suggestion prompts displayed on the welcome screen.',
+      description: 'Static suggestion chips shown on the welcome screen. If the array is empty or not provided, the suggestions section is hidden.',
+      control: 'object',
       table: { category: 'Content' },
     },
     termsText: {
-      description: 'Legal disclaimer text shown at the bottom of the welcome screen. Plain string.',
+      description: 'Legal disclaimer content shown at the bottom of the welcome screen. Accepts HTML string with links.',
       control: 'text',
       table: { category: 'Content' },
     },
-    ariaLabel: {
-      description:
-        'Accessible label for the chat dialog element. Used by screen readers to identify the dialog.',
+    aspectRatio: {
+      control: 'select',
+      options: ['1:1', '3:4', '9:16', '4:3', '16:9'],
+      description: 'Image aspect ratio for product cards in results.',
+      table: { category: 'Results' },
+    },
+    currency: {
       control: 'text',
-      table: { category: 'Accessibility' },
+      description: 'Currency symbol for product prices.',
+      table: { category: 'Results' },
+    },
+    addToCartText: {
+      control: 'text',
+      description: 'Custom text for the "Add to cart" button.',
+      table: { category: 'Results' },
+    },
+    viewMoreText: {
+      control: 'text',
+      description: 'Custom text for the "View more" link.',
+      table: { category: 'Results' },
     },
     onClose: {
       description:
@@ -49,19 +66,32 @@ const meta: Meta<typeof Chat> = {
       description: 'Called when a product card is clicked in results.',
       table: { category: 'Callbacks' },
     },
+    onAddToCart: {
+      description:
+        'Called when "Add to cart" button is clicked. If not provided, the button is hidden.',
+      table: { category: 'Callbacks' },
+    },
     onViewMore: {
-      description: 'Called when "View more products" link is clicked.',
+      description:
+        'Called when "View more" link is clicked. If not provided, the link is hidden.',
       table: { category: 'Callbacks' },
     },
   },
   decorators: [
-    (Story) => (
-      <CioAsaProvider apiKey={DEMO_API_KEY}>
-        <div style={{ height: '100vh' }}>
-          <Story />
-        </div>
-      </CioAsaProvider>
-    ),
+    (Story, context) => {
+      const { termsText: html, ...rest } = context.args;
+      const args = {
+        ...rest,
+        ...(html && { termsText: <span dangerouslySetInnerHTML={{ __html: html }} /> }),
+      };
+      return (
+        <CioAsaProvider apiKey={DEMO_API_KEY}>
+          <div style={{ height: '99vh' }}>
+            <Story args={args} />
+          </div>
+        </CioAsaProvider>
+      );
+    },
   ],
 };
 
@@ -75,7 +105,17 @@ export const Default: Story = {
   args: {
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
-    termsText,
+    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
+    onViewMore: (group) => alert(`View more: ${group.display_name}`),
+    aspectRatio: '3:4',
+    currency: '$',
+    initialSuggestions: [
+      'I need luggage suitable for holiday travel',
+      "I'm looking for stylish gifts that fit my budget",
+      "What's good, quality watch to invest in?",
+      'What should I wear to a holiday party?',
+    ],
+    termsText: defaultTermsHtml,
   },
 };
 
@@ -92,7 +132,17 @@ export const Desktop: Story = {
   args: {
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
-    termsText,
+    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
+    onViewMore: (group) => alert(`View more: ${group.display_name}`),
+    aspectRatio: '3:4',
+    currency: '$',
+    initialSuggestions: [
+      'I need luggage suitable for holiday travel',
+      "I'm looking for stylish gifts that fit my budget",
+      "What's good, quality watch to invest in?",
+      'What should I wear to a holiday party?',
+    ],
+    termsText: defaultTermsHtml,
   },
   decorators: [
     (Story) => (
@@ -100,7 +150,7 @@ export const Desktop: Story = {
         style={{
           position: 'relative',
           width: '900px',
-          height: '700px',
+          height: '99vh',
           border: '1px solid #e0e0e0',
           borderRadius: '12px',
           background: '#f9fafb',
@@ -130,14 +180,24 @@ export const Mobile: Story = {
   args: {
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
-    termsText,
+    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
+    onViewMore: (group) => alert(`View more: ${group.display_name}`),
+    aspectRatio: '3:4',
+    currency: '$',
+    initialSuggestions: [
+      'I need luggage suitable for holiday travel',
+      "I'm looking for stylish gifts that fit my budget",
+      "What's good, quality watch to invest in?",
+      'What should I wear to a holiday party?',
+    ],
+    termsText: defaultTermsHtml,
   },
   decorators: [
     (Story) => (
       <div
         style={{
           width: '366px',
-          height: '700px',
+          height: '99vh',
           borderRadius: '24px',
           overflow: 'hidden',
           border: '1px solid #e0e0e0',
@@ -152,18 +212,121 @@ export const WithCustomSuggestions: Story = {
   args: {
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
+    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
+    onViewMore: (group) => alert(`View more: ${group.display_name}`),
+    aspectRatio: '3:4',
+    currency: '$',
     initialSuggestions: [
       'Show me summer dresses',
       'Best running shoes under $100',
       'Business casual outfit ideas',
     ],
-    termsText,
+    termsText: defaultTermsHtml,
   },
   decorators: [
     (Story) => (
-      <div style={{ width: '504px', height: '700px', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ width: '504px', height: '99vh', borderRadius: '12px', overflow: 'hidden' }}>
         <Story />
       </div>
     ),
   ],
+};
+
+const DesktopIntegrationExample = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '99vh', background: '#f9fafb', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', bottom: '32px', right: '32px' }}>
+        <Button onClick={() => setIsOpen(true)} />
+      </div>
+      {isOpen && (
+        <div className='cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right'>
+          <Chat
+            onClose={() => setIsOpen(false)}
+            onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+            onAddToCart={(product) => alert(`Add to cart: ${product.name}`)}
+            onViewMore={(group) => alert(`View more: ${group.display_name}`)}
+            aspectRatio='3:4'
+            currency='$'
+            initialSuggestions={[
+              'I need luggage suitable for holiday travel',
+              "I'm looking for stylish gifts that fit my budget",
+              "What's good, quality watch to invest in?",
+              'What should I wear to a holiday party?',
+            ]}
+            termsText={<span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const Integration: Story = {
+  name: 'Integration - Desktop',
+  parameters: {
+    layout: 'fullscreen',
+  },
+  render: () => <DesktopIntegrationExample />,
+};
+
+const MobileIntegrationExample = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '375px',
+        height: '95vh',
+        border: '1px solid #e0e0e0',
+        borderRadius: '24px',
+        background: '#fff',
+        overflow: 'hidden',
+        margin: '0 auto',
+      }}>
+      <div style={{ padding: '24px' }}>
+        <p style={{ color: '#666', fontFamily: 'Inter, sans-serif', fontSize: '14px' }}>
+          Tap the button below to open the assistant fullscreen.
+        </p>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}>
+        <Button onClick={() => setIsOpen(true)} />
+      </div>
+      {isOpen && (
+        <div className='cio-asa-chat-fullscreen'>
+          <Chat
+            onClose={() => setIsOpen(false)}
+            onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+            onAddToCart={(product) => alert(`Add to cart: ${product.name}`)}
+            onViewMore={(group) => alert(`View more: ${group.display_name}`)}
+            aspectRatio='3:4'
+            currency='$'
+            initialSuggestions={[
+              'I need luggage suitable for holiday travel',
+              "I'm looking for stylish gifts that fit my budget",
+              "What's good, quality watch to invest in?",
+              'What should I wear to a holiday party?',
+            ]}
+            termsText={<span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const IntegrationMobile: Story = {
+  name: 'Integration - Mobile',
+  parameters: {
+    layout: 'fullscreen',
+  },
+  render: () => <MobileIntegrationExample />,
 };
