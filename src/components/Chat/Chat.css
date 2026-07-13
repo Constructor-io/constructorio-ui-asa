@@ -30,6 +30,7 @@
 
 .cio-asa-chat-view--chat {
   animation: cio-asa-fade-in 0.3s ease;
+  position: relative;
 }
 
 /* Overlay backdrop */

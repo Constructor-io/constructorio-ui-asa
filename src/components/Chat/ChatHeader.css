@@ -5,6 +5,20 @@
   padding: 16px 20px;
   position: relative;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(222, 224, 227, 1);
+  background: #FFFFFF;
+  margin-bottom: 32px;
+}
+
+.cio-asa-chat-header__title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+  color: #0F1324;
 }
 
 .cio-asa-chat-header__close {

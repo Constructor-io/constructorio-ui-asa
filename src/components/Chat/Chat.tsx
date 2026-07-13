@@ -101,7 +101,6 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         role='dialog'
         aria-modal='true'
         aria-label='Shopping assistant chat'>
-        <ChatHeader onClose={onClose} />
         <div className='cio-asa-chat-body'>
           {view === 'welcome' ? (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>
@@ -113,6 +112,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
             </div>
           ) : (
             <div className='cio-asa-chat-view cio-asa-chat-view--chat' ref={chatViewRef}>
+              <ChatHeader onClose={onClose} />
               <ChatMessageList
                 messages={messages}
                 onProductClick={onProductClick}

@@ -31,40 +31,42 @@ export default function ChatInput({
   };
 
   return (
-    <div className='cio-asa-chat-input'>
-      <input
-        type='text'
-        className='cio-asa-chat-input__field'
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={isDisabled}
-        aria-label='Type your message'
-      />
-      <button
-        type='button'
-        className='cio-asa-chat-input__send'
-        onClick={handleSubmit}
-        disabled={isDisabled || !value.trim()}
-        aria-label={sendAriaLabel}>
-        {sendButtonText && <span>{sendButtonText}</span>}
-        <svg
-          width='10'
-          height='11'
-          viewBox='0 0 10 11'
-          fill='none'
-          xmlns='http://www.w3.org/2000/svg'
-          aria-hidden='true'>
-          <path
-            d='M0.5 5L5 0.5L9.5 5M5 1.125V10.25'
-            stroke='#0F1324'
-            strokeOpacity='0.7'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          />
-        </svg>
-      </button>
+    <div className='cio-asa-chat-input-wrapper'>
+      <div className='cio-asa-chat-input'>
+        <input
+          type='text'
+          className='cio-asa-chat-input__field'
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={isDisabled}
+          aria-label='Type your message'
+        />
+        <button
+          type='button'
+          className='cio-asa-chat-input__send'
+          onClick={handleSubmit}
+          disabled={isDisabled || !value.trim()}
+          aria-label={sendAriaLabel}>
+          {sendButtonText && <span>{sendButtonText}</span>}
+          <svg
+            width='10'
+            height='11'
+            viewBox='0 0 10 11'
+            fill='none'
+            xmlns='http://www.w3.org/2000/svg'
+            aria-hidden='true'>
+            <path
+              d='M0.5 5L5 0.5L9.5 5M5 1.125V10.25'
+              stroke='#0F1324'
+              strokeOpacity='0.7'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
