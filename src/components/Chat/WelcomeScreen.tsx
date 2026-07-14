@@ -26,7 +26,7 @@ export default function WelcomeScreen({
   const [inputValue, setInputValue] = useState('');
 
   const handleSubmit = () => {
-    if (!inputValue.trim()) return;
+    if (disabled || !inputValue.trim()) return;
     onSend(inputValue.trim());
     setInputValue('');
   };
@@ -67,7 +67,7 @@ export default function WelcomeScreen({
             type='button'
             className='cio-asa-welcome-screen__send-btn'
             onClick={handleSubmit}
-            disabled={!inputValue.trim()}
+            disabled={disabled || !inputValue.trim()}
             aria-label='Send message'>
             {sendButtonText}
             <svg
@@ -91,6 +91,7 @@ export default function WelcomeScreen({
                 key={suggestion}
                 type='button'
                 className='cio-asa-welcome-screen__suggestion-chip'
+                disabled={disabled}
                 onClick={() => onSend(suggestion)}>
                 {suggestion}
               </button>

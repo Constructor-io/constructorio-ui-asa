@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
 import { ResultGroup, ChatMessage, UseChatReturn } from '../types';
 
@@ -132,6 +132,17 @@ export default function useAsaResults(): UseChatReturn {
       })();
     },
     [cioClient, domain],
+  );
+
+  useEffect(
+    () => () => {
+      killSwitchRef.current = true;
+      if (readerRef.current) {
+        readerRef.current.cancel();
+        readerRef.current = null;
+      }
+    },
+    [],
   );
 
   const clearHistory = useCallback(() => {

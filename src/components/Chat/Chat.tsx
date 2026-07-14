@@ -102,11 +102,12 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       sendMessage(text);
     };
 
-    const layoutClass = desktopLayout === 'fullscreen' ? 'cio-asa-chat--fullscreen' : 'cio-asa-chat--sidebar';
+    const layoutClass =
+      desktopLayout === 'fullscreen' ? 'cio-asa-chat--fullscreen' : 'cio-asa-chat--sidebar';
 
     return (
       <div
-        className={`cio-asa cio-asa-chat ${layoutClass} ${className || ''}`}
+        className={['cio-asa', 'cio-asa-chat', layoutClass, className].filter(Boolean).join(' ')}
         ref={containerRef}
         role='dialog'
         aria-modal='true'
