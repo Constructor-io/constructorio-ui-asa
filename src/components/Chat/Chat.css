@@ -2,16 +2,38 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 504px;
   height: 100%;
-  max-height: 800px;
-  margin: 0 auto;
   background: rgba(248, 249, 252, 1);
   overflow: hidden;
   position: relative;
   font-family: 'Inter', sans-serif;
-  border-radius: 12px;
   animation: cio-asa-fade-in 0.4s ease;
+}
+
+/* Desktop: sidebar layout — fixed panel from the right with overlay */
+.cio-asa-chat--sidebar {
+  max-width: 504px;
+  max-height: 800px;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+/* Desktop: fullscreen layout — fills the entire viewport */
+.cio-asa-chat--fullscreen {
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Mobile: always fullscreen regardless of desktopLayout */
+@media (max-width: 768px) {
+  .cio-asa-chat--sidebar {
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+  }
 }
 
 .cio-asa-chat-body {
@@ -68,10 +90,6 @@
   .cio-asa-chat-panel {
     width: 100%;
     animation: cio-asa-slide-in-right 0.3s ease;
-  }
-
-  .cio-asa-chat {
-    border-radius: 0;
   }
 }
 

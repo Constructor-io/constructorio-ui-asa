@@ -12,7 +12,14 @@ export interface ChatHandle {
   clearHistory: () => void;
 }
 
+export type DesktopLayout = 'sidebar' | 'fullscreen';
+
 interface ChatProps {
+  /**
+   * Controls the chat layout on desktop. On mobile, always renders fullscreen.
+   * @default 'sidebar'
+   */
+  desktopLayout?: DesktopLayout;
   /** Called when the close button (✕) is clicked. The consumer controls visibility. */
   onClose?: () => void;
   /** Additional CSS class name for the root container */
@@ -40,6 +47,7 @@ interface ChatProps {
 const Chat = forwardRef<ChatHandle, ChatProps>(
   (
     {
+      desktopLayout = 'sidebar',
       onClose,
       className,
       initialSuggestions,
@@ -94,9 +102,11 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       sendMessage(text);
     };
 
+    const layoutClass = desktopLayout === 'fullscreen' ? 'cio-asa-chat--fullscreen' : 'cio-asa-chat--sidebar';
+
     return (
       <div
-        className={`cio-asa cio-asa-chat ${className || ''}`}
+        className={`cio-asa cio-asa-chat ${layoutClass} ${className || ''}`}
         ref={containerRef}
         role='dialog'
         aria-modal='true'

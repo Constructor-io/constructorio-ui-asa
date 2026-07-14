@@ -27,6 +27,17 @@ const meta: Meta<typeof Chat> = {
   },
   tags: ['autodocs'],
   argTypes: {
+    desktopLayout: {
+      control: 'select',
+      options: ['sidebar', 'fullscreen'],
+      description:
+        'Chat layout on desktop. On mobile, always renders fullscreen.',
+      table: {
+        category: 'Layout',
+        type: { summary: "'sidebar' | 'fullscreen'" },
+        defaultValue: { summary: 'sidebar' },
+      },
+    },
     initialSuggestions: {
       description:
         'Static suggestion chips shown on the welcome screen. If the array is empty or not provided, the suggestions section is hidden.',
@@ -122,16 +133,17 @@ export const Default: Story = {
 };
 
 export const Desktop: Story = {
-  name: 'Viewport - Desktop',
+  name: 'Desktop - Sidebar',
   parameters: {
     docs: {
       description: {
         story:
-          'Panel slides in from the right side with an overlay blocking content below. Container width: 504px.',
+          '`desktopLayout="sidebar"` — panel slides in from the right with an overlay. This is the default desktop layout.',
       },
     },
   },
   args: {
+    desktopLayout: 'sidebar',
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
@@ -170,12 +182,54 @@ export const Desktop: Story = {
   ],
 };
 
-export const Mobile: Story = {
-  name: 'Viewport - Mobile',
+export const DesktopFullscreen: Story = {
+  name: 'Desktop - Fullscreen',
   parameters: {
     docs: {
       description: {
-        story: 'Full width and height dialog covering the whole screen. Container width: 366px.',
+        story:
+          '`desktopLayout="fullscreen"` — chat fills the entire screen on desktop.',
+      },
+    },
+  },
+  args: {
+    desktopLayout: 'fullscreen',
+    onClose: () => alert('Close clicked'),
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
+    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
+    onViewMore: (group) => alert(`View more: ${group.display_name}`),
+    aspectRatio: '3:4',
+    currency: '$',
+    initialSuggestions: [
+      'I need luggage suitable for holiday travel',
+      "I'm looking for stylish gifts that fit my budget",
+      "What's good, quality watch to invest in?",
+      'What should I wear to a holiday party?',
+    ],
+    termsText: defaultTermsHtml,
+  },
+  decorators: [
+    (Story) => (
+      <div
+        style={{
+          width: '900px',
+          height: '800px',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          border: '1px solid #e0e0e0',
+        }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export const Mobile: Story = {
+  name: 'Mobile',
+  parameters: {
+    docs: {
+      description: {
+        story: 'On mobile viewports, the chat always renders fullscreen regardless of `desktopLayout`.',
       },
     },
   },
