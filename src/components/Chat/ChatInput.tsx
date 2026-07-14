@@ -4,6 +4,7 @@ interface ChatInputProps {
   onSubmit: (text: string) => void;
   isDisabled?: boolean;
   placeholder?: string;
+  inputAriaLabel?: string;
   sendAriaLabel?: string;
   sendButtonText?: string;
 }
@@ -12,6 +13,7 @@ export default function ChatInput({
   onSubmit,
   isDisabled = false,
   placeholder = 'Ask a question about this product',
+  inputAriaLabel = 'Type your message',
   sendAriaLabel = 'Send message',
   sendButtonText,
 }: ChatInputProps) {
@@ -41,7 +43,7 @@ export default function ChatInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isDisabled}
-          aria-label='Type your message'
+          aria-label={inputAriaLabel}
         />
         <button
           type='button'

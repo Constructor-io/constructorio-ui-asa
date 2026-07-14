@@ -50,7 +50,9 @@ export default function WelcomeScreen({
         </button>
       )}
       <div className='cio-asa-welcome-screen__content'>
-        <h2 className='cio-asa-welcome-screen__title'>{title}</h2>
+        <h2 id='cio-asa-chat-title' className='cio-asa-welcome-screen__title'>
+          {title}
+        </h2>
         <div
           className={`cio-asa-welcome-screen__input-row${disabled ? ' cio-asa-welcome-screen__input-row--disabled' : ''}`}>
           <input

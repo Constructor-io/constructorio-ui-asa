@@ -7,7 +7,9 @@ interface ChatHeaderProps {
 export default function ChatHeader({ onClose }: ChatHeaderProps) {
   return (
     <div className='cio-asa-chat-header'>
-      <span className='cio-asa-chat-header__title'>Shopping Assistant</span>
+      <span id='cio-asa-chat-title' className='cio-asa-chat-header__title'>
+        Shopping Assistant
+      </span>
       {onClose && (
         <button
           type='button'

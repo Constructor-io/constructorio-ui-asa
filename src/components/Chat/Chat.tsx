@@ -111,7 +111,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         ref={containerRef}
         role='dialog'
         aria-modal='true'
-        aria-label='Shopping assistant chat'>
+        aria-labelledby='cio-asa-chat-title'>
         <div className='cio-asa-chat-body'>
           {view === 'welcome' ? (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>

@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   name: string;
+  url?: string;
   imageUrl?: string;
   price?: string | number;
   salePrice?: string | number;
@@ -13,10 +14,11 @@ export function normalizeItemToProduct(item: any): Product {
   return {
     id: data.id || data.result_id || item.value || '',
     name: item.value || data.item_name || '',
-    imageUrl: data.image_url,
+    url: data.url,
+    imageUrl: data.image_url || data.imageUrl,
     price: data.price,
-    salePrice: data.sale_price,
+    salePrice: data.sale_price || data.salePrice,
     description: data.description,
-    badge: data.sale_price ? 'Sale' : undefined,
+    badge: data.sale_price || data.salePrice ? 'Sale' : undefined,
   };
 }
