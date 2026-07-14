@@ -30,7 +30,7 @@ export default function AiMessage({
   const hasGroups = message.groups && message.groups.length > 0;
 
   return (
-    <div className='cio-asa-ai-message' role='group' aria-label='Assistant said'>
+    <div className='cio-asa-ai-message'>
       {isLoading && !hasText && !hasGroups && <TypingIndicator />}
       {hasText && (
         <div className='cio-asa-ai-message__bubble'>

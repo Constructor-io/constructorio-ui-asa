@@ -112,9 +112,9 @@ function ResultsBlock({
       ref={containerRef}
       className='cio-asa-results-block'
       style={{ '--cio-asa-image-ratio': aspectRatioMap[aspectRatio] } as React.CSSProperties}>
-      {groups.map((groupData) => {
+      {groups.map((groupData, index) => {
         const label = groupData.group?.display_name || groupData.group?.value || '';
-        const groupKey = groupData.group?.value || label;
+        const groupKey = `${groupData.group?.value || label}-${index}`;
         const products = groupData.searchResults.map(normalizeItemToProduct);
 
         return (

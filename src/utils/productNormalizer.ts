@@ -17,8 +17,8 @@ export function normalizeItemToProduct(item: any): Product {
     url: data.url,
     imageUrl: data.image_url || data.imageUrl,
     price: data.price,
-    salePrice: data.sale_price || data.salePrice,
+    salePrice: data.sale_price ?? data.salePrice,
     description: data.description,
-    badge: data.sale_price || data.salePrice ? 'Sale' : undefined,
+    badge: data.sale_price != null || data.salePrice != null ? 'Sale' : undefined,
   };
 }
