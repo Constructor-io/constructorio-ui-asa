@@ -30,8 +30,7 @@ const meta: Meta<typeof Chat> = {
     desktopLayout: {
       control: 'select',
       options: ['sidebar', 'fullscreen'],
-      description:
-        'Chat layout on desktop. On mobile, always renders fullscreen.',
+      description: 'Chat layout on desktop. On mobile, always renders fullscreen.',
       table: {
         category: 'Layout',
         type: { summary: "'sidebar' | 'fullscreen'" },
@@ -187,8 +186,7 @@ export const DesktopFullscreen: Story = {
   parameters: {
     docs: {
       description: {
-        story:
-          '`desktopLayout="fullscreen"` — chat fills the entire screen on desktop.',
+        story: '`desktopLayout="fullscreen"` — chat fills the entire screen on desktop.',
       },
     },
   },
@@ -225,11 +223,11 @@ export const DesktopFullscreen: Story = {
 };
 
 export const Mobile: Story = {
-  name: 'Mobile',
   parameters: {
     docs: {
       description: {
-        story: 'On mobile viewports, the chat always renders fullscreen regardless of `desktopLayout`.',
+        story:
+          'On mobile viewports, the chat always renders fullscreen regardless of `desktopLayout`.',
       },
     },
   },
@@ -305,10 +303,12 @@ function DesktopIntegrationExample() {
       </div>
       {isOpen && (
         <>
-          <div
+          <button
+            type='button'
             className='cio-asa-chat-overlay'
             style={{ position: 'absolute' }}
             onClick={() => setIsOpen(false)}
+            aria-label='Close chat'
           />
           <div className='cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right'>
             <Chat
