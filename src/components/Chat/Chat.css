@@ -2,11 +2,16 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: 504px;
   height: 100%;
+  max-height: 800px;
+  margin: 0 auto;
   background: rgba(248, 249, 252, 1);
   overflow: hidden;
   position: relative;
   font-family: 'Inter', sans-serif;
+  border-radius: 12px;
+  animation: cio-asa-fade-in 0.4s ease;
 }
 
 .cio-asa-chat-body {
@@ -102,9 +107,18 @@
   inset: 0;
   z-index: 1000;
   overflow: hidden;
-  animation: cio-asa-slide-in-up 0.3s ease;
+  animation: cio-asa-fade-in 0.4s ease;
 }
 
 .cio-asa-chat-fullscreen--right {
-  animation: cio-asa-slide-in-right 0.3s ease;
+  inset: 0 0 0 auto;
+  width: 504px;
+  animation: cio-asa-slide-in-right 0.4s ease 0.2s both;
+}
+
+.cio-asa-chat-fullscreen .cio-asa-chat {
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
 }

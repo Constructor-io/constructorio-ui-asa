@@ -4,6 +4,7 @@ interface WelcomeScreenProps {
   title?: string;
   suggestions?: string[];
   onSend: (text: string) => void;
+  onClose?: () => void;
   termsText?: React.ReactNode;
   placeholder?: string;
   sendButtonText?: string;
@@ -16,6 +17,7 @@ export default function WelcomeScreen({
   title = 'Shopping Assistant',
   suggestions = DEFAULT_SUGGESTIONS,
   onSend,
+  onClose,
   termsText,
   placeholder = 'Ask anything',
   sendButtonText = 'Chat',
@@ -38,6 +40,15 @@ export default function WelcomeScreen({
 
   return (
     <div className='cio-asa-welcome-screen'>
+      {onClose && (
+        <button
+          type='button'
+          className='cio-asa-welcome-screen__close'
+          onClick={onClose}
+          aria-label='Close'>
+          ✕
+        </button>
+      )}
       <div className='cio-asa-welcome-screen__content'>
         <h2 className='cio-asa-welcome-screen__title'>{title}</h2>
         <div

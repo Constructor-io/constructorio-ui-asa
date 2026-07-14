@@ -88,7 +88,7 @@ const meta: Meta<typeof Chat> = {
       };
       return (
         <CioAsaProvider apiKey={DEMO_API_KEY}>
-          <div style={{ height: '99vh' }}>
+          <div style={{ height: '800px', padding: '30px 0' }}>
             <Story args={args} />
           </div>
         </CioAsaProvider>
@@ -152,7 +152,7 @@ export const Desktop: Story = {
         style={{
           position: 'relative',
           width: '900px',
-          height: '99vh',
+          height: '800px',
           border: '1px solid #e0e0e0',
           borderRadius: '12px',
           background: '#f9fafb',
@@ -199,7 +199,7 @@ export const Mobile: Story = {
       <div
         style={{
           width: '366px',
-          height: '99vh',
+          height: '800px',
           borderRadius: '24px',
           overflow: 'hidden',
           border: '1px solid #e0e0e0',
@@ -227,7 +227,7 @@ export const WithCustomSuggestions: Story = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: '504px', height: '99vh', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ width: '504px', height: '800px', borderRadius: '12px', overflow: 'hidden' }}>
         <Story />
       </div>
     ),
@@ -242,7 +242,7 @@ function DesktopIntegrationExample() {
       style={{
         position: 'relative',
         width: '100%',
-        height: '99vh',
+        height: '800px',
         background: '#f9fafb',
         overflow: 'hidden',
       }}>
@@ -250,23 +250,30 @@ function DesktopIntegrationExample() {
         <Button onClick={() => setIsOpen(true)} />
       </div>
       {isOpen && (
-        <div className='cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right'>
-          <Chat
-            onClose={() => setIsOpen(false)}
-            onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
-            onAddToCart={(product) => alert(`Add to cart: ${product.name}`)}
-            onViewMore={(group) => alert(`View more: ${group.display_name}`)}
-            aspectRatio='3:4'
-            currency='$'
-            initialSuggestions={[
-              'I need luggage suitable for holiday travel',
-              "I'm looking for stylish gifts that fit my budget",
-              "What's good, quality watch to invest in?",
-              'What should I wear to a holiday party?',
-            ]}
-            termsText={<span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />}
+        <>
+          <div
+            className='cio-asa-chat-overlay'
+            style={{ position: 'absolute' }}
+            onClick={() => setIsOpen(false)}
           />
-        </div>
+          <div className='cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right'>
+            <Chat
+              onClose={() => setIsOpen(false)}
+              onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+              onAddToCart={(product) => alert(`Add to cart: ${product.name}`)}
+              onViewMore={(group) => alert(`View more: ${group.display_name}`)}
+              aspectRatio='3:4'
+              currency='$'
+              initialSuggestions={[
+                'I need luggage suitable for holiday travel',
+                "I'm looking for stylish gifts that fit my budget",
+                "What's good, quality watch to invest in?",
+                'What should I wear to a holiday party?',
+              ]}
+              termsText={<span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />}
+            />
+          </div>
+        </>
       )}
     </div>
   );
@@ -288,7 +295,7 @@ function MobileIntegrationExample() {
       style={{
         position: 'relative',
         width: '375px',
-        height: '95vh',
+        height: '800px',
         border: '1px solid #e0e0e0',
         borderRadius: '24px',
         background: '#fff',

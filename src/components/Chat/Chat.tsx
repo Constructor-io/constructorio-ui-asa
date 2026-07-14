@@ -107,6 +107,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
               <WelcomeScreen
                 suggestions={initialSuggestions}
                 onSend={handleSend}
+                onClose={onClose}
                 termsText={termsText}
               />
             </div>
