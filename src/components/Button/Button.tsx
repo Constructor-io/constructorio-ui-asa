@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button as CioButton } from '@constructor-io/constructorio-ui-components';
 
 export interface ButtonProps {
   /** Button text content */
@@ -18,9 +19,9 @@ export default function Button({
   onClick,
 }: ButtonProps) {
   return (
-    <button
-      type='button'
+    <CioButton
       className={`cio-asa-button cio-asa-button--${theme} cio-asa-button--${size}`}
+      size={size === 'lg' ? 'default' : 'sm'}
       onClick={onClick}>
       {theme === 'dark' ? (
         <svg
@@ -54,6 +55,6 @@ export default function Button({
         </svg>
       )}
       <span className='cio-asa-button__label'>{label}</span>
-    </button>
+    </CioButton>
   );
 }

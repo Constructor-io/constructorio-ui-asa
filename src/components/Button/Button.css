@@ -1,4 +1,4 @@
-.cio-asa-button {
+.cio-asa-button.cio-button {
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -15,33 +15,33 @@
   transition: opacity 0.2s;
 }
 
-.cio-asa-button:hover {
+.cio-asa-button.cio-button:hover {
   opacity: 0.9;
 }
 
-.cio-asa-button:active {
+.cio-asa-button.cio-button:active {
   opacity: 0.8;
 }
 
 /* Dark theme */
-.cio-asa-button--dark {
+.cio-asa-button--dark.cio-button {
   background: #14151A;
   color: #ffffff;
 }
 
 /* Light theme */
-.cio-asa-button--light {
+.cio-asa-button--light.cio-button {
   background: #ffffff;
   color: #14151A;
 }
 
 /* Sizes */
-.cio-asa-button--sm {
+.cio-asa-button--sm.cio-button {
   height: 32px;
   padding: 8px 12px 8px 8px;
 }
 
-.cio-asa-button--lg {
+.cio-asa-button--lg.cio-button {
   height: 40px;
   padding: 10px 16px 10px 12px;
 }
