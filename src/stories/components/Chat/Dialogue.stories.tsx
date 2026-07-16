@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import UserMessage from '../../../components/Chat/UserMessage';
 import AiMessage from '../../../components/Chat/AiMessage';
 import ChatMessageList from '../../../components/Chat/ChatMessageList';
+import ResultsBlock from '../../../components/ResultsBlock/ResultsBlock';
 import '../../../components/Chat/UserMessage.css';
 import '../../../components/Chat/AiMessage.css';
 import '../../../components/Chat/TypingIndicator.css';
@@ -27,7 +28,11 @@ const meta: Meta = {
           '**AI reply types:**\n' +
           '- **Loading** — displays typing indicator in a bubble.\n' +
           '- **Text** — displays text in a grey bubble.\n' +
-          '- **Show products** — grey reply bubble + product results section below.',
+          '- **Show products** — grey reply bubble + product results section below.\n\n' +
+          '**Component overrides:**\n' +
+          '`AiMessage` accepts a `componentOverrides` prop to replace default sub-components:\n' +
+          '- `loader` — replaces the default `TypingIndicator`.\n' +
+          '- `textBubble(text)` — replaces the default text bubble renderer.',
       },
     },
   },
@@ -121,13 +126,17 @@ export const AiWithProducts: StoryObj = {
     },
   },
   render: () => (
-    <AiMessage
-      message={{
-        id: '1',
-        role: 'assistant',
-        text: 'Hi there! For work essentials, you might find these categories and products suitable.',
-        status: 'done',
-        groups: [
+    <>
+      <AiMessage
+        message={{
+          id: '1',
+          role: 'assistant',
+          text: 'Hi there! For work essentials, you might find these categories and products suitable.',
+          status: 'done',
+        }}
+      />
+      <ResultsBlock
+        groups={[
           {
             group: { display_name: 'Work Essentials', data: { display_name: 'Work Essentials' } },
             searchResults: [
@@ -143,9 +152,86 @@ export const AiWithProducts: StoryObj = {
               { value: 'Leather Belt', data: { id: '4', image_url: PRODUCT_IMAGE, price: 45 } },
             ],
           },
-        ],
+        ]}
+        onViewMore={(group) => alert(`View more: ${group.display_name}`)}
+      />
+    </>
+  ),
+};
+
+const ThinkingLoader = () => {
+  const [dots, setDots] = React.useState('');
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? '' : `${prev}.`));
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className='cio-asa-ai-message__bubble'>
+      <div className='cio-asa-ai-message__text' style={{ color: '#666', fontStyle: 'italic' }}>
+        Thinking{dots}
+      </div>
+    </div>
+  );
+};
+
+export const AiCustomLoader: StoryObj = {
+  name: 'AI - Custom loader override',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Override the default typing indicator via `componentOverrides.loader`. ' +
+          'This example shows a dynamic "Thinking..." loader similar to Claude.',
+      },
+    },
+  },
+  render: () => (
+    <AiMessage
+      message={{ id: '1', role: 'assistant', text: '', status: 'loading' }}
+      componentOverrides={{
+        loader: <ThinkingLoader />,
       }}
-      onViewMore={(group) => alert(`View more: ${group.display_name}`)}
+    />
+  ),
+};
+
+export const AiCustomTextBubble: StoryObj = {
+  name: 'AI - Custom text bubble override',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Override the default text bubble via `componentOverrides.textBubble(text)`. ' +
+          'Receives the message text as an argument and returns a custom `ReactNode`.',
+      },
+    },
+  },
+  render: () => (
+    <AiMessage
+      message={{
+        id: '1',
+        role: 'assistant',
+        text: 'Here are some recommendations for you!',
+        status: 'done',
+      }}
+      componentOverrides={{
+        textBubble: (text) => (
+          <div
+            style={{
+              padding: '14px',
+              background: '#e8f4fd',
+              borderRadius: '12px',
+              border: '1px solid #b8dff5',
+              fontSize: '14px',
+            }}>
+            {text}
+          </div>
+        ),
+      }}
     />
   ),
 };

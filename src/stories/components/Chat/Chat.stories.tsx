@@ -88,6 +88,15 @@ const meta: Meta<typeof Chat> = {
       description: 'Called when "View more" link is clicked. If not provided, the link is hidden.',
       table: { category: 'Callbacks' },
     },
+    aiMessageOverrides: {
+      description: 'Override AI message sub-components.',
+      control: false,
+      table: {
+        category: 'Overrides',
+        type: { summary: '{ loader?: ReactNode, textBubble?: (text: string) => ReactNode }' },
+        defaultValue: { summary: 'undefined' },
+      },
+    },
   },
   decorators: [
     (Story, context) => {
@@ -276,6 +285,60 @@ export const WithCustomSuggestions: Story = {
       'Business casual outfit ideas',
     ],
     termsText: defaultTermsHtml,
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '504px', height: '800px', borderRadius: '12px', overflow: 'hidden' }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export const WithAiMessageOverrides: Story = {
+  name: 'With AI message overrides',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Demonstrates `aiMessageOverrides` prop to customize the loader and text bubble rendering inside the Chat component.',
+      },
+    },
+  },
+  args: {
+    desktopLayout: 'sidebar',
+    onClose: () => alert('Close clicked'),
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
+    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
+    onViewMore: (group) => alert(`View more: ${group.display_name}`),
+    aspectRatio: '3:4',
+    currency: '$',
+    initialSuggestions: [
+      'I need luggage suitable for holiday travel',
+      "I'm looking for stylish gifts that fit my budget",
+    ],
+    termsText: defaultTermsHtml,
+    aiMessageOverrides: {
+      loader: (
+        <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '13px' }}>
+          Thinking
+          <span className='cio-asa-thinking-dots' />
+        </div>
+      ),
+      textBubble: (text: string) => (
+        <div
+          style={{
+            padding: '12px 16px',
+            background: '#f0f4ff',
+            borderRadius: '8px',
+            border: '1px solid #d4deff',
+            fontSize: '14px',
+            lineHeight: '20px',
+          }}>
+          {text}
+        </div>
+      ),
+    },
   },
   decorators: [
     (Story) => (

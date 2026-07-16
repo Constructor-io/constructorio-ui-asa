@@ -3,6 +3,7 @@ import useAsaResults from '../../hooks/useAsaResults';
 import { ResultGroupMeta } from '../../types';
 import { Product } from '../../utils/productNormalizer';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
+import { AiMessageOverrides } from './AiMessage';
 import ChatHeader from './ChatHeader';
 import WelcomeScreen from './WelcomeScreen';
 import ChatMessageList from './ChatMessageList';
@@ -42,6 +43,8 @@ interface ChatProps {
   addToCartText?: string;
   /** Custom text for the "View more" link */
   viewMoreText?: string;
+  /** Override default AI message sub-components (loader, text bubble) */
+  aiMessageOverrides?: AiMessageOverrides;
 }
 
 const Chat = forwardRef<ChatHandle, ChatProps>(
@@ -59,6 +62,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       currency,
       addToCartText,
       viewMoreText,
+      aiMessageOverrides,
     },
     ref,
   ) => {
@@ -134,6 +138,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 currency={currency}
                 addToCartText={addToCartText}
                 viewMoreText={viewMoreText}
+                aiMessageOverrides={aiMessageOverrides}
               />
               <ChatInput onSubmit={handleSend} isDisabled={isStreaming} />
             </div>

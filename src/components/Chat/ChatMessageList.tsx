@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { ChatMessage, ResultGroupMeta } from '../../types';
 import { Product } from '../../utils/productNormalizer';
-import { AspectRatio } from '../ResultsBlock/ResultsBlock';
+import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
-import AiMessage from './AiMessage';
+import AiMessage, { AiMessageOverrides } from './AiMessage';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -14,6 +14,7 @@ interface ChatMessageListProps {
   currency?: string;
   addToCartText?: string;
   viewMoreText?: string;
+  aiMessageOverrides?: AiMessageOverrides;
 }
 
 export default function ChatMessageList({
@@ -25,6 +26,7 @@ export default function ChatMessageList({
   currency,
   addToCartText,
   viewMoreText,
+  aiMessageOverrides,
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -58,18 +60,25 @@ export default function ChatMessageList({
         if (message.role === 'user') {
           return <UserMessage key={message.id} text={message.text} />;
         }
+
+        const hasGroups = message.groups && message.groups.length > 0;
+
         return (
-          <AiMessage
-            key={message.id}
-            message={message}
-            onProductClick={onProductClick}
-            onViewMore={onViewMore}
-            onAddToCart={onAddToCart}
-            aspectRatio={aspectRatio}
-            currency={currency}
-            addToCartText={addToCartText}
-            viewMoreText={viewMoreText}
-          />
+          <div key={message.id} className='cio-asa-ai-message-group'>
+            <AiMessage message={message} componentOverrides={aiMessageOverrides} />
+            {hasGroups && (
+              <ResultsBlock
+                groups={message.groups!}
+                onProductClick={onProductClick}
+                onViewMore={onViewMore}
+                onAddToCart={onAddToCart}
+                aspectRatio={aspectRatio}
+                currency={currency}
+                addToCartText={addToCartText}
+                viewMoreText={viewMoreText}
+              />
+            )}
+          </div>
         );
       })}
     </div>

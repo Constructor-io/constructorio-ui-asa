@@ -7,6 +7,7 @@ export { default as WelcomeScreen } from './components/Chat/WelcomeScreen';
 export { default as ChatMessageList } from './components/Chat/ChatMessageList';
 export { default as UserMessage } from './components/Chat/UserMessage';
 export { default as AiMessage } from './components/Chat/AiMessage';
+export type { AiMessageOverrides, AiMessageProps } from './components/Chat/AiMessage';
 export { default as TypingIndicator } from './components/Chat/TypingIndicator';
 export { default as ChatInput } from './components/Chat/ChatInput';
 export { default as ResultsBlock } from './components/ResultsBlock/ResultsBlock';
