@@ -91,7 +91,6 @@ const meta: Meta<typeof Chat> = {
     translations: {
       description:
         'Translation overrides for internationalizing UI strings. All keys are optional.\n\n' +
-        '- `CioAsa.button.label`\n' +
         '- `CioAsa.header.title`\n' +
         '- `CioAsa.header.close`\n' +
         '- `CioAsa.input.placeholder`\n' +

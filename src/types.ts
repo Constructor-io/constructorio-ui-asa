@@ -127,7 +127,6 @@ export interface UseChatReturn {
  * All keys are optional — any non-provided translation will fall back to the English default.
  */
 export type Translations = {
-  'CioAsa.button.label'?: string;
   'CioAsa.header.title'?: string;
   'CioAsa.header.close'?: string;
   'CioAsa.input.placeholder'?: string;

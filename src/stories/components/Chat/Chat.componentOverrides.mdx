@@ -1,0 +1,296 @@
+import { Meta, Markdown } from '@storybook/blocks';
+
+<Meta title="Components/Chat/Component Overrides" />
+
+# Component Overrides
+
+The `componentOverrides` prop lets you replace any sub-component with your own custom React component using render props.
+
+Every override receives typed props so you have full access to the data and callbacks.
+
+## Override Hierarchy
+
+<Markdown>
+{`
+| Path                                         | Props Type                        | Description                  |
+|----------------------------------------------|-----------------------------------|------------------------------|
+| \`header.reactNode\`                           | \`ChatHeaderRenderProps\`           | Chat header bar              |
+| \`input.reactNode\`                            | \`ChatInputRenderProps\`            | Chat message input           |
+| \`userMessage.reactNode\`                      | \`UserMessageRenderProps\`          | User message bubble          |
+| \`aiMessage.loader.reactNode\`                 | \`AiMessageLoaderRenderProps\`      | Typing indicator             |
+| \`aiMessage.textBubble.reactNode\`             | \`AiMessageTextBubbleRenderProps\`  | AI text bubble               |
+| \`welcomeScreen.title.reactNode\`              | \`WelcomeScreenTitleRenderProps\`   | Welcome screen heading       |
+| \`welcomeScreen.input.reactNode\`              | \`WelcomeScreenInputRenderProps\`   | Welcome screen input         |
+| \`welcomeScreen.suggestedQuestions.reactNode\` | \`SuggestedQuestionsRenderProps\`   | Suggestion chips             |
+| \`resultsBlock.groupTitle.reactNode\`          | \`ResultsGroupTitleRenderProps\`    | Product group title          |
+| \`resultsBlock.viewMore.reactNode\`            | \`ResultsViewMoreRenderProps\`      | View more button             |
+| \`resultsBlock.carousel.reactNode\`            | \`CarouselRenderProps\`             | Entire product carousel      |
+| \`resultsBlock.carousel.item.reactNode\`       | \`CarouselItemRenderProps\`         | Individual carousel item     |
+| \`resultsBlock.carousel.item.productCard\`     | \`ProductCardOverrides\`            | Product card sub-components  |
+| \`resultsBlock.carousel.previous.reactNode\`   | \`CarouselRenderProps\`             | Carousel previous button     |
+| \`resultsBlock.carousel.next.reactNode\`       | \`CarouselRenderProps\`             | Carousel next button         |
+`}
+</Markdown>
+
+## Custom Header
+
+Replace the chat header. Receives `{ title, onClose? }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    header: {
+      reactNode: ({ title, onClose }) => (
+        <div className="my-header">
+          <h2>{title}</h2>
+          <button onClick={onClose}>×</button>
+        </div>
+      ),
+    },
+  }}
+/>
+```
+
+## Custom Chat Input
+
+Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    input: {
+      reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
+        <div className="my-input">
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+            placeholder={placeholder}
+            disabled={isDisabled}
+          />
+          <button onClick={onSubmit} disabled={isDisabled}>Send</button>
+        </div>
+      ),
+    },
+  }}
+/>
+```
+
+## Custom User Message
+
+Replace user message bubbles. Receives `{ text }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    userMessage: {
+      reactNode: ({ text }) => (
+        <div className="my-user-msg">{text}</div>
+      ),
+    },
+  }}
+/>
+```
+
+## Custom AI Message Loader
+
+Replace the typing indicator shown while the assistant is generating a response. Receives `{ translations? }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    aiMessage: {
+      loader: {
+        reactNode: () => (
+          <div className="my-loader">Thinking...</div>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+## Custom AI Text Bubble
+
+Replace the AI response text bubble. Receives `{ text }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    aiMessage: {
+      textBubble: {
+        reactNode: ({ text }) => (
+          <div className="my-ai-bubble">{text}</div>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+## Custom Welcome Screen Title
+
+Replace the welcome screen heading. Receives `{ text }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    welcomeScreen: {
+      title: {
+        reactNode: ({ text }) => <h1 className="my-title">{text}</h1>,
+      },
+    },
+  }}
+/>
+```
+
+## Custom Welcome Screen Input
+
+Replace the welcome screen input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    welcomeScreen: {
+      input: {
+        reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
+          <div className="my-welcome-input">
+            <input
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+              placeholder={placeholder}
+              disabled={isDisabled}
+            />
+            <button onClick={onSubmit} disabled={isDisabled}>Go</button>
+          </div>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+## Custom Suggested Questions
+
+Replace suggestion chips on the welcome screen. Receives `{ suggestions, onSuggestionClick }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    welcomeScreen: {
+      suggestedQuestions: {
+        reactNode: ({ suggestions, onSuggestionClick }) => (
+          <ul className="my-suggestions">
+            {suggestions.map((s) => (
+              <li key={s}>
+                <button onClick={() => onSuggestionClick(s)}>{s}</button>
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+## Custom Results Group Title
+
+Replace product group titles in the results block. Receives `{ label }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    resultsBlock: {
+      groupTitle: {
+        reactNode: ({ label }) => <h4 className="my-group-title">{label}</h4>,
+      },
+    },
+  }}
+/>
+```
+
+## Custom View More Button
+
+Replace the "View more" link in results. Receives `{ group, onClick }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    resultsBlock: {
+      viewMore: {
+        reactNode: ({ group, onClick }) => (
+          <a className="my-view-more" onClick={onClick}>
+            See all {group.display_name} →
+          </a>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+## Custom Product Card
+
+Replace individual product cards in the carousel. Receives `{ item, index }`.
+
+```jsx
+<Chat
+  componentOverrides={{
+    resultsBlock: {
+      carousel: {
+        item: {
+          reactNode: ({ item }) => (
+            <div className="my-product-card">
+              <img src={item?.imageUrl} alt={item?.name} />
+              <p>{item?.name}</p>
+              <p>${item?.price}</p>
+            </div>
+          ),
+        },
+      },
+    },
+  }}
+/>
+```
+
+## Custom Product Card Sub-components
+
+Override individual parts of the default product card via `resultsBlock.carousel.item.productCard`. Available slots: `image`, `content` (`title`, `price`), and `footer` (`addToCartButton`).
+
+```jsx
+<Chat
+  componentOverrides={{
+    resultsBlock: {
+      carousel: {
+        item: {
+          productCard: {
+            content: {
+              title: {
+                reactNode: ({ product }) => (
+                  <p className="my-title">{product?.name}</p>
+                ),
+              },
+              price: {
+                reactNode: ({ product }) => (
+                  <span className="my-price">${product?.price}</span>
+                ),
+              },
+            },
+            footer: {
+              addToCartButton: {
+                reactNode: ({ product, onAddToCart }) => (
+                  <button onClick={(e) => onAddToCart?.(e, product)}>
+                    Add to bag
+                  </button>
+                ),
+              },
+            },
+          },
+        },
+      },
+    },
+  }}
+/>
+```

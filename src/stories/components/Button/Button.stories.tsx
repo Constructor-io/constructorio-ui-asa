@@ -18,11 +18,6 @@ const meta = {
   },
   tags: ['autodocs'],
   argTypes: {
-    label: {
-      control: 'text',
-      description: 'Button text content.',
-      table: { category: 'Appearance' },
-    },
     theme: {
       control: 'radio',
       options: ['dark', 'light'],
@@ -39,6 +34,11 @@ const meta = {
       description: 'Click handler. Use this to open the chat window.',
       table: { category: 'Callbacks' },
     },
+    label: {
+      control: 'text',
+      description: 'Button label text.',
+      table: { category: 'Appearance' },
+    },
   },
 } satisfies Meta<typeof Button>;
 
@@ -47,7 +47,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Shopping assistant',
     theme: 'dark',
     size: 'sm',
   },
@@ -88,7 +87,7 @@ export const SizeLarge: Story = {
 
 export const CustomLabel: Story = {
   args: {
-    label: 'My custom button name',
+    label: 'Style Advisor',
   },
   name: 'label - Custom',
   tags: ['!dev'],

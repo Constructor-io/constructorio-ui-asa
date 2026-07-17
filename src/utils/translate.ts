@@ -1,7 +1,6 @@
 import type { Translations } from '../types';
 
 const defaultTranslations: Translations = {
-  'CioAsa.button.label': 'Shopping assistant',
   'CioAsa.header.title': 'Shopping Assistant',
   'CioAsa.header.close': 'Close',
   'CioAsa.input.placeholder': 'Ask a question about this product',
