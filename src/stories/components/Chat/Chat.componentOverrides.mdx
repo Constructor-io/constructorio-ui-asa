@@ -1,6 +1,7 @@
-import { Meta, Markdown } from '@storybook/blocks';
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as OverridesStories from './Chat.componentOverrides.stories';
 
-<Meta title="Components/Chat/Component Overrides" />
+<Meta of={OverridesStories} />
 
 # Component Overrides
 
@@ -36,6 +37,8 @@ Every override receives typed props so you have full access to the data and call
 
 Replace the chat header. Receives `{ title, onClose? }`.
 
+<Canvas of={OverridesStories.CustomHeader} />
+
 ```jsx
 <Chat
   componentOverrides={{
@@ -55,13 +58,15 @@ Replace the chat header. Receives `{ title, onClose? }`.
 
 Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled }`.
 
+<Canvas of={OverridesStories.CustomInput} />
+
 ```jsx
 <Chat
   componentOverrides={{
     input: {
       reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
         <div className="my-input">
-          <textarea
+          <input
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
@@ -80,6 +85,8 @@ Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, i
 
 Replace user message bubbles. Receives `{ text }`.
 
+<Canvas of={OverridesStories.CustomUserMessage} />
+
 ```jsx
 <Chat
   componentOverrides={{
@@ -96,14 +103,14 @@ Replace user message bubbles. Receives `{ text }`.
 
 Replace the typing indicator shown while the assistant is generating a response. Receives `{ translations? }`.
 
+<Canvas of={OverridesStories.CustomLoader} />
+
 ```jsx
 <Chat
   componentOverrides={{
     aiMessage: {
       loader: {
-        reactNode: () => (
-          <div className="my-loader">Thinking...</div>
-        ),
+        reactNode: () => <div className="my-loader">Thinking...</div>,
       },
     },
   }}
@@ -113,6 +120,8 @@ Replace the typing indicator shown while the assistant is generating a response.
 ## Custom AI Text Bubble
 
 Replace the AI response text bubble. Receives `{ text }`.
+
+<Canvas of={OverridesStories.CustomTextBubble} />
 
 ```jsx
 <Chat
@@ -132,6 +141,8 @@ Replace the AI response text bubble. Receives `{ text }`.
 
 Replace the welcome screen heading. Receives `{ text }`.
 
+<Canvas of={OverridesStories.CustomWelcomeTitle} />
+
 ```jsx
 <Chat
   componentOverrides={{
@@ -144,36 +155,11 @@ Replace the welcome screen heading. Receives `{ text }`.
 />
 ```
 
-## Custom Welcome Screen Input
-
-Replace the welcome screen input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled }`.
-
-```jsx
-<Chat
-  componentOverrides={{
-    welcomeScreen: {
-      input: {
-        reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
-          <div className="my-welcome-input">
-            <input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-              placeholder={placeholder}
-              disabled={isDisabled}
-            />
-            <button onClick={onSubmit} disabled={isDisabled}>Go</button>
-          </div>
-        ),
-      },
-    },
-  }}
-/>
-```
-
 ## Custom Suggested Questions
 
 Replace suggestion chips on the welcome screen. Receives `{ suggestions, onSuggestionClick }`.
+
+<Canvas of={OverridesStories.CustomSuggestedQuestions} />
 
 ```jsx
 <Chat
@@ -195,25 +181,11 @@ Replace suggestion chips on the welcome screen. Receives `{ suggestions, onSugge
 />
 ```
 
-## Custom Results Group Title
-
-Replace product group titles in the results block. Receives `{ label }`.
-
-```jsx
-<Chat
-  componentOverrides={{
-    resultsBlock: {
-      groupTitle: {
-        reactNode: ({ label }) => <h4 className="my-group-title">{label}</h4>,
-      },
-    },
-  }}
-/>
-```
-
 ## Custom View More Button
 
-Replace the "View more" link in results. Receives `{ group, onClick }`.
+Replace the "View more" link in results. Receives `{ group, onClick }`. Send a message to see products, then this override applies to the "View more" button.
+
+<Canvas of={OverridesStories.CustomViewMore} />
 
 ```jsx
 <Chat
@@ -233,7 +205,7 @@ Replace the "View more" link in results. Receives `{ group, onClick }`.
 
 ## Custom Product Card
 
-Replace individual product cards in the carousel. Receives `{ item, index }`.
+Replace individual product cards in the carousel.
 
 ```jsx
 <Chat
@@ -257,7 +229,7 @@ Replace individual product cards in the carousel. Receives `{ item, index }`.
 
 ## Custom Product Card Sub-components
 
-Override individual parts of the default product card via `resultsBlock.carousel.item.productCard`. Available slots: `image`, `content` (`title`, `price`), and `footer` (`addToCartButton`).
+Override individual parts of the default product card via `resultsBlock.carousel.item.productCard`.
 
 ```jsx
 <Chat
@@ -268,22 +240,16 @@ Override individual parts of the default product card via `resultsBlock.carousel
           productCard: {
             content: {
               title: {
-                reactNode: ({ product }) => (
-                  <p className="my-title">{product?.name}</p>
-                ),
+                reactNode: ({ product }) => <p className="my-title">{product?.name}</p>,
               },
               price: {
-                reactNode: ({ product }) => (
-                  <span className="my-price">${product?.price}</span>
-                ),
+                reactNode: ({ product }) => <span className="my-price">${product?.price}</span>,
               },
             },
             footer: {
               addToCartButton: {
                 reactNode: ({ product, onAddToCart }) => (
-                  <button onClick={(e) => onAddToCart?.(e, product)}>
-                    Add to bag
-                  </button>
+                  <button onClick={(e) => onAddToCart?.(e, product)}>Add to bag</button>
                 ),
               },
             },
