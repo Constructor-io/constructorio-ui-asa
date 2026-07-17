@@ -332,49 +332,6 @@ export const CustomProductCard: Story = {
   args: {
     onClose: () => alert('Close'),
     onProductClick: (product) => alert(`Click: ${product.name}`),
-    initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
-    aspectRatio: '3:4',
-    currency: '$',
-    componentOverrides: {
-      resultsBlock: {
-        carousel: {
-          item: {
-            reactNode: ({ item }) => (
-              <div
-                style={{
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid #e5e7eb',
-                  textAlign: 'center',
-                  fontSize: '13px',
-                }}>
-                <img
-                  src={(item as any)?.imageUrl}
-                  alt={(item as any)?.name}
-                  style={{
-                    width: '100%',
-                    borderRadius: '6px',
-                    aspectRatio: '3/4',
-                    objectFit: 'cover',
-                  }}
-                />
-                <p style={{ margin: '8px 0 4px', fontWeight: 500 }}>{(item as any)?.name}</p>
-                <p style={{ margin: 0, color: '#667eea' }}>${(item as any)?.price}</p>
-              </div>
-            ),
-          },
-        },
-      },
-    },
-  },
-};
-
-export const CustomProductCardParts: Story = {
-  name: 'Custom Product Card Sub-components',
-  args: {
-    onClose: () => alert('Close'),
-    onProductClick: (product) => alert(`Click: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     initialSuggestions: ['Show me summer dresses'],
     termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
@@ -386,16 +343,35 @@ export const CustomProductCardParts: Story = {
           item: {
             productCard: {
               content: {
-                title: {
-                  reactNode: ({ product }: any) => (
-                    <p style={{ fontSize: '13px', fontWeight: 600, margin: '4px 0' }}>
-                      {product?.name}
-                    </p>
-                  ),
-                },
                 price: {
                   reactNode: ({ product }: any) => (
-                    <span style={{ color: '#667eea', fontWeight: 600 }}>${product?.price}</span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginTop: '4px',
+                      }}>
+                      <span
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          color: '#667eea',
+                        }}>
+                        ${product?.price}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          background: '#eef2ff',
+                          color: '#4f46e5',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                        }}>
+                        NEW
+                      </span>
+                    </div>
                   ),
                 },
               },
@@ -407,14 +383,14 @@ export const CustomProductCardParts: Story = {
                       onClick={(e) => onAddToCart?.(e, product)}
                       style={{
                         width: '100%',
-                        padding: '8px',
-                        borderRadius: '6px',
+                        padding: '10px',
+                        borderRadius: '8px',
                         border: 'none',
-                        background: '#667eea',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: '#fff',
                         cursor: 'pointer',
                         fontSize: '12px',
-                        fontWeight: 500,
+                        fontWeight: 600,
                         marginTop: '8px',
                       }}>
                       Add to bag
@@ -429,3 +405,4 @@ export const CustomProductCardParts: Story = {
     },
   },
 };
+

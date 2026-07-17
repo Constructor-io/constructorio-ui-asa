@@ -205,7 +205,7 @@ Replace the "View more" link in results. Receives `{ group, onClick }`. Send a m
 
 ## Custom Product Card
 
-Replace individual product cards in the carousel. Send a message to see products with the custom card.
+Customize product card parts (title, price, footer) via `resultsBlock.carousel.item.productCard`. Send a message to see products with the custom styling.
 
 <Canvas of={OverridesStories.CustomProductCard} />
 
@@ -215,45 +215,20 @@ Replace individual product cards in the carousel. Send a message to see products
     resultsBlock: {
       carousel: {
         item: {
-          reactNode: ({ item }) => (
-            <div className="my-product-card">
-              <img src={item?.imageUrl} alt={item?.name} />
-              <p>{item?.name}</p>
-              <p>${item?.price}</p>
-            </div>
-          ),
-        },
-      },
-    },
-  }}
-/>
-```
-
-## Custom Product Card Sub-components
-
-Override individual parts of the default product card via `resultsBlock.carousel.item.productCard`. Send a message to see the customized cards.
-
-<Canvas of={OverridesStories.CustomProductCardParts} />
-
-```jsx
-<Chat
-  componentOverrides={{
-    resultsBlock: {
-      carousel: {
-        item: {
           productCard: {
             content: {
-              title: {
-                reactNode: ({ product }) => <p className="my-title">{product?.name}</p>,
-              },
               price: {
-                reactNode: ({ product }) => <span className="my-price">${product?.price}</span>,
+                reactNode: ({ product }) => (
+                  <span className="my-price">${product?.price}</span>
+                ),
               },
             },
             footer: {
               addToCartButton: {
                 reactNode: ({ product, onAddToCart }) => (
-                  <button onClick={(e) => onAddToCart?.(e, product)}>Add to bag</button>
+                  <button onClick={(e) => onAddToCart?.(e, product)}>
+                    Add to bag
+                  </button>
                 ),
               },
             },
@@ -264,3 +239,4 @@ Override individual parts of the default product card via `resultsBlock.carousel
   }}
 />
 ```
+

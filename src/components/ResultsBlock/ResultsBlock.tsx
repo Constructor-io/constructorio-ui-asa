@@ -90,6 +90,8 @@ function ResultsBlock({
     ? (_e: React.MouseEvent, product: Product) => onAddToCart(product)
     : undefined;
 
+  const productCardOverrides = componentOverrides?.carousel?.item?.productCard;
+
   const renderProductCard = (renderProps: any) => {
     const product = renderProps.product as Product;
     return (
@@ -98,7 +100,8 @@ function ResultsBlock({
         className='cio-asa-product-card'
         onProductClick={onProductClick}
         onAddToCart={handleAddToCart}
-        addToCartText={addToCartText}>
+        addToCartText={addToCartText}
+        componentOverrides={productCardOverrides}>
         <ProductCard.ImageSection
           className='cio-asa-product-card__image-wrapper'
           imageUrl={product.imageUrl || PLACEHOLDER_IMAGE}>
@@ -136,15 +139,17 @@ function ResultsBlock({
           onClick: () => onViewMore?.(groupData.group),
         };
 
+        const userCarousel = componentOverrides?.carousel;
         const carouselOverrides = {
           previous: { reactNode: PreviousButton },
           next: { reactNode: NextButton },
+          ...userCarousel,
           item: {
+            ...userCarousel?.item,
             productCard: {
               reactNode: renderProductCard,
             },
           },
-          ...componentOverrides?.carousel,
         };
 
         return (
