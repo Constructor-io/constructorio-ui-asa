@@ -3,7 +3,7 @@ import { RenderPropsWrapper } from '@constructor-io/constructorio-ui-components'
 import {
   AiMessageLoaderRenderProps,
   AiMessageOverrides,
-  AiMessageTextBubbleRenderProps,
+  AiMessageTextRenderProps,
   ChatMessage,
   Translations,
 } from '../../types';
@@ -21,7 +21,7 @@ export default function AiMessage({ message, componentOverrides, translations }:
   const hasGroups = message.groups && message.groups.length > 0;
 
   const loaderRenderProps: AiMessageLoaderRenderProps = { translations };
-  const textBubbleRenderProps: AiMessageTextBubbleRenderProps = { text: message.text || '' };
+  const textRenderProps: AiMessageTextRenderProps = { text: message.text || '' };
 
   return (
     <div className='cio-asa-ai-message'>
@@ -34,8 +34,8 @@ export default function AiMessage({ message, componentOverrides, translations }:
       )}
       {hasText && (
         <RenderPropsWrapper
-          override={componentOverrides?.textBubble?.reactNode}
-          props={textBubbleRenderProps}>
+          override={componentOverrides?.text?.reactNode}
+          props={textRenderProps}>
           <div className='cio-asa-ai-message__bubble'>
             <div className='cio-asa-ai-message__text'>{message.text}</div>
           </div>

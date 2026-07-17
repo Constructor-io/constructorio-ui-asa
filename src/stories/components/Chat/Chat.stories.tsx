@@ -77,7 +77,7 @@ const meta: Meta<typeof Chat> = {
         '- `input` — Replace the chat input\n' +
         '- `userMessage` — Replace user message bubbles\n' +
         '- `aiMessage.loader` — Replace the typing indicator\n' +
-        '- `aiMessage.textBubble` — Replace AI text bubbles\n' +
+        '- `aiMessage.text` — Replace AI response text\n' +
         '- `resultsBlock.groupTitle` — Replace group titles\n' +
         '- `resultsBlock.viewMore` — Replace view more buttons\n' +
         '- `resultsBlock.carousel` — Override carousel sub-components',
@@ -339,7 +339,7 @@ export const WithComponentOverrides: Story = {
             </div>
           ),
         },
-        textBubble: {
+        text: {
           reactNode: ({ text }: { text: string }) => (
             <div
               style={{

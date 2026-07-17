@@ -19,7 +19,7 @@ Every override receives typed props so you have full access to the data and call
 | \`input.reactNode\`                            | \`ChatInputRenderProps\`            | Chat message input           |
 | \`userMessage.reactNode\`                      | \`UserMessageRenderProps\`          | User message bubble          |
 | \`aiMessage.loader.reactNode\`                 | \`AiMessageLoaderRenderProps\`      | Typing indicator             |
-| \`aiMessage.textBubble.reactNode\`             | \`AiMessageTextBubbleRenderProps\`  | AI text bubble               |
+| \`aiMessage.text.reactNode\`             | \`AiMessageTextRenderProps\`        | AI response text             |
 | \`welcomeScreen.title.reactNode\`              | \`WelcomeScreenTitleRenderProps\`   | Welcome screen heading       |
 | \`welcomeScreen.input.reactNode\`              | \`WelcomeScreenInputRenderProps\`   | Welcome screen input         |
 | \`welcomeScreen.suggestedQuestions.reactNode\` | \`SuggestedQuestionsRenderProps\`   | Suggestion chips             |
@@ -117,17 +117,17 @@ Replace the typing indicator shown while the assistant is generating a response.
 />
 ```
 
-## Custom AI Text Bubble
+## Custom AI Text
 
-Replace the AI response text bubble. Receives `{ text }`.
+Replace the AI response text. Receives `{ text }`.
 
-<Canvas of={OverridesStories.CustomTextBubble} />
+<Canvas of={OverridesStories.CustomText} />
 
 ```jsx
 <Chat
   componentOverrides={{
     aiMessage: {
-      textBubble: {
+      text: {
         reactNode: ({ text }) => (
           <div className="my-ai-bubble">{text}</div>
         ),
@@ -205,7 +205,9 @@ Replace the "View more" link in results. Receives `{ group, onClick }`. Send a m
 
 ## Custom Product Card
 
-Replace individual product cards in the carousel.
+Replace individual product cards in the carousel. Send a message to see products with the custom card.
+
+<Canvas of={OverridesStories.CustomProductCard} />
 
 ```jsx
 <Chat
@@ -229,7 +231,9 @@ Replace individual product cards in the carousel.
 
 ## Custom Product Card Sub-components
 
-Override individual parts of the default product card via `resultsBlock.carousel.item.productCard`.
+Override individual parts of the default product card via `resultsBlock.carousel.item.productCard`. Send a message to see the customized cards.
+
+<Canvas of={OverridesStories.CustomProductCardParts} />
 
 ```jsx
 <Chat

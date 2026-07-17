@@ -234,7 +234,7 @@ The `componentOverrides` prop lets you replace any sub-component with your own c
     },
     aiMessage: {
       loader: { reactNode: <MyCustomLoader /> },
-      textBubble: {
+      text: {
         reactNode: ({ text }) => <MyCustomBubble>{text}</MyCustomBubble>,
       },
     },
@@ -270,7 +270,7 @@ Available override slots:
 | `input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
 | `userMessage` | `{ text }` |
 | `aiMessage.loader` | `{ translations? }` |
-| `aiMessage.textBubble` | `{ text }` |
+| `aiMessage.text` | `{ text }` |
 | `welcomeScreen.title` | `{ text }` |
 | `welcomeScreen.input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
 | `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }` |

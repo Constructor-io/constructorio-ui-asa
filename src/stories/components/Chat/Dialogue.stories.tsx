@@ -32,7 +32,7 @@ const meta: Meta = {
           '**Component overrides:**\n' +
           '`AiMessage` accepts a `componentOverrides` prop to replace default sub-components:\n' +
           '- `loader` — replaces the default `TypingIndicator`.\n' +
-          '- `textBubble(text)` — replaces the default text bubble renderer.',
+          '- `text` — replaces the default AI text renderer.',
       },
     },
   },
@@ -199,14 +199,14 @@ export const AiCustomLoader: StoryObj = {
   ),
 };
 
-export const AiCustomTextBubble: StoryObj = {
-  name: 'AI - Custom text bubble override',
+export const AiCustomText: StoryObj = {
+  name: 'AI - Custom text override',
   parameters: {
     docs: {
       description: {
         story:
-          'Override the default text bubble via `componentOverrides.textBubble(text)`. ' +
-          'Receives the message text as an argument and returns a custom `ReactNode`.',
+          'Override the default AI text via `componentOverrides.text.reactNode`. ' +
+          'Receives `{ text }` render props.',
       },
     },
   },
@@ -219,18 +219,20 @@ export const AiCustomTextBubble: StoryObj = {
         status: 'done',
       }}
       componentOverrides={{
-        textBubble: (text) => (
-          <div
-            style={{
-              padding: '14px',
-              background: '#e8f4fd',
-              borderRadius: '12px',
-              border: '1px solid #b8dff5',
-              fontSize: '14px',
-            }}>
-            {text}
-          </div>
-        ),
+        text: {
+          reactNode: ({ text }) => (
+            <div
+              style={{
+                padding: '14px',
+                background: '#e8f4fd',
+                borderRadius: '12px',
+                border: '1px solid #b8dff5',
+                fontSize: '14px',
+              }}>
+              {text}
+            </div>
+          ),
+        },
       }}
     />
   ),

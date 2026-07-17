@@ -185,7 +185,7 @@ export interface AiMessageLoaderRenderProps {
   translations?: Translations;
 }
 
-export interface AiMessageTextBubbleRenderProps {
+export interface AiMessageTextRenderProps {
   text: string;
 }
 
@@ -216,7 +216,7 @@ export interface ChatInputOverrides {
 
 export interface AiMessageOverrides {
   loader?: ComponentOverrideProps<AiMessageLoaderRenderProps>;
-  textBubble?: ComponentOverrideProps<AiMessageTextBubbleRenderProps>;
+  text?: ComponentOverrideProps<AiMessageTextRenderProps>;
 }
 
 export interface ResultsBlockOverrides {
