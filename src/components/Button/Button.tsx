@@ -1,22 +1,24 @@
 import React from 'react';
 import { Button as CioButton } from '@constructor-io/constructorio-ui-components';
+import { Translations } from '../../types';
+import translate from '../../utils/translate';
 
 export interface ButtonProps {
-  /** Button text content */
-  label?: string;
   /** Color scheme: dark (for light backgrounds) or light (for dark backgrounds) */
   theme?: 'dark' | 'light';
   /** Button size: sm (small) or lg (large) */
   size?: 'sm' | 'lg';
   /** Click handler */
   onClick?: () => void;
+  /** Translation overrides */
+  translations?: Translations;
 }
 
 export default function Button({
-  label = 'Shopping assistant',
   theme = 'dark',
   size = 'sm',
   onClick,
+  translations,
 }: ButtonProps) {
   return (
     <CioButton
@@ -54,7 +56,9 @@ export default function Button({
           />
         </svg>
       )}
-      <span className='cio-asa-button__label'>{label}</span>
+      <span className='cio-asa-button__label'>
+        {translate('CioAsa.button.label', translations)}
+      </span>
     </CioButton>
   );
 }

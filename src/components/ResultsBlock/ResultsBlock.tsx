@@ -1,6 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Carousel, ProductCard } from '@constructor-io/constructorio-ui-components';
-import { ResultGroup, ResultGroupMeta } from '../../types';
+import {
+  Carousel,
+  ProductCard,
+  RenderPropsWrapper,
+} from '@constructor-io/constructorio-ui-components';
+import {
+  ResultGroup,
+  ResultGroupMeta,
+  ResultsBlockOverrides,
+  ResultsGroupTitleRenderProps,
+  ResultsViewMoreRenderProps,
+} from '../../types';
 import { normalizeItemToProduct, Product } from '../../utils/productNormalizer';
 import { PLACEHOLDER_IMAGE } from '../../constants';
 import './ResultsBlock.css';
@@ -19,6 +29,7 @@ interface ResultsBlockProps {
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
   onViewMore?: (group: ResultGroupMeta) => void;
+  componentOverrides?: ResultsBlockOverrides;
 }
 
 const PEEK_FRACTION = 0.3;
@@ -51,6 +62,7 @@ function ResultsBlock({
   onProductClick,
   onAddToCart,
   onViewMore,
+  componentOverrides,
 }: ResultsBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [slidesToShow, setSlidesToShow] = useState(3 + PEEK_FRACTION);
@@ -117,45 +129,64 @@ function ResultsBlock({
         const groupKey = `${groupData.group?.value || label}-${index}`;
         const products = groupData.searchResults.map(normalizeItemToProduct);
 
+        const titleRenderProps: ResultsGroupTitleRenderProps = { label };
+        const viewMoreRenderProps: ResultsViewMoreRenderProps = {
+          group: groupData.group,
+          onClick: () => onViewMore?.(groupData.group),
+        };
+
+        const carouselOverrides = {
+          previous: { reactNode: PreviousButton },
+          next: { reactNode: NextButton },
+          item: {
+            productCard: {
+              reactNode: renderProductCard,
+            },
+          },
+          ...componentOverrides?.carousel,
+        };
+
         return (
           <div className='cio-asa-results-group' key={groupKey}>
-            {showTitle && label && <h3 className='cio-asa-results-group__label'>{label}</h3>}
+            {showTitle && label && (
+              <RenderPropsWrapper
+                override={componentOverrides?.groupTitle?.reactNode}
+                props={titleRenderProps}>
+                <h3 className='cio-asa-results-group__label'>{label}</h3>
+              </RenderPropsWrapper>
+            )}
             <Carousel<Product>
               items={products}
               loop={false}
               responsive={{
                 0: { gap, slidesToShow },
               }}
-              componentOverrides={{
-                previous: { reactNode: PreviousButton },
-                next: { reactNode: NextButton },
-                item: {
-                  productCard: {
-                    reactNode: renderProductCard,
-                  },
-                },
-              }}
+              componentOverrides={carouselOverrides}
             />
             {onViewMore && (
-              <button
-                type='button'
-                className='cio-asa-results-group__view-more'
-                onClick={() => onViewMore(groupData.group)}>
-                <span className='cio-asa-results-group__view-more-text'>{viewMoreText}</span>
-                <svg
-                  width='10'
-                  height='10'
-                  viewBox='0 0 10 10'
-                  fill='none'
-                  xmlns='http://www.w3.org/2000/svg'>
-                  <path
-                    fillRule='evenodd'
-                    clipRule='evenodd'
-                    d='M8.25979 4.20698L4.63903 0.72032L5.33267 -1.97313e-07L9.84668 4.34682L9.84668 5.06714L5.33267 9.41396L4.63903 8.69364L8.25979 5.20698L-0.000141371 5.20698L-0.000141328 4.20698L8.25979 4.20698Z'
-                    fill='currentColor'
-                  />
-                </svg>
-              </button>
+              <RenderPropsWrapper
+                override={componentOverrides?.viewMore?.reactNode}
+                props={viewMoreRenderProps}>
+                <button
+                  type='button'
+                  className='cio-asa-results-group__view-more'
+                  onClick={() => onViewMore(groupData.group)}>
+                  <span className='cio-asa-results-group__view-more-text'>{viewMoreText}</span>
+                  <svg
+                    width='10'
+                    height='10'
+                    viewBox='0 0 10 10'
+                    fill='none'
+                    xmlns='http://www.w3.org/2000/svg'>
+                    <path
+                      fillRule='evenodd'
+                      clipRule='evenodd'
+                      d='M8.25979 4.20698L4.63903 0.72032L5.33267 -1.97313e-07L9.84668 4.34682L9.84668 5.06714L5.33267 9.41396L4.63903 8.69364L8.25979 5.20698L-0.000141371 5.20698L-0.000141328 4.20698L8.25979 4.20698Z'
+                      fill='currentColor'
+                    />
+                  </svg>
+                </button>
+              </RenderPropsWrapper>
             )}
           </div>
         );

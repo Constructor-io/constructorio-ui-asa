@@ -142,17 +142,147 @@ import { Chat } from '@constructor-io/constructorio-ui-asa';
 function ShoppingAssistant() {
   return (
     <Chat
-      onClose={() => console.log('closed')}
-      onProductClick={(product) => {
-        window.location.href = product.url;
-      }}
+      onClose={() => setIsOpen(false)}
+      onProductClick={(product) => window.location.href = product.url}
+      onAddToCart={(product) => addToCart(product)}
+      onViewMore={(group) => navigateToCategory(group)}
+      aspectRatio="3:4"
+      currency="$"
+      initialSuggestions={[
+        'Show me summer dresses',
+        'Best running shoes under $100',
+      ]}
     />
   );
 }
 ```
 
+The `Chat` component accepts:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `onClose` | `() => void` | Called when close button is clicked |
+| `className` | `string` | Additional CSS class for the root container |
+| `initialSuggestions` | `string[]` | Suggestion chips on the welcome screen |
+| `termsText` | `ReactNode` | Legal text below the welcome input |
+| `onProductClick` | `(product) => void` | Product card click handler |
+| `onAddToCart` | `(product) => void` | Add to cart button handler (hidden if not provided) |
+| `onViewMore` | `(group) => void` | View more link handler (hidden if not provided) |
+| `aspectRatio` | `'1:1' \| '3:4' \| '9:16' \| '4:3' \| '16:9'` | Product card image ratio |
+| `currency` | `string` | Currency symbol for prices |
+| `translations` | `Translations` | Override UI strings (see Translations section) |
+| `componentOverrides` | `ChatComponentOverrides` | Override any sub-component (see Component Overrides section) |
+
 <div className="step-heading">
   <span className="step-number">4</span>
+  <h2>Translations</h2>
+</div>
+
+All user-facing text can be customized via the `translations` prop. Pass only the keys you want to override — all others fall back to English defaults.
+
+```jsx
+<Chat
+  translations={{
+    'CioAsa.welcome.title': 'Style Advisor',
+    'CioAsa.welcome.placeholder': 'What are you looking for?',
+    'CioAsa.welcome.sendButton': 'Ask',
+    'CioAsa.input.placeholder': 'Type a follow-up question...',
+    'CioAsa.results.addToCart': 'Add to bag',
+    'CioAsa.results.viewMore': 'See all products',
+  }}
+/>
+```
+
+Available translation keys:
+
+| Key | Default |
+|-----|---------|
+| `CioAsa.button.label` | Shopping assistant |
+| `CioAsa.header.title` | Shopping Assistant |
+| `CioAsa.header.close` | Close |
+| `CioAsa.input.placeholder` | Ask a question about this product |
+| `CioAsa.input.ariaLabel` | Type your message |
+| `CioAsa.input.sendAriaLabel` | Send message |
+| `CioAsa.welcome.title` | Shopping Assistant |
+| `CioAsa.welcome.placeholder` | Ask anything |
+| `CioAsa.welcome.sendButton` | Chat |
+| `CioAsa.welcome.inputAriaLabel` | Type your question |
+| `CioAsa.welcome.sendAriaLabel` | Send message |
+| `CioAsa.welcome.suggestionsAriaLabel` | Suggested questions |
+| `CioAsa.messageList.ariaLabel` | Chat messages |
+| `CioAsa.typingIndicator.ariaLabel` | Assistant is typing |
+| `CioAsa.userMessage.ariaLabel` | You said |
+| `CioAsa.results.viewMore` | View more products |
+| `CioAsa.results.addToCart` | Add to cart |
+
+<div className="step-heading">
+  <span className="step-number">5</span>
+  <h2>Component Overrides</h2>
+</div>
+
+The `componentOverrides` prop lets you replace any sub-component with your own custom React component using render props. Each override slot receives typed props you can use to build your custom UI.
+
+```jsx
+<Chat
+  componentOverrides={{
+    header: {
+      reactNode: ({ title, onClose }) => (
+        <div className="my-header">
+          <h1>{title}</h1>
+          <button onClick={onClose}>Close</button>
+        </div>
+      ),
+    },
+    aiMessage: {
+      loader: { reactNode: <MyCustomLoader /> },
+      textBubble: {
+        reactNode: ({ text }) => <MyCustomBubble>{text}</MyCustomBubble>,
+      },
+    },
+    welcomeScreen: {
+      title: { reactNode: ({ text }) => <h1>{text}</h1> },
+      suggestedQuestions: {
+        reactNode: ({ suggestions, onSuggestionClick }) => (
+          <ul>
+            {suggestions.map((s) => (
+              <li key={s} onClick={() => onSuggestionClick(s)}>{s}</li>
+            ))}
+          </ul>
+        ),
+      },
+    },
+    resultsBlock: {
+      groupTitle: { reactNode: ({ label }) => <h4>{label}</h4> },
+      viewMore: {
+        reactNode: ({ group, onClick }) => (
+          <a onClick={onClick}>See all {group.display_name}</a>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+Available override slots:
+
+| Slot | Render Props |
+|------|-------------|
+| `header` | `{ title, onClose? }` |
+| `input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
+| `userMessage` | `{ text }` |
+| `aiMessage.loader` | `{ translations? }` |
+| `aiMessage.textBubble` | `{ text }` |
+| `welcomeScreen.title` | `{ text }` |
+| `welcomeScreen.input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
+| `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }` |
+| `resultsBlock.groupTitle` | `{ label }` |
+| `resultsBlock.viewMore` | `{ group, onClick }` |
+| `resultsBlock.carousel` | Carousel component overrides (previous, next, item) |
+
+Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a static ReactNode to completely replace the component, or a function to receive render props.
+
+<div className="step-heading">
+  <span className="step-number">6</span>
   <h2>Using the Hook Directly</h2>
 </div>
 
@@ -187,23 +317,27 @@ The hook returns:
 - `clearHistory()` — Reset the conversation
 
 <div className="step-heading">
-  <span className="step-number">5</span>
-  <h2>Customization</h2>
+  <span className="step-number">7</span>
+  <h2>CSS Customization</h2>
 </div>
 
-All components use BEM-style class names prefixed with `cio-asa-` for easy style overrides:
+All components use BEM-style class names prefixed with `cio-asa-` for easy style overrides. The `Chat` component fills its container — control the layout by sizing the parent wrapper or using the `className` prop.
 
 ```css
 .cio-asa-chat {
-  /* Chat container */
+  /* Chat container — fills parent width/height */
 }
 
 .cio-asa-product-card {
   /* Product card in results */
 }
 
-.cio-asa-product-card__image {
-  /* Product image */
+.cio-asa-ai-message__bubble {
+  /* AI text bubble */
+}
+
+.cio-asa-welcome-screen__title {
+  /* Welcome screen heading */
 }
 ```
 

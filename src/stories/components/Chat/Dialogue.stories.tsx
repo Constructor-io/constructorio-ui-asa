@@ -159,7 +159,7 @@ export const AiWithProducts: StoryObj = {
   ),
 };
 
-const ThinkingLoader = () => {
+function ThinkingLoader() {
   const [dots, setDots] = React.useState('');
 
   React.useEffect(() => {
@@ -176,7 +176,7 @@ const ThinkingLoader = () => {
       </div>
     </div>
   );
-};
+}
 
 export const AiCustomLoader: StoryObj = {
   name: 'AI - Custom loader override',

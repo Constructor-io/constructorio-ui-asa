@@ -10,32 +10,6 @@
   animation: cio-asa-fade-in 0.4s ease;
 }
 
-/* Desktop: sidebar layout — fixed panel from the right with overlay */
-.cio-asa-chat--sidebar {
-  max-width: 504px;
-  max-height: 800px;
-  margin: 0 auto;
-  border-radius: 12px;
-}
-
-/* Desktop: fullscreen layout — fills the entire viewport */
-.cio-asa-chat--fullscreen {
-  max-width: none;
-  max-height: none;
-  margin: 0;
-  border-radius: 0;
-}
-
-/* Mobile: always fullscreen regardless of desktopLayout */
-@media (max-width: 768px) {
-  .cio-asa-chat--sidebar {
-    max-width: none;
-    max-height: none;
-    margin: 0;
-    border-radius: 0;
-  }
-}
-
 .cio-asa-chat-body {
   flex: 1;
   display: flex;
@@ -69,7 +43,7 @@
   animation: cio-asa-fade-in 0.2s ease;
 }
 
-/* Desktop: slide-in panel from right */
+/* Slide-in panel from right */
 .cio-asa-chat-panel {
   position: fixed;
   top: 0;
@@ -81,16 +55,7 @@
 }
 
 .cio-asa-chat-panel .cio-asa-chat {
-  border-radius: 0;
   height: 100%;
-}
-
-/* Mobile: full screen */
-@media (max-width: 768px) {
-  .cio-asa-chat-panel {
-    width: 100%;
-    animation: cio-asa-slide-in-right 0.3s ease;
-  }
 }
 
 @keyframes cio-asa-fade-in {
@@ -132,11 +97,4 @@
   inset: 0 0 0 auto;
   width: 504px;
   animation: cio-asa-slide-in-right 0.4s ease 0.2s both;
-}
-
-.cio-asa-chat-fullscreen .cio-asa-chat {
-  max-width: none;
-  max-height: none;
-  margin: 0;
-  border-radius: 0;
 }

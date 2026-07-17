@@ -1,9 +1,18 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { ChatMessage, ResultGroupMeta } from '../../types';
+import {
+  AiMessageOverrides,
+  ChatMessage,
+  ComponentOverrideProps,
+  ResultGroupMeta,
+  ResultsBlockOverrides,
+  Translations,
+  UserMessageRenderProps,
+} from '../../types';
+import translate from '../../utils/translate';
 import { Product } from '../../utils/productNormalizer';
 import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
-import AiMessage, { AiMessageOverrides } from './AiMessage';
+import AiMessage from './AiMessage';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -15,6 +24,9 @@ interface ChatMessageListProps {
   addToCartText?: string;
   viewMoreText?: string;
   aiMessageOverrides?: AiMessageOverrides;
+  userMessageOverrides?: ComponentOverrideProps<UserMessageRenderProps>;
+  resultsBlockOverrides?: ResultsBlockOverrides;
+  translations?: Translations;
 }
 
 export default function ChatMessageList({
@@ -27,6 +39,9 @@ export default function ChatMessageList({
   addToCartText,
   viewMoreText,
   aiMessageOverrides,
+  userMessageOverrides,
+  resultsBlockOverrides,
+  translations,
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -55,17 +70,28 @@ export default function ChatMessageList({
       onScroll={handleScroll}
       role='log'
       aria-live='polite'
-      aria-label='Chat messages'>
+      aria-label={translate('CioAsa.messageList.ariaLabel', translations)}>
       {messages.map((message) => {
         if (message.role === 'user') {
-          return <UserMessage key={message.id} text={message.text} />;
+          return (
+            <UserMessage
+              key={message.id}
+              text={message.text}
+              translations={translations}
+              componentOverrides={userMessageOverrides}
+            />
+          );
         }
 
         const hasGroups = message.groups && message.groups.length > 0;
 
         return (
           <div key={message.id} className='cio-asa-ai-message-group'>
-            <AiMessage message={message} componentOverrides={aiMessageOverrides} />
+            <AiMessage
+              message={message}
+              componentOverrides={aiMessageOverrides}
+              translations={translations}
+            />
             {hasGroups && (
               <ResultsBlock
                 groups={message.groups!}
@@ -76,6 +102,7 @@ export default function ChatMessageList({
                 currency={currency}
                 addToCartText={addToCartText}
                 viewMoreText={viewMoreText}
+                componentOverrides={resultsBlockOverrides}
               />
             )}
           </div>

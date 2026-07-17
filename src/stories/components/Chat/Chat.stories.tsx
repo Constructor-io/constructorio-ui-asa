@@ -18,25 +18,14 @@ const meta: Meta<typeof Chat> = {
       description: {
         component:
           'AI Shopping Assistant chat dialog.\n\n' +
-          '**Viewport:**\n' +
-          '- **Desktop** — The component displays a dialog which slides from the right side, blocking clickable content below with an overlay.\n' +
-          '- **Mobile** — The component displays a full width and height dialog, covering the whole screen.\n\n' +
+          'The component fills its container (`width: 100%; height: 100%`). ' +
+          'Control the layout (sidebar, fullscreen, panel) by styling the parent wrapper or using the `className` prop.\n\n' +
           '**Content** — You can swap the sections for a customized version of the AI Chat dialog component.',
       },
     },
   },
   tags: ['autodocs'],
   argTypes: {
-    desktopLayout: {
-      control: 'select',
-      options: ['sidebar', 'fullscreen'],
-      description: 'Chat layout on desktop. On mobile, always renders fullscreen.',
-      table: {
-        category: 'Layout',
-        type: { summary: "'sidebar' | 'fullscreen'" },
-        defaultValue: { summary: 'sidebar' },
-      },
-    },
     initialSuggestions: {
       description:
         'Static suggestion chips shown on the welcome screen. If the array is empty or not provided, the suggestions section is hidden.',
@@ -60,16 +49,6 @@ const meta: Meta<typeof Chat> = {
       description: 'Currency symbol for product prices.',
       table: { category: 'Results' },
     },
-    addToCartText: {
-      control: 'text',
-      description: 'Custom text for the "Add to cart" button.',
-      table: { category: 'Results' },
-    },
-    viewMoreText: {
-      control: 'text',
-      description: 'Custom text for the "View more" link.',
-      table: { category: 'Results' },
-    },
     onClose: {
       description:
         'Called when the close button (✕) is clicked. The consumer controls component visibility.',
@@ -88,13 +67,51 @@ const meta: Meta<typeof Chat> = {
       description: 'Called when "View more" link is clicked. If not provided, the link is hidden.',
       table: { category: 'Callbacks' },
     },
-    aiMessageOverrides: {
-      description: 'Override AI message sub-components.',
+    componentOverrides: {
+      description:
+        'Override any sub-component with custom render props or React nodes.\n\n' +
+        '- `header` — Replace the chat header\n' +
+        '- `welcomeScreen.title` — Replace the welcome title\n' +
+        '- `welcomeScreen.input` — Replace the welcome input\n' +
+        '- `welcomeScreen.suggestedQuestions` — Replace suggestion chips\n' +
+        '- `input` — Replace the chat input\n' +
+        '- `userMessage` — Replace user message bubbles\n' +
+        '- `aiMessage.loader` — Replace the typing indicator\n' +
+        '- `aiMessage.textBubble` — Replace AI text bubbles\n' +
+        '- `resultsBlock.groupTitle` — Replace group titles\n' +
+        '- `resultsBlock.viewMore` — Replace view more buttons\n' +
+        '- `resultsBlock.carousel` — Override carousel sub-components',
       control: false,
       table: {
         category: 'Overrides',
-        type: { summary: '{ loader?: ReactNode, textBubble?: (text: string) => ReactNode }' },
+        type: { summary: 'ChatComponentOverrides' },
         defaultValue: { summary: 'undefined' },
+      },
+    },
+    translations: {
+      description:
+        'Translation overrides for internationalizing UI strings. All keys are optional.\n\n' +
+        '- `CioAsa.button.label`\n' +
+        '- `CioAsa.header.title`\n' +
+        '- `CioAsa.header.close`\n' +
+        '- `CioAsa.input.placeholder`\n' +
+        '- `CioAsa.input.ariaLabel`\n' +
+        '- `CioAsa.input.sendAriaLabel`\n' +
+        '- `CioAsa.welcome.title`\n' +
+        '- `CioAsa.welcome.placeholder`\n' +
+        '- `CioAsa.welcome.sendButton`\n' +
+        '- `CioAsa.welcome.inputAriaLabel`\n' +
+        '- `CioAsa.welcome.sendAriaLabel`\n' +
+        '- `CioAsa.welcome.suggestionsAriaLabel`\n' +
+        '- `CioAsa.messageList.ariaLabel`\n' +
+        '- `CioAsa.typingIndicator.ariaLabel`\n' +
+        '- `CioAsa.userMessage.ariaLabel`\n' +
+        '- `CioAsa.results.viewMore`\n' +
+        '- `CioAsa.results.addToCart`',
+      control: 'object',
+      table: {
+        category: 'Translations',
+        type: { summary: 'Translations' },
       },
     },
   },
@@ -145,13 +162,11 @@ export const Desktop: Story = {
   parameters: {
     docs: {
       description: {
-        story:
-          '`desktopLayout="sidebar"` — panel slides in from the right with an overlay. This is the default desktop layout.',
+        story: 'Chat placed in a fixed-width container (504px) — renders as a sidebar panel.',
       },
     },
   },
   args: {
-    desktopLayout: 'sidebar',
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
@@ -195,12 +210,11 @@ export const DesktopFullscreen: Story = {
   parameters: {
     docs: {
       description: {
-        story: '`desktopLayout="fullscreen"` — chat fills the entire screen on desktop.',
+        story: 'Chat placed in a full-width container — fills the entire available space.',
       },
     },
   },
   args: {
-    desktopLayout: 'fullscreen',
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
@@ -235,8 +249,7 @@ export const Mobile: Story = {
   parameters: {
     docs: {
       description: {
-        story:
-          'On mobile viewports, the chat always renders fullscreen regardless of `desktopLayout`.',
+        story: 'Chat placed in a narrow container (366px) — simulates a mobile viewport.',
       },
     },
   },
@@ -295,18 +308,17 @@ export const WithCustomSuggestions: Story = {
   ],
 };
 
-export const WithAiMessageOverrides: Story = {
-  name: 'With AI message overrides',
+export const WithComponentOverrides: Story = {
+  name: 'With component overrides',
   parameters: {
     docs: {
       description: {
         story:
-          'Demonstrates `aiMessageOverrides` prop to customize the loader and text bubble rendering inside the Chat component.',
+          'Demonstrates `componentOverrides` prop to customize sub-components inside the Chat.',
       },
     },
   },
   args: {
-    desktopLayout: 'sidebar',
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
@@ -318,26 +330,32 @@ export const WithAiMessageOverrides: Story = {
       "I'm looking for stylish gifts that fit my budget",
     ],
     termsText: defaultTermsHtml,
-    aiMessageOverrides: {
-      loader: (
-        <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '13px' }}>
-          Thinking
-          <span className='cio-asa-thinking-dots' />
-        </div>
-      ),
-      textBubble: (text: string) => (
-        <div
-          style={{
-            padding: '12px 16px',
-            background: '#f0f4ff',
-            borderRadius: '8px',
-            border: '1px solid #d4deff',
-            fontSize: '14px',
-            lineHeight: '20px',
-          }}>
-          {text}
-        </div>
-      ),
+    componentOverrides: {
+      aiMessage: {
+        loader: {
+          reactNode: (
+            <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '13px' }}>
+              Thinking
+              <span className='cio-asa-thinking-dots' />
+            </div>
+          ),
+        },
+        textBubble: {
+          reactNode: ({ text }: { text: string }) => (
+            <div
+              style={{
+                padding: '12px 16px',
+                background: '#f0f4ff',
+                borderRadius: '8px',
+                border: '1px solid #d4deff',
+                fontSize: '14px',
+                lineHeight: '20px',
+              }}>
+              {text}
+            </div>
+          ),
+        },
+      },
     },
   },
   decorators: [

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
-import { ResultGroupMeta } from '../../types';
+import { ChatComponentOverrides, ResultGroupMeta, Translations } from '../../types';
 import { Product } from '../../utils/productNormalizer';
+import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
-import { AiMessageOverrides } from './AiMessage';
 import ChatHeader from './ChatHeader';
 import WelcomeScreen from './WelcomeScreen';
 import ChatMessageList from './ChatMessageList';
@@ -13,14 +13,7 @@ export interface ChatHandle {
   clearHistory: () => void;
 }
 
-export type DesktopLayout = 'sidebar' | 'fullscreen';
-
 interface ChatProps {
-  /**
-   * Controls the chat layout on desktop. On mobile, always renders fullscreen.
-   * @default 'sidebar'
-   */
-  desktopLayout?: DesktopLayout;
   /** Called when the close button (✕) is clicked. The consumer controls visibility. */
   onClose?: () => void;
   /** Additional CSS class name for the root container */
@@ -39,18 +32,15 @@ interface ChatProps {
   aspectRatio?: AspectRatio;
   /** Currency symbol for product prices */
   currency?: string;
-  /** Custom text for the "Add to cart" button */
-  addToCartText?: string;
-  /** Custom text for the "View more" link */
-  viewMoreText?: string;
-  /** Override default AI message sub-components (loader, text bubble) */
-  aiMessageOverrides?: AiMessageOverrides;
+  /** Override any sub-component with custom render props or React nodes */
+  componentOverrides?: ChatComponentOverrides;
+  /** Translation overrides for internationalizing UI strings */
+  translations?: Translations;
 }
 
 const Chat = forwardRef<ChatHandle, ChatProps>(
   (
     {
-      desktopLayout = 'sidebar',
       onClose,
       className,
       initialSuggestions,
@@ -60,30 +50,27 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       onAddToCart,
       aspectRatio,
       currency,
-      addToCartText,
-      viewMoreText,
-      aiMessageOverrides,
+      componentOverrides,
+      translations,
     },
     ref,
   ) => {
     const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults();
-    const [view, setView] = useState<'welcome' | 'chat'>('welcome');
     const chatViewRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    const isWelcome = messages.length === 0;
+
     useImperativeHandle(ref, () => ({
-      clearHistory: () => {
-        clearHistory();
-        setView('welcome');
-      },
+      clearHistory,
     }));
 
     useEffect(() => {
-      if (view === 'chat') {
+      if (!isWelcome) {
         const input = chatViewRef.current?.querySelector('input');
         input?.focus();
       }
-    }, [view]);
+    }, [isWelcome]);
 
     useEffect(() => {
       const container = containerRef.current;
@@ -99,36 +86,32 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       return () => container.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
-    const handleSend = (text: string) => {
-      if (view === 'welcome') {
-        setView('chat');
-      }
-      sendMessage(text);
-    };
-
-    const layoutClass =
-      desktopLayout === 'fullscreen' ? 'cio-asa-chat--fullscreen' : 'cio-asa-chat--sidebar';
-
     return (
       <div
-        className={['cio-asa', 'cio-asa-chat', layoutClass, className].filter(Boolean).join(' ')}
+        className={['cio-asa', 'cio-asa-chat', className].filter(Boolean).join(' ')}
         ref={containerRef}
         role='dialog'
         aria-modal='true'
         aria-labelledby='cio-asa-chat-title'>
         <div className='cio-asa-chat-body'>
-          {view === 'welcome' ? (
+          {isWelcome ? (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>
               <WelcomeScreen
                 suggestions={initialSuggestions}
-                onSend={handleSend}
+                onSend={sendMessage}
                 onClose={onClose}
                 termsText={termsText}
+                translations={translations}
+                componentOverrides={componentOverrides?.welcomeScreen}
               />
             </div>
           ) : (
             <div className='cio-asa-chat-view cio-asa-chat-view--chat' ref={chatViewRef}>
-              <ChatHeader onClose={onClose} />
+              <ChatHeader
+                onClose={onClose}
+                translations={translations}
+                componentOverrides={componentOverrides?.header}
+              />
               <ChatMessageList
                 messages={messages}
                 onProductClick={onProductClick}
@@ -136,11 +119,19 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 onAddToCart={onAddToCart}
                 aspectRatio={aspectRatio}
                 currency={currency}
-                addToCartText={addToCartText}
-                viewMoreText={viewMoreText}
-                aiMessageOverrides={aiMessageOverrides}
+                addToCartText={translate('CioAsa.results.addToCart', translations)}
+                viewMoreText={translate('CioAsa.results.viewMore', translations)}
+                aiMessageOverrides={componentOverrides?.aiMessage}
+                userMessageOverrides={componentOverrides?.userMessage}
+                resultsBlockOverrides={componentOverrides?.resultsBlock}
+                translations={translations}
               />
-              <ChatInput onSubmit={handleSend} isDisabled={isStreaming} />
+              <ChatInput
+                onSubmit={sendMessage}
+                isDisabled={isStreaming}
+                translations={translations}
+                componentOverrides={componentOverrides?.input}
+              />
             </div>
           )}
         </div>

@@ -6,6 +6,12 @@ import {
   Nullable,
 } from '@constructor-io/constructorio-client-javascript/lib/types';
 import { IAgentParameters } from '@constructor-io/constructorio-client-javascript/lib/types/agent';
+import {
+  ComponentOverrideProps,
+  CarouselOverrides,
+  IncludeComponentOverrides,
+} from '@constructor-io/constructorio-ui-components';
+import { Product } from './utils/productNormalizer';
 
 export { Nullable, ConstructorIOClient };
 
@@ -115,3 +121,119 @@ export interface UseChatReturn {
   isStreaming: boolean;
   clearHistory: () => void;
 }
+
+/**
+ * Translations type for internationalizing UI strings.
+ * All keys are optional — any non-provided translation will fall back to the English default.
+ */
+export type Translations = {
+  'CioAsa.button.label'?: string;
+  'CioAsa.header.title'?: string;
+  'CioAsa.header.close'?: string;
+  'CioAsa.input.placeholder'?: string;
+  'CioAsa.input.ariaLabel'?: string;
+  'CioAsa.input.sendAriaLabel'?: string;
+  'CioAsa.welcome.title'?: string;
+  'CioAsa.welcome.placeholder'?: string;
+  'CioAsa.welcome.sendButton'?: string;
+  'CioAsa.welcome.inputAriaLabel'?: string;
+  'CioAsa.welcome.sendAriaLabel'?: string;
+  'CioAsa.welcome.suggestionsAriaLabel'?: string;
+  'CioAsa.messageList.ariaLabel'?: string;
+  'CioAsa.typingIndicator.ariaLabel'?: string;
+  'CioAsa.userMessage.ariaLabel'?: string;
+  'CioAsa.results.viewMore'?: string;
+  'CioAsa.results.addToCart'?: string;
+};
+
+// --- Component Override Render Props ---
+
+export interface ChatHeaderRenderProps {
+  title: string;
+  onClose?: () => void;
+}
+
+export interface ChatInputRenderProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  isDisabled: boolean;
+}
+
+export interface WelcomeScreenTitleRenderProps {
+  text: string;
+}
+
+export interface WelcomeScreenInputRenderProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  isDisabled: boolean;
+}
+
+export interface SuggestedQuestionsRenderProps {
+  suggestions: string[];
+  onSuggestionClick: (suggestion: string) => void;
+}
+
+export interface UserMessageRenderProps {
+  text: string;
+}
+
+export interface AiMessageLoaderRenderProps {
+  translations?: Translations;
+}
+
+export interface AiMessageTextBubbleRenderProps {
+  text: string;
+}
+
+export interface ResultsBlockRenderProps {
+  groups: ResultGroup[];
+}
+
+export interface ResultsGroupTitleRenderProps {
+  label: string;
+}
+
+export interface ResultsViewMoreRenderProps {
+  group: ResultGroupMeta;
+  onClick: () => void;
+}
+
+// --- Component Override Types ---
+
+export interface WelcomeScreenOverrides {
+  title?: ComponentOverrideProps<WelcomeScreenTitleRenderProps>;
+  input?: ComponentOverrideProps<WelcomeScreenInputRenderProps>;
+  suggestedQuestions?: ComponentOverrideProps<SuggestedQuestionsRenderProps>;
+}
+
+export interface ChatInputOverrides {
+  reactNode?: ComponentOverrideProps<ChatInputRenderProps>['reactNode'];
+}
+
+export interface AiMessageOverrides {
+  loader?: ComponentOverrideProps<AiMessageLoaderRenderProps>;
+  textBubble?: ComponentOverrideProps<AiMessageTextBubbleRenderProps>;
+}
+
+export interface ResultsBlockOverrides {
+  reactNode?: ComponentOverrideProps<ResultsBlockRenderProps>['reactNode'];
+  groupTitle?: ComponentOverrideProps<ResultsGroupTitleRenderProps>;
+  viewMore?: ComponentOverrideProps<ResultsViewMoreRenderProps>;
+  carousel?: CarouselOverrides<Product>;
+}
+
+export interface ChatComponentOverrides {
+  header?: ComponentOverrideProps<ChatHeaderRenderProps>;
+  welcomeScreen?: WelcomeScreenOverrides;
+  input?: ComponentOverrideProps<ChatInputRenderProps>;
+  userMessage?: ComponentOverrideProps<UserMessageRenderProps>;
+  aiMessage?: AiMessageOverrides;
+  resultsBlock?: ResultsBlockOverrides;
+}
+
+export type { ComponentOverrideProps, IncludeComponentOverrides };
