@@ -29,7 +29,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const CustomHeader: Story = {
-  name: 'Custom Header',
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses', 'Best running shoes'],
@@ -70,7 +69,6 @@ export const CustomHeader: Story = {
 };
 
 export const CustomLoader: Story = {
-  name: 'Custom AI Loader',
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
@@ -100,7 +98,6 @@ export const CustomLoader: Story = {
 };
 
 export const CustomText: Story = {
-  name: 'Custom AI Text',
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
@@ -128,7 +125,6 @@ export const CustomText: Story = {
 };
 
 export const CustomWelcomeTitle: Story = {
-  name: 'Custom Welcome Title',
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses', 'Best running shoes'],
@@ -159,7 +155,6 @@ export const CustomWelcomeTitle: Story = {
 };
 
 export const CustomSuggestedQuestions: Story = {
-  name: 'Custom Suggested Questions',
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: [
@@ -255,7 +250,6 @@ export const CustomInput: Story = {
 };
 
 export const CustomUserMessage: Story = {
-  name: 'Custom User Message',
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
@@ -288,7 +282,6 @@ export const CustomUserMessage: Story = {
 };
 
 export const CustomViewMore: Story = {
-  name: 'Custom View More',
   args: {
     onClose: () => alert('Close'),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
@@ -328,7 +321,6 @@ export const CustomViewMore: Story = {
 };
 
 export const CustomProductCard: Story = {
-  name: 'Custom Product Card',
   args: {
     onClose: () => alert('Close'),
     onProductClick: (product) => alert(`Click: ${product.name}`),
@@ -405,4 +397,3 @@ export const CustomProductCard: Story = {
     },
   },
 };
-

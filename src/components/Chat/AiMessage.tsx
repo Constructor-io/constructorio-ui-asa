@@ -33,9 +33,7 @@ export default function AiMessage({ message, componentOverrides, translations }:
         </RenderPropsWrapper>
       )}
       {hasText && (
-        <RenderPropsWrapper
-          override={componentOverrides?.text?.reactNode}
-          props={textRenderProps}>
+        <RenderPropsWrapper override={componentOverrides?.text?.reactNode} props={textRenderProps}>
           <div className='cio-asa-ai-message__bubble'>
             <div className='cio-asa-ai-message__text'>{message.text}</div>
           </div>
