@@ -4,6 +4,7 @@ import {
   ProductCard,
   RenderPropsWrapper,
 } from '@constructor-io/constructorio-ui-components';
+import type { ProductCardProps } from '@constructor-io/constructorio-ui-components';
 import {
   ResultGroup,
   ResultGroupMeta,
@@ -94,7 +95,7 @@ function ResultsBlock({
 
   const productCardOverrides = componentOverrides?.carousel?.item?.productCard;
 
-  const renderProductCard = (renderProps: any) => {
+  const renderProductCard = (renderProps: ProductCardProps) => {
     const product = renderProps.product as Product;
     return (
       <ProductCard
