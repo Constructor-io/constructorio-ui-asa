@@ -82,6 +82,7 @@ function ResultsBlock({
     };
 
     compute();
+    if (typeof ResizeObserver === 'undefined') return undefined;
     const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
