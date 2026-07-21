@@ -90,18 +90,16 @@ export default function useAsaResults(): UseChatReturn {
             }
 
             if (type === 'search_result') {
+              const resolvedGroup: ResultGroupMeta = pendingGroup ?? {
+                display_name: data?.response?.search_request?.display_name ?? data?.title ?? '',
+                value: data?.response?.search_request?.search_term ?? data?.title ?? '',
+              };
+              const results = data?.response?.results ?? (data?.results ? data.results : [data]);
+              const newGroup: ResultGroup = { group: resolvedGroup, searchResults: results };
+              pendingGroup = null;
               setMessages((prev) =>
                 prev.map((msg) => {
                   if (msg.id !== assistantMessage.id) return msg;
-                  const response = data?.response;
-                  const results = response?.results ?? (data?.results ? data.results : [data]);
-                  const searchRequest = response?.search_request;
-                  const group: ResultGroupMeta = pendingGroup ?? {
-                    display_name: searchRequest?.display_name ?? data?.title ?? '',
-                    value: searchRequest?.search_term ?? data?.title ?? '',
-                  };
-                  const newGroup: ResultGroup = { group, searchResults: results };
-                  pendingGroup = null;
                   return {
                     ...msg,
                     status: 'streaming' as const,

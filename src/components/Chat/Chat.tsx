@@ -109,7 +109,6 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         className={['cio-asa', 'cio-asa-chat', className].filter(Boolean).join(' ')}
         ref={containerRef}
         role='dialog'
-
         aria-labelledby='cio-asa-chat-title'>
         <div className='cio-asa-chat-body'>
           {isWelcome ? (

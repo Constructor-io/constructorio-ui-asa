@@ -25,7 +25,7 @@ export function normalizeItemToProduct(item: any, options?: NormalizeOptions): P
     description: data.description,
     badge:
       data.sale_price != null || data.salePrice != null
-        ? (options?.saleBadgeText ?? 'Sale')
+        ? options?.saleBadgeText ?? 'Sale'
         : undefined,
   };
 }
