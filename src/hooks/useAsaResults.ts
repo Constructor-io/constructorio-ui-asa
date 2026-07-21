@@ -142,10 +142,12 @@ export default function useAsaResults(): UseChatReturn {
             }),
           );
         } finally {
-          reader.cancel();
-          readerRef.current = null;
-          setIsStreaming(false);
-          isStreamingRef.current = false;
+          if (readerRef.current === reader) {
+            reader.cancel();
+            readerRef.current = null;
+            setIsStreaming(false);
+            isStreamingRef.current = false;
+          }
         }
       })();
     },
