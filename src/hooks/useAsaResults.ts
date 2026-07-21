@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
-import { ResultGroup, ChatMessage, UseChatReturn } from '../types';
+import { ResultGroup, ResultGroupMeta, ChatMessage, UseChatReturn } from '../types';
 
 const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
 
@@ -59,6 +59,8 @@ export default function useAsaResults(): UseChatReturn {
       readerRef.current = reader;
 
       (async () => {
+        let pendingGroup: ResultGroupMeta | null = null;
+
         try {
           // eslint-disable-next-line no-await-in-loop
           while (!killSwitchRef.current) {
@@ -80,18 +82,26 @@ export default function useAsaResults(): UseChatReturn {
               threadIdRef.current = data.thread_id;
             }
 
+            if (type === 'group') {
+              pendingGroup = {
+                display_name: data?.display_name ?? data?.group ?? '',
+                value: data?.value ?? data?.group ?? '',
+              };
+            }
+
             if (type === 'search_result') {
               setMessages((prev) =>
                 prev.map((msg) => {
                   if (msg.id !== assistantMessage.id) return msg;
                   const response = data?.response;
-                  const results = response?.results || [];
+                  const results = response?.results ?? (data?.results ? data.results : [data]);
                   const searchRequest = response?.search_request;
-                  const group = {
-                    display_name: searchRequest?.display_name || data?.title || '',
-                    value: searchRequest?.search_term || data?.title || '',
+                  const group: ResultGroupMeta = pendingGroup ?? {
+                    display_name: searchRequest?.display_name ?? data?.title ?? '',
+                    value: searchRequest?.search_term ?? data?.title ?? '',
                   };
                   const newGroup: ResultGroup = { group, searchResults: results };
+                  pendingGroup = null;
                   return {
                     ...msg,
                     status: 'streaming' as const,
