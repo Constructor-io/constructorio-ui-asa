@@ -17,6 +17,7 @@ const defaultTranslations: Translations = {
   'CioAsa.userMessage.ariaLabel': 'You said',
   'CioAsa.results.viewMore': 'View more products',
   'CioAsa.results.addToCart': 'Add to cart',
+  'CioAsa.results.saleBadge': 'Sale',
 };
 
 export default function translate(key: keyof Translations, translations?: Translations): string {

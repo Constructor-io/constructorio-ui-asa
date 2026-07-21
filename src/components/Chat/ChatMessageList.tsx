@@ -102,6 +102,7 @@ export default function ChatMessageList({
                 currency={currency}
                 addToCartText={addToCartText}
                 viewMoreText={viewMoreText}
+                saleBadgeText={translate('CioAsa.results.saleBadge', translations)}
                 componentOverrides={resultsBlockOverrides}
               />
             )}

@@ -26,6 +26,7 @@ interface ResultsBlockProps {
   showTitle?: boolean;
   viewMoreText?: string;
   addToCartText?: string;
+  saleBadgeText?: string;
   currency?: string;
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
@@ -59,6 +60,7 @@ function ResultsBlock({
   showTitle = true,
   viewMoreText = 'View more products',
   addToCartText = 'Add to cart',
+  saleBadgeText = 'Sale',
   currency,
   onProductClick,
   onAddToCart,
@@ -131,7 +133,9 @@ function ResultsBlock({
       {groups.map((groupData, index) => {
         const label = groupData.group?.display_name || groupData.group?.value || '';
         const groupKey = `${groupData.group?.value || label}-${index}`;
-        const products = groupData.searchResults.map(normalizeItemToProduct);
+        const products = groupData.searchResults.map((item) =>
+          normalizeItemToProduct(item, { saleBadgeText }),
+        );
 
         const titleRenderProps: ResultsGroupTitleRenderProps = { label };
         const viewMoreRenderProps: ResultsViewMoreRenderProps = {

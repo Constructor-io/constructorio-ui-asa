@@ -20,7 +20,7 @@ export { default as useAsaResults } from './hooks/useAsaResults';
 
 // Utils
 export { normalizeItemToProduct } from './utils/productNormalizer';
-export type { Product } from './utils/productNormalizer';
+export type { Product, NormalizeOptions } from './utils/productNormalizer';
 
 // Types
 export * from './types';
