@@ -6,7 +6,7 @@
   background: rgba(248, 249, 252, 1);
   overflow: hidden;
   position: relative;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--cio-asa-font-family, 'Inter', sans-serif);
   animation: cio-asa-fade-in 0.4s ease;
 }
 

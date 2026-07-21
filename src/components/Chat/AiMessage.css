@@ -19,7 +19,7 @@
 }
 
 .cio-asa-ai-message__text {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--cio-asa-font-family, 'Inter', sans-serif);
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
