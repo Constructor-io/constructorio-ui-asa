@@ -4,8 +4,18 @@ import Chat from '../../../components/Chat/Chat';
 import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
 import { DEMO_API_KEY } from '../../../constants';
 
-const defaultTermsHtml =
-  'By submitting a search via the virtual style assistant, you agree to our <a href="#">Terms</a>.';
+/* eslint-disable react/no-danger */
+function TermsText() {
+  return (
+    <span
+      dangerouslySetInnerHTML={{
+        __html:
+          'By submitting a search via the virtual style assistant, you agree to our <a href="#">Terms</a>.',
+      }}
+    />
+  );
+}
+/* eslint-enable react/no-danger */
 
 const decorator = (Story: React.ComponentType) => (
   <CioAsaProvider apiKey={DEMO_API_KEY}>
@@ -32,7 +42,7 @@ export const CustomHeader: Story = {
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses', 'Best running shoes'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       header: {
         reactNode: ({ title, onClose }) => (
@@ -72,7 +82,7 @@ export const CustomLoader: Story = {
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       aiMessage: {
         loader: {
@@ -101,7 +111,7 @@ export const CustomText: Story = {
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       aiMessage: {
         text: {
@@ -128,7 +138,7 @@ export const CustomWelcomeTitle: Story = {
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses', 'Best running shoes'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       welcomeScreen: {
         title: {
@@ -162,7 +172,7 @@ export const CustomSuggestedQuestions: Story = {
       'Best running shoes under $100',
       'What should I wear to a party?',
     ],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       welcomeScreen: {
         suggestedQuestions: {
@@ -200,7 +210,7 @@ export const CustomInput: Story = {
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       input: {
         reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
@@ -253,7 +263,7 @@ export const CustomUserMessage: Story = {
   args: {
     onClose: () => alert('Close'),
     initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     componentOverrides: {
       userMessage: {
         reactNode: ({ text }) => (
@@ -287,7 +297,7 @@ export const CustomViewMore: Story = {
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
     onProductClick: (product) => alert(`Click: ${product.name}`),
     initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     aspectRatio: '3:4',
     currency: '$',
     componentOverrides: {
@@ -326,7 +336,7 @@ export const CustomProductCard: Story = {
     onProductClick: (product) => alert(`Click: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     initialSuggestions: ['Show me summer dresses'],
-    termsText: <span dangerouslySetInnerHTML={{ __html: defaultTermsHtml }} />,
+    termsText: <TermsText />,
     aspectRatio: '3:4',
     currency: '$',
     componentOverrides: {

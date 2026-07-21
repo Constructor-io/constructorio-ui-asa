@@ -4,6 +4,70 @@ import { ResultGroup, ResultGroupMeta, ChatMessage, UseChatReturn } from '../typ
 
 const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
 
+type MessageUpdater = React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+
+function handleSearchResult(
+  data: any,
+  pendingGroup: ResultGroupMeta | null,
+  assistantId: string,
+  setMessages: MessageUpdater,
+): ResultGroupMeta | null {
+  const resolvedGroup: ResultGroupMeta = pendingGroup ?? {
+    display_name: data?.response?.search_request?.display_name ?? data?.title ?? '',
+    value: data?.response?.search_request?.search_term ?? data?.title ?? '',
+  };
+  const results = data?.response?.results ?? (data?.results ? data.results : [data]);
+  const newGroup: ResultGroup = { group: resolvedGroup, searchResults: results };
+  setMessages((prev) =>
+    prev.map((msg) => {
+      if (msg.id !== assistantId) return msg;
+      return {
+        ...msg,
+        status: 'streaming' as const,
+        groups: [...(msg.groups || []), newGroup],
+      };
+    }),
+  );
+  return null;
+}
+
+function handleMessage(data: any, assistantId: string, setMessages: MessageUpdater) {
+  setMessages((prev) =>
+    prev.map((msg) => {
+      if (msg.id !== assistantId) return msg;
+      return {
+        ...msg,
+        status: 'streaming' as const,
+        text: (msg.text || '') + (data?.text || ''),
+      };
+    }),
+  );
+}
+
+function handleServerError(assistantId: string, setMessages: MessageUpdater) {
+  setMessages((prev) =>
+    prev.map((msg) => {
+      if (msg.id !== assistantId) return msg;
+      return { ...msg, text: ERROR_FALLBACK_TEXT, status: 'error' as const };
+    }),
+  );
+}
+
+function handleStreamEnd(assistantId: string, setMessages: MessageUpdater) {
+  setMessages((prev) =>
+    prev.map((msg) => (msg.id === assistantId ? { ...msg, status: 'done' } : msg)),
+  );
+}
+
+function handleStreamError(assistantId: string, setMessages: MessageUpdater) {
+  setMessages((prev) =>
+    prev.map((msg) => {
+      if (msg.id !== assistantId) return msg;
+      return { ...msg, text: msg.text || ERROR_FALLBACK_TEXT, status: 'error' as const };
+    }),
+  );
+}
+
 export default function useAsaResults(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -68,11 +132,7 @@ export default function useAsaResults(): UseChatReturn {
             const res = await reader.read();
             if (killSwitchRef.current) break;
             if (res.done) {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMessage.id ? { ...msg, status: 'done' } : msg,
-                ),
-              );
+              handleStreamEnd(assistantMessage.id, setMessages);
               break;
             }
 
@@ -80,65 +140,27 @@ export default function useAsaResults(): UseChatReturn {
 
             if (type === 'start' && data?.thread_id) {
               threadIdRef.current = data.thread_id;
-            }
-
-            if (type === 'group') {
+            } else if (type === 'group') {
               pendingGroup = {
                 display_name: data?.display_name ?? data?.group ?? '',
                 value: data?.value ?? data?.group ?? '',
               };
-            }
-
-            if (type === 'search_result') {
-              const resolvedGroup: ResultGroupMeta = pendingGroup ?? {
-                display_name: data?.response?.search_request?.display_name ?? data?.title ?? '',
-                value: data?.response?.search_request?.search_term ?? data?.title ?? '',
-              };
-              const results = data?.response?.results ?? (data?.results ? data.results : [data]);
-              const newGroup: ResultGroup = { group: resolvedGroup, searchResults: results };
-              pendingGroup = null;
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id !== assistantMessage.id) return msg;
-                  return {
-                    ...msg,
-                    status: 'streaming' as const,
-                    groups: [...(msg.groups || []), newGroup],
-                  };
-                }),
+            } else if (type === 'search_result') {
+              pendingGroup = handleSearchResult(
+                data,
+                pendingGroup,
+                assistantMessage.id,
+                setMessages,
               );
-            }
-
-            if (type === 'message') {
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id !== assistantMessage.id) return msg;
-                  return {
-                    ...msg,
-                    status: 'streaming' as const,
-                    text: (msg.text || '') + (data?.text || ''),
-                  };
-                }),
-              );
-            }
-
-            if (type === 'server_error') {
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id !== assistantMessage.id) return msg;
-                  return { ...msg, text: ERROR_FALLBACK_TEXT, status: 'error' as const };
-                }),
-              );
+            } else if (type === 'message') {
+              handleMessage(data, assistantMessage.id, setMessages);
+            } else if (type === 'server_error') {
+              handleServerError(assistantMessage.id, setMessages);
               break;
             }
           }
-        } catch (e) {
-          setMessages((prev) =>
-            prev.map((msg) => {
-              if (msg.id !== assistantMessage.id) return msg;
-              return { ...msg, text: msg.text || ERROR_FALLBACK_TEXT, status: 'error' as const };
-            }),
-          );
+        } catch {
+          handleStreamError(assistantMessage.id, setMessages);
         } finally {
           if (readerRef.current === reader) {
             reader.cancel();
