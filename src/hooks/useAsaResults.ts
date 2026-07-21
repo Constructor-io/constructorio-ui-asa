@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
 import { ResultGroup, ResultGroupMeta, ChatMessage, UseChatReturn } from '../types';
 
 const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
 
-type MessageUpdater = React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
 
 function handleSearchResult(
   data: any,

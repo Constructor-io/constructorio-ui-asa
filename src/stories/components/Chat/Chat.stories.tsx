@@ -20,7 +20,9 @@ const meta: Meta<typeof Chat> = {
           'AI Shopping Assistant chat dialog.\n\n' +
           'The component fills its container (`width: 100%; height: 100%`). ' +
           'Control the layout (sidebar, fullscreen, panel) by styling the parent wrapper or using the `className` prop.\n\n' +
-          '**Content** — You can swap the sections for a customized version of the AI Chat dialog component.',
+          '**Content** — You can swap the sections for a customized version of the AI Chat dialog component.\n\n' +
+          '**Results** — Product results are rendered using the [ResultsBlock](?path=/docs/components-resultsblock--docs) component internally. ' +
+          'See its documentation for available layout and display options (`aspectRatio`, `minCardWidth`, `gap`, `showTitle`, etc.).',
       },
     },
   },
@@ -46,7 +48,8 @@ const meta: Meta<typeof Chat> = {
     },
     currency: {
       control: 'text',
-      description: 'Currency symbol for product prices.',
+      description:
+        'Currency symbol for product prices. For additional results layout options see [ResultsBlock](?path=/docs/components-resultsblock--docs).',
       table: { category: 'Results' },
     },
     onClose: {
@@ -106,7 +109,8 @@ const meta: Meta<typeof Chat> = {
         '- `CioAsa.typingIndicator.ariaLabel`\n' +
         '- `CioAsa.userMessage.ariaLabel`\n' +
         '- `CioAsa.results.viewMore`\n' +
-        '- `CioAsa.results.addToCart`',
+        '- `CioAsa.results.addToCart`\n' +
+        '- `CioAsa.results.saleBadge`',
       control: 'object',
       table: {
         category: 'Translations',
