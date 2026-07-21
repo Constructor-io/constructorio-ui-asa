@@ -80,6 +80,24 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         if (e.key === 'Escape' && onClose) {
           onClose();
         }
+
+        if (e.key === 'Tab') {
+          const focusableElements = container.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          );
+          if (focusableElements.length === 0) return;
+
+          const first = focusableElements[0];
+          const last = focusableElements[focusableElements.length - 1];
+
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       };
 
       container.addEventListener('keydown', handleKeyDown);
