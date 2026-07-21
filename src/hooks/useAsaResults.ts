@@ -14,12 +14,20 @@ export default function useAsaResults(): UseChatReturn {
   const idCounterRef = useRef(0);
 
   const contextValue = useCioAsaContext();
-  const { cioClient, staticRequestConfigs } = contextValue || {};
+  if (!contextValue) {
+    throw new Error('useAsaResults must be used within a CioAsaProvider.');
+  }
+  const { cioClient, staticRequestConfigs } = contextValue;
   const { domain } = staticRequestConfigs || {};
+  if (!cioClient || !domain) {
+    throw new Error(
+      'useAsaResults requires a configured cioClient and domain. Check your CioAsaProvider props.',
+    );
+  }
 
   const sendMessage = useCallback(
     (text: string) => {
-      if (!cioClient || !domain || !text.trim() || isStreamingRef.current) return;
+      if (!text.trim() || isStreamingRef.current) return;
 
       idCounterRef.current += 1;
       const userMessage: ChatMessage = {
