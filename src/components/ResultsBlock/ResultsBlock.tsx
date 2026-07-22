@@ -1,10 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import {
-  Carousel,
-  ProductCard,
-  RenderPropsWrapper,
-} from '@constructor-io/constructorio-ui-components';
-import type { ProductCardProps } from '@constructor-io/constructorio-ui-components';
+import { Carousel, RenderPropsWrapper } from '@constructor-io/constructorio-ui-components';
 import {
   ResultGroup,
   ResultGroupMeta,
@@ -14,10 +9,11 @@ import {
 } from '../../types';
 import { normalizeItemToProduct, Product } from '../../utils/productNormalizer';
 import { ArrowRightIcon } from '../icons';
-import { PLACEHOLDER_IMAGE } from '../../constants';
+import { AspectRatio, PEEK_FRACTION, aspectRatioMap } from './constants';
+import createProductCardRenderer from './renderProductCard';
 import './ResultsBlock.css';
 
-export type AspectRatio = '1:1' | '3:4' | '9:16' | '4:3' | '16:9';
+export type { AspectRatio } from './constants';
 
 interface ResultsBlockProps {
   groups: ResultGroup[];
@@ -34,16 +30,6 @@ interface ResultsBlockProps {
   onViewMore?: (group: ResultGroupMeta) => void;
   componentOverrides?: ResultsBlockOverrides;
 }
-
-const PEEK_FRACTION = 0.3;
-
-const aspectRatioMap: Record<AspectRatio, string> = {
-  '1:1': '1 / 1',
-  '3:4': '3 / 4',
-  '9:16': '9 / 16',
-  '4:3': '4 / 3',
-  '16:9': '16 / 9',
-};
 
 function PreviousButton() {
   return null;
@@ -90,42 +76,13 @@ function ResultsBlock({
 
   if (!groups || groups.length === 0) return null;
 
-  const handleAddToCart = onAddToCart
-    ? (_e: React.MouseEvent, product: Product) => onAddToCart(product)
-    : undefined;
-
-  const productCardOverrides = componentOverrides?.carousel?.item?.productCard;
-
-  const renderProductCard = (renderProps: ProductCardProps) => {
-    const product = renderProps.product as Product;
-    return (
-      <ProductCard
-        product={product}
-        className='cio-asa-product-card'
-        onProductClick={onProductClick}
-        onAddToCart={handleAddToCart}
-        addToCartText={addToCartText}
-        componentOverrides={productCardOverrides}>
-        <ProductCard.ImageSection
-          className='cio-asa-product-card__image-wrapper'
-          imageUrl={product.imageUrl || PLACEHOLDER_IMAGE}>
-          {product.badge && <span className='cio-asa-product-card__badge'>{product.badge}</span>}
-        </ProductCard.ImageSection>
-        <ProductCard.Content className='cio-asa-product-card__info'>
-          <ProductCard.TitleSection className='cio-asa-product-card__name' />
-          {currency && (
-            <ProductCard.PriceSection
-              className='cio-asa-product-card__price'
-              priceCurrency={currency}
-            />
-          )}
-          {onAddToCart && (
-            <ProductCard.AddToCartButton className='cio-asa-product-card__add-to-cart' />
-          )}
-        </ProductCard.Content>
-      </ProductCard>
-    );
-  };
+  const renderProductCard = createProductCardRenderer({
+    currency,
+    addToCartText,
+    onProductClick,
+    onAddToCart,
+    componentOverrides: componentOverrides?.carousel?.item?.productCard,
+  });
 
   return (
     <div

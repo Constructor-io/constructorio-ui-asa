@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { RenderPropsWrapper } from '@constructor-io/constructorio-ui-components';
 import { ChatInputRenderProps, ComponentOverrideProps, Translations } from '../../types';
 import { SendArrowIcon } from '../icons';
 import translate from '../../utils/translate';
+import useMessageInput from '../../hooks/useMessageInput';
 
 interface ChatInputProps {
   onSubmit: (text: string) => void;
@@ -17,20 +18,11 @@ export default function ChatInput({
   translations,
   componentOverrides,
 }: ChatInputProps) {
-  const [value, setValue] = useState('');
-
-  const handleSubmit = () => {
-    if (!value.trim() || isDisabled) return;
-    onSubmit(value.trim());
-    setValue('');
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
+  const { value, setValue, handleSubmit, handleKeyDown } = useMessageInput({
+    onSend: onSubmit,
+    isDisabled,
+    submitOnEnterOnly: true,
+  });
 
   const renderProps: ChatInputRenderProps = {
     value,

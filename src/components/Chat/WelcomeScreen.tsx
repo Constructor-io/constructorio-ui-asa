@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { RenderPropsWrapper } from '@constructor-io/constructorio-ui-components';
 import {
   SuggestedQuestionsRenderProps,
@@ -9,6 +9,7 @@ import {
 } from '../../types';
 import { SendPlaneIcon } from '../icons';
 import translate from '../../utils/translate';
+import useMessageInput from '../../hooks/useMessageInput';
 
 interface WelcomeScreenProps {
   suggestions?: string[];
@@ -31,20 +32,12 @@ export default function WelcomeScreen({
   translations,
   componentOverrides,
 }: WelcomeScreenProps) {
-  const [inputValue, setInputValue] = useState('');
-
-  const handleSubmit = () => {
-    if (disabled || !inputValue.trim()) return;
-    onSend(inputValue.trim());
-    setInputValue('');
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
+  const {
+    value: inputValue,
+    setValue: setInputValue,
+    handleSubmit,
+    handleKeyDown,
+  } = useMessageInput({ onSend, isDisabled: disabled });
 
   const titleRenderProps: WelcomeScreenTitleRenderProps = {
     text: translate('CioAsa.welcome.title', translations),

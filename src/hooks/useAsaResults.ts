@@ -1,72 +1,13 @@
-import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
-import { ResultGroup, ResultGroupMeta, ChatMessage, UseChatReturn } from '../types';
-
-const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
-
-type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
-
-function handleSearchResult(
-  data: any,
-  pendingGroup: ResultGroupMeta | null,
-  assistantId: string,
-  setMessages: MessageUpdater,
-): ResultGroupMeta | null {
-  const resolvedGroup: ResultGroupMeta = pendingGroup ?? {
-    display_name: data?.response?.search_request?.display_name ?? data?.title ?? '',
-    value: data?.response?.search_request?.search_term ?? data?.title ?? '',
-  };
-  const results = data?.response?.results ?? (data?.results ? data.results : [data]);
-  const newGroup: ResultGroup = { group: resolvedGroup, searchResults: results };
-  setMessages((prev) =>
-    prev.map((msg) => {
-      if (msg.id !== assistantId) return msg;
-      return {
-        ...msg,
-        status: 'streaming' as const,
-        groups: [...(msg.groups || []), newGroup],
-      };
-    }),
-  );
-  return null;
-}
-
-function handleMessage(data: any, assistantId: string, setMessages: MessageUpdater) {
-  setMessages((prev) =>
-    prev.map((msg) => {
-      if (msg.id !== assistantId) return msg;
-      return {
-        ...msg,
-        status: 'streaming' as const,
-        text: (msg.text || '') + (data?.text || ''),
-      };
-    }),
-  );
-}
-
-function handleServerError(assistantId: string, setMessages: MessageUpdater) {
-  setMessages((prev) =>
-    prev.map((msg) => {
-      if (msg.id !== assistantId) return msg;
-      return { ...msg, text: ERROR_FALLBACK_TEXT, status: 'error' as const };
-    }),
-  );
-}
-
-function handleStreamEnd(assistantId: string, setMessages: MessageUpdater) {
-  setMessages((prev) =>
-    prev.map((msg) => (msg.id === assistantId ? { ...msg, status: 'done' } : msg)),
-  );
-}
-
-function handleStreamError(assistantId: string, setMessages: MessageUpdater) {
-  setMessages((prev) =>
-    prev.map((msg) => {
-      if (msg.id !== assistantId) return msg;
-      return { ...msg, text: msg.text || ERROR_FALLBACK_TEXT, status: 'error' as const };
-    }),
-  );
-}
+import { ResultGroupMeta, ChatMessage, UseChatReturn } from '../types';
+import {
+  handleSearchResult,
+  handleMessage,
+  handleServerError,
+  handleStreamEnd,
+  handleStreamError,
+} from './asaStreamHandlers';
 
 export default function useAsaResults(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -89,21 +30,24 @@ export default function useAsaResults(): UseChatReturn {
     );
   }
 
+  const nextMessageId = useCallback(() => {
+    idCounterRef.current += 1;
+    return `msg-${idCounterRef.current}-${Date.now()}`;
+  }, []);
+
   const sendMessage = useCallback(
     (text: string) => {
       if (!text.trim() || isStreamingRef.current) return;
 
-      idCounterRef.current += 1;
       const userMessage: ChatMessage = {
-        id: `msg-${idCounterRef.current}-${Date.now()}`,
+        id: nextMessageId(),
         role: 'user',
         text: text.trim(),
         status: 'done',
       };
 
-      idCounterRef.current += 1;
       const assistantMessage: ChatMessage = {
-        id: `msg-${idCounterRef.current}-${Date.now()}`,
+        id: nextMessageId(),
         role: 'assistant',
         text: '',
         groups: [],
@@ -171,7 +115,7 @@ export default function useAsaResults(): UseChatReturn {
         }
       })();
     },
-    [cioClient, domain],
+    [cioClient, domain, nextMessageId],
   );
 
   useEffect(

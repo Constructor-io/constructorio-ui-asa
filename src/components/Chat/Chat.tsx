@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import { ChatComponentOverrides, ResultGroupMeta, Translations } from '../../types';
 import { Product } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
@@ -72,37 +73,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       }
     }, [isWelcome]);
 
-    useEffect(() => {
-      const container = containerRef.current;
-      if (!container) return undefined;
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' && onClose) {
-          onClose();
-        }
-
-        if (e.key === 'Tab') {
-          const focusableElements = container.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-          );
-          if (focusableElements.length === 0) return;
-
-          const first = focusableElements[0];
-          const last = focusableElements[focusableElements.length - 1];
-
-          if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      };
-
-      container.addEventListener('keydown', handleKeyDown);
-      return () => container.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
+    useFocusTrap(containerRef, { onEscape: onClose });
 
     return (
       <div
