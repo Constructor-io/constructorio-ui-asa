@@ -1,4 +1,5 @@
 // Components
+export { default as CioAsaProvider } from './components/CioAsaProvider/CioAsaProvider';
 export { default as Button } from './components/Button/Button';
 export { default as Chat } from './components/Chat/Chat';
 export type { ChatHandle } from './components/Chat/Chat';

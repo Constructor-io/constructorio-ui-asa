@@ -46,7 +46,7 @@
     "dist/constructorio-ui-asa-bundled.js"
   ],
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   },
   "types": "lib/types/index.d.ts",
   "scripts": {
