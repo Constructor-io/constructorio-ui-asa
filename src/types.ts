@@ -28,9 +28,7 @@ export interface AsaContextValue {
   cioClientOptions: CioClientOptions;
   setCioClientOptions: React.Dispatch<CioClientOptions>;
   staticRequestConfigs: RequestConfigs;
-  itemFieldGetters: ItemFieldGetters;
   formatters: Formatters;
-  callbacks: Callbacks;
   urlHelpers: UrlHelpers;
 }
 
@@ -38,11 +36,9 @@ export interface RequestConfigs extends IAgentParameters {
   intent?: string;
 }
 
-export interface ItemFieldGetters {}
 export interface Formatters {
   formatPrice: (price?: number) => string;
 }
-export interface Callbacks {}
 export interface UrlHelpers {
   getUrl: () => string | undefined;
   setUrl: (newUrlWithEncodedState: string) => void;
@@ -75,7 +71,6 @@ export interface QueryParamEncodingOptions {
 }
 
 // Type Extenders
-export type PropsWithChildren<P> = P & { children?: ReactNode };
 
 /**
  * Composes a type for a Component that accepts
@@ -85,13 +80,6 @@ export type PropsWithChildren<P> = P & { children?: ReactNode };
 export type IncludeRenderProps<ComponentProps, ChildrenFunctionProps> = ComponentProps & {
   children?: ((props: ChildrenFunctionProps) => ReactNode) | React.ReactNode;
 };
-
-export interface ProductInfo {
-  name: string;
-  price: number;
-  url: string | undefined;
-  imageUrl: string | undefined;
-}
 
 // Chat types
 export interface ChatMessage {
