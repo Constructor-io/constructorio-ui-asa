@@ -132,6 +132,7 @@ export type Translations = {
   'CioAsa.results.viewMore'?: string;
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
+  'CioAsa.error.message'?: string;
 };
 
 // --- Component Override Render Props ---

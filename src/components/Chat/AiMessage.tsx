@@ -7,6 +7,7 @@ import {
   ChatMessage,
   Translations,
 } from '../../types';
+import translate from '../../utils/translate';
 import TypingIndicator from './TypingIndicator';
 
 export interface AiMessageProps {
@@ -17,11 +18,17 @@ export interface AiMessageProps {
 
 export default function AiMessage({ message, componentOverrides, translations }: AiMessageProps) {
   const isLoading = message.status === 'loading';
-  const hasText = message.text && message.text.length > 0;
+  const isError = message.status === 'error';
   const hasGroups = message.groups && message.groups.length > 0;
+  // On error, fall back to the (translatable) error message when the agent
+  // returned no partial text of its own.
+  const text = isError
+    ? message.text || translate('CioAsa.error.message', translations)
+    : message.text || '';
+  const hasText = text.length > 0;
 
   const loaderRenderProps: AiMessageLoaderRenderProps = { translations };
-  const textRenderProps: AiMessageTextRenderProps = { text: message.text || '' };
+  const textRenderProps: AiMessageTextRenderProps = { text };
 
   return (
     <div className='cio-asa-ai-message'>
@@ -34,8 +41,14 @@ export default function AiMessage({ message, componentOverrides, translations }:
       )}
       {hasText && (
         <RenderPropsWrapper override={componentOverrides?.text?.reactNode} props={textRenderProps}>
-          <div className='cio-asa-ai-message__bubble'>
-            <div className='cio-asa-ai-message__text'>{message.text}</div>
+          <div
+            className={[
+              'cio-asa-ai-message__bubble',
+              isError && 'cio-asa-ai-message__bubble--error',
+            ]
+              .filter(Boolean)
+              .join(' ')}>
+            <div className='cio-asa-ai-message__text'>{text}</div>
           </div>
         </RenderPropsWrapper>
       )}

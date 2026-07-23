@@ -1,8 +1,6 @@
 import { Dispatch, SetStateAction } from 'react';
 import { ResultGroup, ResultGroupMeta, ChatMessage } from '../types';
 
-export const ERROR_FALLBACK_TEXT = "I can't assist you with that request.";
-
 export type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
 
 function updateMessageById(
@@ -44,7 +42,7 @@ export function handleMessage(data: any, assistantId: string, setMessages: Messa
 export function handleServerError(assistantId: string, setMessages: MessageUpdater) {
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
-    text: ERROR_FALLBACK_TEXT,
+    text: '',
     status: 'error',
   }));
 }
@@ -56,7 +54,6 @@ export function handleStreamEnd(assistantId: string, setMessages: MessageUpdater
 export function handleStreamError(assistantId: string, setMessages: MessageUpdater) {
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
-    text: msg.text || ERROR_FALLBACK_TEXT,
     status: 'error',
   }));
 }

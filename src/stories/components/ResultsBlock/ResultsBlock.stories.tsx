@@ -97,6 +97,16 @@ const meta: Meta<typeof ResultsBlock> = {
       description: 'If true, displays a title on top of the products list.',
       table: { category: 'Appearance' },
     },
+    normalizeItem: {
+      description:
+        'Map a raw search-result item to the product-card shape (`Product`). Override this when your index metadata uses non-default field names (e.g. `thumbnail` instead of `image_url`).',
+      control: false,
+      table: {
+        category: 'Data',
+        type: { summary: '(item, options?) => Product' },
+        defaultValue: { summary: 'normalizeItemToProduct' },
+      },
+    },
     onProductClick: {
       description: 'Called when a product card is clicked.',
       table: { category: 'Callbacks' },

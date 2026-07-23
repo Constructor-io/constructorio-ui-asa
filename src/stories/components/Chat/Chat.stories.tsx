@@ -52,6 +52,16 @@ const meta: Meta<typeof Chat> = {
         'Currency symbol for product prices. For additional results layout options see [ResultsBlock](?path=/docs/components-resultsblock--docs).',
       table: { category: 'Results' },
     },
+    normalizeItem: {
+      description:
+        'Map a raw search-result item to the product-card shape (`Product`). Override this when your index metadata uses non-default field names (e.g. `thumbnail` instead of `image_url`).',
+      control: false,
+      table: {
+        category: 'Results',
+        type: { summary: '(item, options?) => Product' },
+        defaultValue: { summary: 'normalizeItemToProduct' },
+      },
+    },
     onClose: {
       description:
         'Called when the close button (✕) is clicked. The consumer controls component visibility.',
@@ -301,65 +311,6 @@ export const WithCustomSuggestions: Story = {
       'Business casual outfit ideas',
     ],
     termsText: defaultTermsHtml,
-  },
-  decorators: [
-    (Story) => (
-      <div style={{ width: '504px', height: '800px', borderRadius: '12px', overflow: 'hidden' }}>
-        <Story />
-      </div>
-    ),
-  ],
-};
-
-export const WithComponentOverrides: Story = {
-  name: 'With component overrides',
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Demonstrates `componentOverrides` prop to customize sub-components inside the Chat.',
-      },
-    },
-  },
-  args: {
-    onClose: () => alert('Close clicked'),
-    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
-    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
-    onViewMore: (group) => alert(`View more: ${group.display_name}`),
-    aspectRatio: '3:4',
-    currency: '$',
-    initialSuggestions: [
-      'I need luggage suitable for holiday travel',
-      "I'm looking for stylish gifts that fit my budget",
-    ],
-    termsText: defaultTermsHtml,
-    componentOverrides: {
-      aiMessage: {
-        loader: {
-          reactNode: (
-            <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '13px' }}>
-              Thinking
-              <span className='cio-asa-thinking-dots' />
-            </div>
-          ),
-        },
-        text: {
-          reactNode: ({ text }: { text: string }) => (
-            <div
-              style={{
-                padding: '12px 16px',
-                background: '#f0f4ff',
-                borderRadius: '8px',
-                border: '1px solid #d4deff',
-                fontSize: '14px',
-                lineHeight: '20px',
-              }}>
-              {text}
-            </div>
-          ),
-        },
-      },
-    },
   },
   decorators: [
     (Story) => (

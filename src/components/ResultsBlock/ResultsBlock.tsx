@@ -7,7 +7,7 @@ import {
   ResultsGroupTitleRenderProps,
   ResultsViewMoreRenderProps,
 } from '../../types';
-import { normalizeItemToProduct, Product } from '../../utils/productNormalizer';
+import { normalizeItemToProduct, Product, NormalizeOptions } from '../../utils/productNormalizer';
 import { ArrowRightIcon } from '../icons';
 import { AspectRatio, PEEK_FRACTION, aspectRatioMap } from './constants';
 import createProductCardRenderer from './renderProductCard';
@@ -25,6 +25,12 @@ interface ResultsBlockProps {
   addToCartText?: string;
   saleBadgeText?: string;
   currency?: string;
+  /**
+   * Map a raw search-result item to the `Product` shape rendered by the card.
+   * Override this when your index metadata uses non-default field names
+   * (e.g. `imageUrl` instead of `image_url`). Defaults to `normalizeItemToProduct`.
+   */
+  normalizeItem?: (item: any, options?: NormalizeOptions) => Product;
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
   onViewMore?: (group: ResultGroupMeta) => void;
@@ -49,6 +55,7 @@ function ResultsBlock({
   addToCartText = 'Add to cart',
   saleBadgeText = 'Sale',
   currency,
+  normalizeItem = normalizeItemToProduct,
   onProductClick,
   onAddToCart,
   onViewMore,
@@ -93,7 +100,7 @@ function ResultsBlock({
         const label = groupData.group?.display_name || groupData.group?.value || '';
         const groupKey = `${groupData.group?.value || label}-${index}`;
         const products = groupData.searchResults.map((item) =>
-          normalizeItemToProduct(item, { saleBadgeText }),
+          normalizeItem(item, { saleBadgeText }),
         );
 
         const titleRenderProps: ResultsGroupTitleRenderProps = { label };

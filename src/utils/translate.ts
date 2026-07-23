@@ -18,6 +18,7 @@ const defaultTranslations: Translations = {
   'CioAsa.results.viewMore': 'View more products',
   'CioAsa.results.addToCart': 'Add to cart',
   'CioAsa.results.saleBadge': 'Sale',
+  'CioAsa.error.message': "I can't assist you with that request.",
 };
 
 export default function translate(key: keyof Translations, translations?: Translations): string {

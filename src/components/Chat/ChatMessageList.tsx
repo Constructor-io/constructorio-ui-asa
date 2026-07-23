@@ -9,7 +9,7 @@ import {
   UserMessageRenderProps,
 } from '../../types';
 import translate from '../../utils/translate';
-import { Product } from '../../utils/productNormalizer';
+import { Product, NormalizeOptions } from '../../utils/productNormalizer';
 import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
@@ -21,6 +21,7 @@ interface ChatMessageListProps {
   onAddToCart?: (product: Product) => void;
   aspectRatio?: AspectRatio;
   currency?: string;
+  normalizeItem?: (item: any, options?: NormalizeOptions) => Product;
   addToCartText?: string;
   viewMoreText?: string;
   aiMessageOverrides?: AiMessageOverrides;
@@ -36,6 +37,7 @@ export default function ChatMessageList({
   onAddToCart,
   aspectRatio,
   currency,
+  normalizeItem,
   addToCartText,
   viewMoreText,
   aiMessageOverrides,
@@ -100,6 +102,7 @@ export default function ChatMessageList({
                 onAddToCart={onAddToCart}
                 aspectRatio={aspectRatio}
                 currency={currency}
+                normalizeItem={normalizeItem}
                 addToCartText={addToCartText}
                 viewMoreText={viewMoreText}
                 saleBadgeText={translate('CioAsa.results.saleBadge', translations)}

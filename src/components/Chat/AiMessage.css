@@ -18,6 +18,10 @@
   box-sizing: border-box;
 }
 
+.cio-asa-ai-message__bubble--error {
+  background: #FDECEC;
+}
+
 .cio-asa-ai-message__text {
   font-family: var(--cio-asa-font-family, 'Inter', sans-serif);
   font-weight: 400;
@@ -25,4 +29,8 @@
   line-height: 20px;
   letter-spacing: -0.005em;
   color: #0F1324;
+}
+
+.cio-asa-ai-message__bubble--error .cio-asa-ai-message__text {
+  color: #B42318;
 }

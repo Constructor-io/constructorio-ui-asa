@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react
 import useAsaResults from '../../hooks/useAsaResults';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import { ChatComponentOverrides, ResultGroupMeta, Translations } from '../../types';
-import { Product } from '../../utils/productNormalizer';
+import { Product, NormalizeOptions } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import ChatHeader from './ChatHeader';
@@ -33,6 +33,11 @@ interface ChatProps {
   aspectRatio?: AspectRatio;
   /** Currency symbol for product prices */
   currency?: string;
+  /**
+   * Map a raw search-result item to the `Product` shape rendered by result cards.
+   * Override this when your index metadata uses non-default field names.
+   */
+  normalizeItem?: (item: any, options?: NormalizeOptions) => Product;
   /** Override any sub-component with custom render props or React nodes */
   componentOverrides?: ChatComponentOverrides;
   /** Translation overrides for internationalizing UI strings */
@@ -51,6 +56,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       onAddToCart,
       aspectRatio,
       currency,
+      normalizeItem,
       componentOverrides,
       translations,
     },
@@ -107,6 +113,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 onAddToCart={onAddToCart}
                 aspectRatio={aspectRatio}
                 currency={currency}
+                normalizeItem={normalizeItem}
                 addToCartText={translate('CioAsa.results.addToCart', translations)}
                 viewMoreText={translate('CioAsa.results.viewMore', translations)}
                 aiMessageOverrides={componentOverrides?.aiMessage}
