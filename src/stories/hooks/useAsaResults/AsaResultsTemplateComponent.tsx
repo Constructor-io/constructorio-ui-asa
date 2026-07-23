@@ -66,7 +66,7 @@ function CollapsibleJson({ data }: { data: any }) {
   const entries = Object.entries(data);
 
   return (
-    <pre
+    <div
       style={{
         fontFamily: "'SF Mono', 'Fira Code', monospace",
         fontSize: 13,
@@ -79,7 +79,7 @@ function CollapsibleJson({ data }: { data: any }) {
       {entries.map(([key, val]) => (
         <JsonNode key={key} label={key} value={val} />
       ))}
-    </pre>
+    </div>
   );
 }
 

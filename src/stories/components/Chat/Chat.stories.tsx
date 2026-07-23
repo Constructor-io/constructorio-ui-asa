@@ -36,7 +36,7 @@ const meta: Meta<typeof Chat> = {
     },
     termsText: {
       description:
-        'Legal disclaimer content shown at the bottom of the welcome screen. Accepts HTML string with links.',
+        'Legal disclaimer content shown at the bottom of the welcome screen. `Chat` accepts a ReactNode; in this story you can provide an HTML string which is rendered via dangerouslySetInnerHTML.',
       control: 'text',
       table: { category: 'Content' },
     },
