@@ -42,7 +42,6 @@ export function handleMessage(data: any, assistantId: string, setMessages: Messa
 export function handleServerError(assistantId: string, setMessages: MessageUpdater) {
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
-    text: '',
     status: 'error',
   }));
 }

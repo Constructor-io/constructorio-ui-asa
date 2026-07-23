@@ -9,14 +9,14 @@ describe('translate', () => {
 
   it('prefers a user-provided override over the default', () => {
     const translations: Translations = {
-      'CioAsa.header.title': 'Ayudante de compras',
+      'CioAsa.header.title': 'Custom Title',
     };
-    expect(translate('CioAsa.header.title', translations)).toBe('Ayudante de compras');
+    expect(translate('CioAsa.header.title', translations)).toBe('Custom Title');
   });
 
   it('falls back to the default when the override does not define the key', () => {
     const translations: Translations = {
-      'CioAsa.header.title': 'Ayudante de compras',
+      'CioAsa.header.title': 'Custom Title',
     };
     expect(translate('CioAsa.header.close', translations)).toBe('Close');
   });

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 interface UseMessageInputOptions {
   onSend: (text: string) => void;
   isDisabled?: boolean;
-  /** When true (default), Shift+Enter inserts a newline instead of submitting. */
+  /** When true, Shift+Enter will not submit (allowing a newline in multiline inputs). */
   submitOnEnterOnly?: boolean;
 }
 
