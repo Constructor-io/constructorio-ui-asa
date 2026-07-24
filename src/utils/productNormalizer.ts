@@ -16,8 +16,8 @@ export interface NormalizeOptions {
 export function normalizeItemToProduct(item: any, options?: NormalizeOptions): Product {
   const data = item.data || {};
   return {
-    id: data.id ?? data.result_id ?? item.value ?? '',
-    name: item.value ?? data.item_name ?? '',
+    id: String(data.id ?? data.result_id ?? item.value ?? ''),
+    name: String(item.value ?? data.item_name ?? ''),
     url: data.url,
     imageUrl: data.image_url ?? data.imageUrl,
     price: data.price,
