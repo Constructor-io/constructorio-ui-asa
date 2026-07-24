@@ -11,7 +11,7 @@ import {
   CarouselOverrides,
   IncludeComponentOverrides,
 } from '@constructor-io/constructorio-ui-components';
-import { Product } from './utils/productNormalizer';
+import type { Product } from './utils/productNormalizer';
 
 export { Nullable, ConstructorIOClient };
 
