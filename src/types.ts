@@ -182,10 +182,6 @@ export interface AiMessageTextRenderProps {
   text: string;
 }
 
-export interface ResultsBlockRenderProps {
-  groups: ResultGroup[];
-}
-
 export interface ResultsGroupTitleRenderProps {
   label: string;
 }
@@ -213,7 +209,6 @@ export interface AiMessageOverrides {
 }
 
 export interface ResultsBlockOverrides {
-  reactNode?: ComponentOverrideProps<ResultsBlockRenderProps>['reactNode'];
   groupTitle?: ComponentOverrideProps<ResultsGroupTitleRenderProps>;
   viewMore?: ComponentOverrideProps<ResultsViewMoreRenderProps>;
   carousel?: CarouselOverrides<Product>;

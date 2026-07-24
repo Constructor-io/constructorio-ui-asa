@@ -55,7 +55,6 @@ export type {
   UserMessageRenderProps,
   AiMessageLoaderRenderProps,
   AiMessageTextRenderProps,
-  ResultsBlockRenderProps,
   ResultsGroupTitleRenderProps,
   ResultsViewMoreRenderProps,
 } from './types';

@@ -193,7 +193,7 @@ export const AiCustomLoader: StoryObj = {
     <AiMessage
       message={{ id: '1', role: 'assistant', text: '', status: 'loading' }}
       componentOverrides={{
-        loader: <ThinkingLoader />,
+        loader: { reactNode: <ThinkingLoader /> },
       }}
     />
   ),

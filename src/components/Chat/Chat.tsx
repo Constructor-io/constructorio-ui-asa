@@ -73,10 +73,9 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     }));
 
     useEffect(() => {
-      if (!isWelcome) {
-        const input = chatViewRef.current?.querySelector('input');
-        input?.focus();
-      }
+      const root = isWelcome ? containerRef.current : chatViewRef.current;
+      const input = root?.querySelector('input');
+      input?.focus();
     }, [isWelcome]);
 
     useFocusTrap(containerRef, { onEscape: onClose });

@@ -162,7 +162,7 @@ The provider accepts the following props:
 | Prop | Type | Description |
 |------|------|-------------|
 | `apiKey` | `string` | Your Constructor index key. Required unless you pass your own `cioClient`. |
-| `cioClient` | `ConstructorIOClient` | A pre-configured Constructor client instance. Provide this instead of `apiKey` if you already build a client elsewhere, or when you need to customize client options (e.g. `serviceUrl`, `region`) — construct the client yourself and pass it here. |
+| `cioClient` | `ConstructorIOClient` | A pre-configured Constructor client instance. Provide this instead of `apiKey` if you already build a client elsewhere, or when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`) — construct the client yourself and pass it here. |
 | `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
