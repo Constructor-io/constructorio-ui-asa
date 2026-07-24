@@ -91,7 +91,7 @@ export default function ChatMessageList({
           );
         }
 
-        const hasGroups = message.groups && message.groups.length > 0;
+        const hasGroups = !!message.groups?.length;
 
         return (
           <div key={message.id} className='cio-asa-ai-message-group'>

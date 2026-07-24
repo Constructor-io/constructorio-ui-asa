@@ -19,7 +19,7 @@ export interface AiMessageProps {
 export default function AiMessage({ message, componentOverrides, translations }: AiMessageProps) {
   const isLoading = message.status === 'loading';
   const isError = message.status === 'error';
-  const hasGroups = message.groups && message.groups.length > 0;
+  const hasGroups = !!message.groups?.length;
   // On error, fall back to the (translatable) error message when the agent
   // returned no partial text of its own.
   const text = isError
