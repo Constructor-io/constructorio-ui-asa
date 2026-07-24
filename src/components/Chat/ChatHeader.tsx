@@ -26,9 +26,8 @@ export default function ChatHeader({ onClose, translations, componentOverrides }
             type='button'
             className='cio-asa-chat-header__close'
             onClick={onClose}
-            aria-label={translate('CioAsa.header.close', translations)}>
-            ✕
-          </button>
+            aria-label={translate('CioAsa.header.close', translations)}
+          />
         )}
       </div>
     </RenderPropsWrapper>
