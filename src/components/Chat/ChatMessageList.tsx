@@ -47,6 +47,7 @@ export default function ChatMessageList({
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(messages.length);
 
   const handleScroll = useCallback(() => {
     const el = listRef.current;
@@ -56,12 +57,17 @@ export default function ChatMessageList({
   }, []);
 
   useEffect(() => {
+    const isNewMessage = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+
     if (!isNearBottomRef.current) return;
     const el = listRef.current;
     if (!el) return;
 
+    // Smooth-scroll only when a new message is added; use 'auto' for the frequent
+    // updates during SSE streaming to avoid restarting the animation on every chunk.
     requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      el.scrollTo({ top: el.scrollHeight, behavior: isNewMessage ? 'smooth' : 'auto' });
     });
   }, [messages]);
 
