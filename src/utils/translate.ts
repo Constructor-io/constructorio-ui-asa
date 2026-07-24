@@ -26,5 +26,5 @@ export default function translate(key: keyof Translations, translations?: Transl
     return translations[key] as string;
   }
 
-  return defaultTranslations[key] || key;
+  return defaultTranslations[key] ?? key;
 }
