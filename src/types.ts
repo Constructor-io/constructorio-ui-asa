@@ -47,10 +47,13 @@ export interface UrlHelpers {
   defaultQueryStringMap: Readonly<DefaultQueryStringMap>;
 }
 
-// eslint-disable-next-line prettier/prettier
+// `cioClientOptions` is intentionally excluded: it is runtime state managed via
+// `setCioClientOptions`, not a provider input. Configure the client with `apiKey`
+// (optionally after instantiating your own `cioClient`).
 export interface CioAsaProviderProps
-  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions'>,
-    UseCioClientProps {}
+  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions' | 'cioClientOptions'> {
+  apiKey?: string;
+}
 
 export interface UseCioClientProps {
   apiKey?: string;
