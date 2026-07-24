@@ -120,7 +120,8 @@ const meta: Meta<typeof Chat> = {
         '- `CioAsa.userMessage.ariaLabel`\n' +
         '- `CioAsa.results.viewMore`\n' +
         '- `CioAsa.results.addToCart`\n' +
-        '- `CioAsa.results.saleBadge`',
+        '- `CioAsa.results.saleBadge`\n' +
+        '- `CioAsa.error.message`',
       control: 'object',
       table: {
         category: 'Translations',
