@@ -1,0 +1,51 @@
+.cio-asa-typing-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px;
+  gap: 8px;
+  background: #ECEEF3;
+  border-radius: 6px;
+}
+
+.cio-asa-typing-indicator__dots {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.cio-asa-typing-indicator__dot {
+  width: 8px;
+  height: 8px;
+  background: #C8CAD0;
+  border-radius: 50%;
+  animation: cio-asa-typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.cio-asa-typing-indicator__dot:nth-child(1) {
+  background: rgba(15, 19, 36, 0.6);
+  animation-delay: -0.32s;
+}
+
+.cio-asa-typing-indicator__dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.cio-asa-typing-indicator__dot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes cio-asa-typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

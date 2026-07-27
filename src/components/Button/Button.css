@@ -1,29 +1,61 @@
-/* Button Styles */
-.cio-asa-button {
-  width: 200px;
-  padding: 8px;
-  border-radius: 12px;
+.cio-asa-button.cio-button {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
   border: none;
-  background: #12B886;
-  color: #FFFFFF;
-  box-shadow: 0px 2px 0px 0px #099268;
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 20px;
+  border-radius: 6px;
   cursor: pointer;
+  box-shadow:
+    0px 6px 14px rgba(18, 18, 105, 0.11),
+    0px 2px 4px rgba(18, 18, 105, 0.0717),
+    0px 1px 2px rgba(18, 18, 105, 0.055);
+  transition: opacity 0.2s;
 }
 
-.cio-asa-button:hover {
-  background: #0CA678;
-  box-shadow: 0px 2px 0px 0px #099268;
+.cio-asa-button.cio-button:hover {
+  opacity: 0.9;
 }
 
-.cio-asa-button:active {
-  background: #099268;
-  color: #087F5B;
+.cio-asa-button.cio-button:active {
+  opacity: 0.8;
 }
 
-.cio-asa-button-full-width {
-  width: 100%;
+/* Dark theme */
+.cio-asa-button--dark.cio-button {
+  background: #14151A;
+  color: #ffffff;
+}
+
+/* Light theme */
+.cio-asa-button--light.cio-button {
+  background: #ffffff;
+  color: #14151A;
+}
+
+/* Sizes */
+.cio-asa-button--sm.cio-button {
+  height: 32px;
+  padding: 8px 12px 8px 8px;
+}
+
+.cio-asa-button--lg.cio-button {
+  height: 40px;
+  padding: 10px 16px 10px 12px;
+}
+
+.cio-asa-button__icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.cio-asa-button__label {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 16px;
+  letter-spacing: -0.005em;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+  white-space: nowrap;
 }

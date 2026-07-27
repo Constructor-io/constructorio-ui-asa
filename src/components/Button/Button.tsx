@@ -1,16 +1,31 @@
 import React from 'react';
+import { Button as CioButton } from '@constructor-io/constructorio-ui-components';
+import { ChatBubbleDarkIcon, ChatBubbleLightIcon } from '../icons';
 
-interface ButtonProps {
-  text?: string;
-  fullWidth?: boolean;
+export interface ButtonProps {
+  /** Color scheme: dark (for light backgrounds) or light (for dark backgrounds) */
+  theme?: 'dark' | 'light';
+  /** Button size: sm (small) or lg (large) */
+  size?: 'sm' | 'lg';
+  /** Click handler */
+  onClick?: () => void;
+  /** Button label text */
+  label?: string;
 }
 
-export default function Button({ text, fullWidth }: ButtonProps) {
+export default function Button({
+  theme = 'dark',
+  size = 'sm',
+  onClick,
+  label = 'Shopping assistant',
+}: ButtonProps) {
   return (
-    <button
-      type='button'
-      className={`cio-asa-button ${fullWidth ? 'cio-asa-button-full-width' : ''}`}>
-      {text || 'Click Me'}
-    </button>
+    <CioButton
+      className={`cio-asa-button cio-asa-button--${theme} cio-asa-button--${size}`}
+      size={size === 'lg' ? 'default' : 'sm'}
+      onClick={onClick}>
+      {theme === 'dark' ? <ChatBubbleDarkIcon /> : <ChatBubbleLightIcon />}
+      <span className='cio-asa-button__label'>{label}</span>
+    </CioButton>
   );
 }

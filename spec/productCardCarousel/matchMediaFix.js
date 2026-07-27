@@ -3,7 +3,7 @@
  */
 global.matchMedia =
   global.matchMedia ||
-  function () {
+  function matchMediaPolyfill() {
     return {
       matches: false,
       addListener() {},
