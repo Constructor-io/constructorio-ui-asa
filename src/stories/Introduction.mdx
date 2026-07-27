@@ -1,0 +1,185 @@
+import { Meta } from '@storybook/blocks';
+import flow from '../../.storybook/assets/flow.svg';
+import comments from '../../.storybook/assets/comments.svg';
+import colors from '../../.storybook/assets/colors.svg';
+import codeBrackets from '../../.storybook/assets/code-brackets.svg';
+import conversation from '../../.storybook/assets/conversation.svg';
+
+<Meta title="General/Introduction" />
+
+<style>
+{`
+  .intro-wrapper {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    color: #1a1a2e;
+  }
+
+  .intro-wrapper h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .intro-wrapper .subtitle {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #4a4a68;
+    margin-bottom: 40px;
+  }
+
+  .intro-wrapper .subtitle strong {
+    color: #1a1a2e;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #6b7280;
+    margin-bottom: 16px;
+    margin-top: 48px;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .cards-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+  }
+
+  .card-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #f3f4f6;
+  }
+
+  .card-icon img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+  }
+
+  .card-description {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #6b7280;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 48px 0 0;
+  }
+`}
+</style>
+
+<div className="intro-wrapper">
+
+# Welcome to Constructor's AI Shopping Assistant UI
+
+Integration with Constructor's APIs has never been easier with **comprehensive components** that take care of both the tracking and results retrieval, allowing you to focus on developing your own unique site experience.
+
+<div className="section-title">Getting Started</div>
+
+<div className="cards-grid">
+  <a className="card" href="/?path=/docs/general-integration-guide--variants">
+    <div className="card-icon"><img src={flow} alt="Integration Guide" /></div>
+    <div className="card-content">
+      <div className="card-title">Integration Guide</div>
+      <div className="card-description">Step-by-step setup: installation, provider configuration, and rendering</div>
+    </div>
+  </a>
+</div>
+
+<div className="section-title">Components</div>
+
+<div className="cards-grid">
+  <a className="card" href="/?path=/docs/components-chat--variants">
+    <div className="card-icon"><img src={comments} alt="Chat" /></div>
+    <div className="card-content">
+      <div className="card-title">Chat</div>
+      <div className="card-description">A full-featured conversational UI with multi-turn chat interactions and product results</div>
+    </div>
+  </a>
+  <a className="card" href="/?path=/docs/components-chat-dialogue--variants">
+    <div className="card-icon"><img src={conversation} alt="Dialogue" /></div>
+    <div className="card-content">
+      <div className="card-title">Dialogue</div>
+      <div className="card-description">A conversation component that enables continuous multi-turn chat interactions on items</div>
+    </div>
+  </a>
+  <a className="card" href="/?path=/docs/components-resultsblock--variants">
+    <div className="card-icon"><img src={colors} alt="ResultsBlock" /></div>
+    <div className="card-content">
+      <div className="card-title">ResultsBlock</div>
+      <div className="card-description">Renders grouped product results in a carousel layout with customizable cards</div>
+    </div>
+  </a>
+  <a className="card" href="/?path=/docs/components-button--variants">
+    <div className="card-icon"><img src={codeBrackets} alt="Button" /></div>
+    <div className="card-content">
+      <div className="card-title">Button</div>
+      <div className="card-description">A flexible button component with theme variants and size options</div>
+    </div>
+  </a>
+</div>
+
+<div className="section-title">Hooks</div>
+
+<div className="cards-grid">
+  <a className="card" href="/?path=/docs/hooks-useasaresults--variants">
+    <div className="card-icon"><img src={codeBrackets} alt="useAsaResults" /></div>
+    <div className="card-content">
+      <div className="card-title">useAsaResults</div>
+      <div className="card-description">Core hook for managing chat state, streaming SSE responses, and handling product results</div>
+    </div>
+  </a>
+</div>
+
+<hr className="divider" />
+
+</div>

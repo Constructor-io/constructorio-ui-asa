@@ -16,7 +16,7 @@ export default function useRequestConfigs(): UseRequestConfigsReturn {
   const { getUrl, setUrl, getStateFromUrl, getUrlFromState } = urlHelpers;
 
   const url = getUrl();
-  const urlRequestConfigs = url ? getStateFromUrl(url) : { domain: 'assistant' };
+  const urlRequestConfigs = url ? getStateFromUrl(url) : {};
 
   const requestConfigs: RequestConfigs = { ...staticRequestConfigs, ...urlRequestConfigs };
 
@@ -27,7 +27,7 @@ export default function useRequestConfigs(): UseRequestConfigsReturn {
     }
 
     const urlObj = new URL(oldUrl);
-    const oldRequestConfigs = oldUrl ? getStateFromUrl(oldUrl) : { domain: 'assistant' };
+    const oldRequestConfigs = getStateFromUrl(oldUrl);
     const newRequestConfigs = { ...oldRequestConfigs, ...configsToUpdate };
     const newUrl = getUrlFromState(newRequestConfigs, urlObj);
 

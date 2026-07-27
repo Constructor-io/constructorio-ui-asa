@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/react";
+import StorybookAutodocs from './StorybookAutodocs';
 import './storybook-styles.css';
 
 const preview: Preview = {
@@ -11,10 +12,12 @@ const preview: Preview = {
       },
     },
     docs: {
-      toc: {
-        headingSelector: 'h2, h3',
-        ignoreSelector: '.docs-story h2, .docs-story h3'
-      }
+      page: StorybookAutodocs,
+    },
+    options: {
+      storySort: {
+        order: ['General', ['Introduction'], 'Components', 'Hooks'],
+      },
     },
   },
 };

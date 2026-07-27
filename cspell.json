@@ -5,5 +5,23 @@
   "dictionaries": ["en_US", "html", "css"],
   "ignorePaths": ["lib", "docs"],
   "flagWords": [],
-  "words": ["constructorio", "cnstrc"]
+  "words": [
+    "constructorio",
+    "cnstrc",
+    "autodocs",
+    "resultsblock",
+    "Csvg",
+    "Crect",
+    "Adizero",
+    "Tracefinder",
+    "Runfalcon",
+    "Ultraboost",
+    "Duramo",
+    "Terrex",
+    "Agravic",
+    "Trailmaker",
+    "scrollability",
+    "fygjnt",
+    "usvx"
+  ]
 }

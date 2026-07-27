@@ -1,116 +1,145 @@
-import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
+import { ResultGroupMeta, ChatMessage, UseChatReturn } from '../types';
+import {
+  handleSearchResult,
+  handleMessage,
+  handleServerError,
+  handleStreamEnd,
+  handleStreamError,
+} from './asaStreamHandlers';
 
-export interface UseAsaResultsProps {
-  intent: string;
-}
+export default function useAsaResults(): UseChatReturn {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const isStreamingRef = useRef(false);
+  const killSwitchRef = useRef(false);
+  const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
+  const threadIdRef = useRef<string | null>(null);
+  const idCounterRef = useRef(0);
 
-export interface UseAsaResultsReturn {
-  groups: AsaResultGroup[];
-  status: Status;
-}
+  const contextValue = useCioAsaContext();
+  if (!contextValue) {
+    throw new Error('useAsaResults must be used within a CioAsaProvider.');
+  }
+  const { cioClient, staticRequestConfigs } = contextValue;
+  const { domain } = staticRequestConfigs || {};
+  if (!cioClient || !domain) {
+    throw new Error(
+      'useAsaResults requires a configured cioClient and domain. Check your CioAsaProvider props.',
+    );
+  }
 
-interface AsaResultGroup {
-  group: any;
-  searchResults: any[];
-}
+  const nextMessageId = useCallback(() => {
+    idCounterRef.current += 1;
+    return `msg-${idCounterRef.current}-${Date.now()}`;
+  }, []);
 
-export enum Status {
-  LOADING = 'loading',
-  SUCCESS = 'success',
-  ERROR = 'error',
-}
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!text.trim() || isStreamingRef.current) return;
 
-const useFetchAsaResults = (
-  client: ConstructorIOClient,
-  intent: string,
-  domain: string,
-): UseAsaResultsReturn => {
-  const [groups, setGroups] = useState<AsaResultGroup[]>([]);
-  const [status, setStatus] = useState<Status>(Status.LOADING);
+      const userMessage: ChatMessage = {
+        id: nextMessageId(),
+        role: 'user',
+        text: text.trim(),
+        status: 'done',
+      };
 
-  useEffect(() => {
-    setGroups([]);
-  }, [client, intent, domain]);
+      const assistantMessage: ChatMessage = {
+        id: nextMessageId(),
+        role: 'assistant',
+        text: '',
+        groups: [],
+        status: 'loading',
+      };
 
-  const readableStream = useMemo(
-    () => client.agent.getAgentResultsStream(intent, { domain }),
-    [client, domain, intent],
-  );
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setIsStreaming(true);
+      isStreamingRef.current = true;
+      killSwitchRef.current = false;
 
-  const reader = useMemo(() => readableStream.getReader(), [readableStream]);
+      const stream = cioClient.agent.getAgentResultsStream(text.trim(), {
+        domain,
+        ...(threadIdRef.current && { threadId: threadIdRef.current }),
+      });
+      const reader = stream.getReader();
+      readerRef.current = reader;
 
-  useEffect(() => {
-    let killSwitch = false;
-    async function fetchData() {
-      try {
-        while (!killSwitch) {
+      (async () => {
+        let pendingGroup: ResultGroupMeta | null = null;
+
+        try {
           // eslint-disable-next-line no-await-in-loop
-          const res = await reader.read();
-          if (res.done) {
-            setStatus(Status.SUCCESS);
-            break;
-          }
-          // if the value is a group, we will append a new empty group to the end of 'groups'
-          if (res.value.type === 'group') {
-            const newGroup = res.value;
-            setGroups((oldGroups) => [...oldGroups, { group: newGroup, searchResults: [] }]);
-          }
-          // if the value is a search result, we will find the most recent group (which will be the last in the list)
-          // and we will append this search result to the last group's list of results
-          if (res.value.type === 'search_result') {
-            setGroups((oldGroups) => {
-              // this shouldn't happen but if the API returns a search result before any groups, we will ignore it
-              if (oldGroups.length === 0) {
-                return oldGroups;
-              }
-              const lastGroup = oldGroups[oldGroups.length - 1];
-              const newSearchResults = res.value;
-              // update the last group to include the new search result
-              const updatedLastGroup = {
-                group: lastGroup.group,
-                searchResults: [...lastGroup.searchResults, newSearchResults],
-              };
+          while (!killSwitchRef.current) {
+            // eslint-disable-next-line no-await-in-loop
+            const res = await reader.read();
+            if (killSwitchRef.current) break;
+            if (res.done) {
+              handleStreamEnd(assistantMessage.id, setMessages);
+              break;
+            }
 
-              // slice off the old last group and replace it with the updated last group
-              return [...oldGroups.slice(0, oldGroups.length - 1), updatedLastGroup];
-            });
+            const { type, data } = res.value;
+
+            if (type === 'start' && data?.thread_id) {
+              threadIdRef.current = data.thread_id;
+            } else if (type === 'group') {
+              pendingGroup = {
+                display_name: data?.display_name ?? data?.group ?? '',
+                value: data?.value ?? data?.group ?? '',
+              };
+            } else if (type === 'search_result') {
+              pendingGroup = handleSearchResult(
+                data,
+                pendingGroup,
+                assistantMessage.id,
+                setMessages,
+              );
+            } else if (type === 'message') {
+              handleMessage(data, assistantMessage.id, setMessages);
+            } else if (type === 'server_error') {
+              handleServerError(assistantMessage.id, setMessages);
+              break;
+            }
+          }
+        } catch {
+          handleStreamError(assistantMessage.id, setMessages);
+        } finally {
+          if (readerRef.current === reader) {
+            reader.cancel();
+            readerRef.current = null;
+            setIsStreaming(false);
+            isStreamingRef.current = false;
           }
         }
-      } catch (e) {
-        setStatus(Status.ERROR);
-        // fail gracefully
-      } finally {
-        reader.cancel();
+      })();
+    },
+    [cioClient, domain, nextMessageId],
+  );
+
+  useEffect(
+    () => () => {
+      killSwitchRef.current = true;
+      if (readerRef.current) {
+        readerRef.current.cancel();
+        readerRef.current = null;
       }
+    },
+    [],
+  );
+
+  const clearHistory = useCallback(() => {
+    killSwitchRef.current = true;
+    if (readerRef.current) {
+      readerRef.current.cancel();
+      readerRef.current = null;
     }
-    fetchData();
+    threadIdRef.current = null;
+    setMessages([]);
+    setIsStreaming(false);
+    isStreamingRef.current = false;
+  }, []);
 
-    return () => {
-      killSwitch = true;
-      reader.cancel();
-    };
-  }, [reader]);
-
-  return { groups, status };
-};
-
-export default function useAsaResults(intent: string): UseAsaResultsReturn {
-  const contextValue = useCioAsaContext();
-
-  const { cioClient, staticRequestConfigs } = contextValue || {};
-  const { domain } = staticRequestConfigs || {};
-
-  if (!cioClient) {
-    throw Error('CioClient required');
-  }
-  if (!domain) {
-    throw Error('Missing domain');
-  }
-  if (!intent) {
-    throw Error('Missing intent');
-  }
-
-  return useFetchAsaResults(cioClient, intent, domain);
+  return { messages, sendMessage, isStreaming, clearHistory };
 }
