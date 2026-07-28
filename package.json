@@ -119,6 +119,19 @@
   "dependencies": {
     "react-slick": "^0.30.2"
   },
+  "overrides": {
+    "brace-expansion@1": "1.1.16",
+    "brace-expansion@2": "2.1.2",
+    "minimatch@5": "5.1.9",
+    "minimatch@9": "9.0.9",
+    "form-data": "^4.0.6",
+    "joi": "^17.13.4",
+    "js-yaml@3": "3.15.0",
+    "js-yaml@4": "4.3.0",
+    "postcss": "^8.5.18",
+    "uuid": "^11.1.1",
+    "yaml": "^1.10.3"
+  },
   "volta": {
     "node": "22.18.0",
     "npm": "10.9.3"
