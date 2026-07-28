@@ -1,0 +1,41 @@
+.cio-asa-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  position: relative;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(222, 224, 227, 1);
+  background: #FFFFFF;
+}
+
+.cio-asa-chat-header__title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+  color: #0F1324;
+}
+
+.cio-asa-chat-header__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a1a;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.cio-asa-chat-header__close::before {
+  content: '\2715';
+}
+
+.cio-asa-chat-header__close:hover {
+  opacity: 0.7;
+}

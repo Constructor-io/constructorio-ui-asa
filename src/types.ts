@@ -6,6 +6,12 @@ import {
   Nullable,
 } from '@constructor-io/constructorio-client-javascript/lib/types';
 import { IAgentParameters } from '@constructor-io/constructorio-client-javascript/lib/types/agent';
+import {
+  ComponentOverrideProps,
+  CarouselOverrides,
+  IncludeComponentOverrides,
+} from '@constructor-io/constructorio-ui-components';
+import type { Product } from './utils/productNormalizer';
 
 export { Nullable, ConstructorIOClient };
 
@@ -22,9 +28,7 @@ export interface AsaContextValue {
   cioClientOptions: CioClientOptions;
   setCioClientOptions: React.Dispatch<CioClientOptions>;
   staticRequestConfigs: RequestConfigs;
-  itemFieldGetters: ItemFieldGetters;
   formatters: Formatters;
-  callbacks: Callbacks;
   urlHelpers: UrlHelpers;
 }
 
@@ -32,11 +36,9 @@ export interface RequestConfigs extends IAgentParameters {
   intent?: string;
 }
 
-export interface ItemFieldGetters {}
 export interface Formatters {
   formatPrice: (price?: number) => string;
 }
-export interface Callbacks {}
 export interface UrlHelpers {
   getUrl: () => string | undefined;
   setUrl: (newUrlWithEncodedState: string) => void;
@@ -45,10 +47,13 @@ export interface UrlHelpers {
   defaultQueryStringMap: Readonly<DefaultQueryStringMap>;
 }
 
-// eslint-disable-next-line prettier/prettier
+// `cioClientOptions` is intentionally excluded: it is runtime state managed via
+// `setCioClientOptions`, not a provider input. Configure the client with `apiKey`
+// (optionally after instantiating your own `cioClient`).
 export interface CioAsaProviderProps
-  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions'>,
-    UseCioClientProps {}
+  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions' | 'cioClientOptions'> {
+  apiKey?: string;
+}
 
 export interface UseCioClientProps {
   apiKey?: string;
@@ -69,7 +74,6 @@ export interface QueryParamEncodingOptions {
 }
 
 // Type Extenders
-export type PropsWithChildren<P> = P & { children?: ReactNode };
 
 /**
  * Composes a type for a Component that accepts
@@ -80,9 +84,143 @@ export type IncludeRenderProps<ComponentProps, ChildrenFunctionProps> = Componen
   children?: ((props: ChildrenFunctionProps) => ReactNode) | React.ReactNode;
 };
 
-export interface ProductInfo {
-  name: string;
-  price: number;
-  url: string | undefined;
-  imageUrl: string | undefined;
+// Chat types
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  groups?: ResultGroup[];
+  status: ChatMessageStatus;
 }
+
+export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
+
+export interface ResultGroupMeta {
+  display_name: string;
+  value?: string;
+  data?: { display_name?: string; [key: string]: unknown };
+}
+
+export interface ResultGroup {
+  group: ResultGroupMeta;
+  searchResults: Record<string, unknown>[];
+}
+
+export interface UseChatReturn {
+  messages: ChatMessage[];
+  sendMessage: (text: string) => void;
+  isStreaming: boolean;
+  clearHistory: () => void;
+}
+
+/**
+ * Translations type for internationalizing UI strings.
+ * All keys are optional — any non-provided translation will fall back to the English default.
+ */
+export type Translations = {
+  'CioAsa.header.title'?: string;
+  'CioAsa.header.close'?: string;
+  'CioAsa.input.placeholder'?: string;
+  'CioAsa.input.ariaLabel'?: string;
+  'CioAsa.input.sendAriaLabel'?: string;
+  'CioAsa.welcome.title'?: string;
+  'CioAsa.welcome.placeholder'?: string;
+  'CioAsa.welcome.sendButton'?: string;
+  'CioAsa.welcome.inputAriaLabel'?: string;
+  'CioAsa.welcome.sendAriaLabel'?: string;
+  'CioAsa.welcome.suggestionsAriaLabel'?: string;
+  'CioAsa.messageList.ariaLabel'?: string;
+  'CioAsa.typingIndicator.ariaLabel'?: string;
+  'CioAsa.userMessage.ariaLabel'?: string;
+  'CioAsa.results.viewMore'?: string;
+  'CioAsa.results.addToCart'?: string;
+  'CioAsa.results.saleBadge'?: string;
+  'CioAsa.error.message'?: string;
+};
+
+// --- Component Override Render Props ---
+
+export interface ChatHeaderRenderProps {
+  title: string;
+  onClose?: () => void;
+}
+
+export interface ChatInputRenderProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  isDisabled: boolean;
+}
+
+export interface WelcomeScreenTitleRenderProps {
+  text: string;
+}
+
+export interface WelcomeScreenInputRenderProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  isDisabled: boolean;
+}
+
+export interface SuggestedQuestionsRenderProps {
+  suggestions: string[];
+  onSuggestionClick: (suggestion: string) => void;
+}
+
+export interface UserMessageRenderProps {
+  text: string;
+}
+
+export interface AiMessageLoaderRenderProps {
+  translations?: Translations;
+}
+
+export interface AiMessageTextRenderProps {
+  text: string;
+}
+
+export interface ResultsGroupTitleRenderProps {
+  label: string;
+}
+
+export interface ResultsViewMoreRenderProps {
+  group: ResultGroupMeta;
+  onClick: () => void;
+}
+
+// --- Component Override Types ---
+
+export interface WelcomeScreenOverrides {
+  title?: ComponentOverrideProps<WelcomeScreenTitleRenderProps>;
+  input?: ComponentOverrideProps<WelcomeScreenInputRenderProps>;
+  suggestedQuestions?: ComponentOverrideProps<SuggestedQuestionsRenderProps>;
+}
+
+export interface ChatInputOverrides {
+  reactNode?: ComponentOverrideProps<ChatInputRenderProps>['reactNode'];
+}
+
+export interface AiMessageOverrides {
+  loader?: ComponentOverrideProps<AiMessageLoaderRenderProps>;
+  text?: ComponentOverrideProps<AiMessageTextRenderProps>;
+}
+
+export interface ResultsBlockOverrides {
+  groupTitle?: ComponentOverrideProps<ResultsGroupTitleRenderProps>;
+  viewMore?: ComponentOverrideProps<ResultsViewMoreRenderProps>;
+  carousel?: CarouselOverrides<Product>;
+}
+
+export interface ChatComponentOverrides {
+  header?: ComponentOverrideProps<ChatHeaderRenderProps>;
+  welcomeScreen?: WelcomeScreenOverrides;
+  input?: ComponentOverrideProps<ChatInputRenderProps>;
+  userMessage?: ComponentOverrideProps<UserMessageRenderProps>;
+  aiMessage?: AiMessageOverrides;
+  resultsBlock?: ResultsBlockOverrides;
+}
+
+export type { ComponentOverrideProps, IncludeComponentOverrides };

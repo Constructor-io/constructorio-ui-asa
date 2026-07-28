@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import useCioClient from '../../hooks/useCioClient';
 import { AsaContextValue, IncludeRenderProps, CioAsaProviderProps } from '../../types';
 import { AsaContext } from '../../hooks/useCioAsaContext';
-import * as defaultGetters from '../../utils/itemFieldGetters';
 import * as defaultFormatters from '../../utils/formatters';
 import * as defaultUrlHelpers from '../../utils/urlHelpers';
 
@@ -12,10 +11,8 @@ export default function CioAsaProvider(
   const {
     apiKey,
     formatters,
-    callbacks,
-    itemFieldGetters,
     urlHelpers,
-    staticRequestConfigs = { domain: 'assistant' },
+    staticRequestConfigs = { domain: 'chatbot' },
     cioClient: customCioClient,
     children,
   } = props;
@@ -29,20 +26,10 @@ export default function CioAsaProvider(
       cioClientOptions,
       setCioClientOptions,
       staticRequestConfigs,
-      itemFieldGetters: { ...defaultGetters, ...itemFieldGetters },
       formatters: { ...defaultFormatters, ...formatters },
-      callbacks: { ...callbacks },
       urlHelpers: { ...defaultUrlHelpers, ...urlHelpers },
     }),
-    [
-      cioClient,
-      cioClientOptions,
-      itemFieldGetters,
-      formatters,
-      callbacks,
-      urlHelpers,
-      staticRequestConfigs,
-    ],
+    [cioClient, cioClientOptions, formatters, urlHelpers, staticRequestConfigs],
   );
 
   return (

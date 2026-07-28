@@ -1,0 +1,616 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="General/Integration Guide" />
+
+<style>
+{`
+  .guide-wrapper {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    color: #1a1a2e;
+  }
+
+  .guide-wrapper h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .guide-wrapper h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 40px;
+    margin-bottom: 12px;
+    color: #1a1a2e;
+  }
+
+  .guide-wrapper p {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #4a4a68;
+    margin-bottom: 16px;
+  }
+
+  .guide-wrapper code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .guide-wrapper pre {
+    background: #f5f5f7;
+    color: #2d2d3a;
+    padding: 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0 24px;
+  }
+
+  .guide-wrapper pre code {
+    background: none;
+    padding: 0;
+    color: #2d2d3a;
+  }
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #6366f1;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  .step-heading {
+    display: flex;
+    align-items: center;
+    margin-top: 40px;
+    margin-bottom: 12px;
+  }
+
+  .step-heading h2 {
+    margin: 0;
+  }
+`}
+</style>
+
+<div className="guide-wrapper">
+
+# Integration Guide
+
+Get up and running with Constructor's AI Shopping Assistant UI in minutes.
+
+<div className="step-heading">
+  <span className="step-number">1</span>
+  <h2>Installation</h2>
+</div>
+
+Install the package:
+
+```bash
+npm install @constructor-io/constructorio-ui-asa
+```
+
+On npm 7+ this pulls in the peer dependencies automatically.
+
+This library declares the following as peer dependencies, so they must be present in your project:
+
+| Package | Version |
+|---------|---------|
+| `@constructor-io/constructorio-client-javascript` | `^2.88.0` |
+| `@constructor-io/constructorio-ui-components` | `^1.6.0` |
+| `react` | `>=16.12.0` |
+| `react-dom` | `>=16.12.0` |
+| `tslib` | `^2.4.0` |
+
+If your package manager doesn't install peer dependencies automatically (yarn, pnpm, npm 6 and below), or you see an `unmet peer dependency` warning, install any that are missing from your project:
+
+```bash
+npm install \
+  @constructor-io/constructorio-client-javascript \
+  @constructor-io/constructorio-ui-components \
+  react react-dom tslib
+```
+
+Only add what's missing — packages already installed with a compatible version can be left as-is. If an existing package is **below** the required version, upgrade it to a compatible one.
+
+<div className="step-heading">
+  <span className="step-number">2</span>
+  <h2>Import Styles</h2>
+</div>
+
+Import the stylesheet once, at your application's entry point. Without it, all `cio-asa-*` class names are unstyled and the `Chat` UI will render without any layout or theming.
+
+```jsx
+import '@constructor-io/constructorio-ui-asa/styles.css';
+```
+
+<div className="step-heading">
+  <span className="step-number">3</span>
+  <h2>Provider Setup</h2>
+</div>
+
+Wrap your application (or the relevant subtree) with `CioAsaProvider`. This provides the Constructor client and configuration to all child components.
+
+```jsx
+import { CioAsaProvider } from '@constructor-io/constructorio-ui-asa';
+
+function App() {
+  return (
+    <CioAsaProvider apiKey="YOUR_API_KEY">
+      {/* Your app content */}
+    </CioAsaProvider>
+  );
+}
+```
+
+The provider accepts the following props:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `apiKey` | `string` | Your Constructor index key. Required unless you pass your own `cioClient`. |
+| `cioClient` | `ConstructorIOClient` | A pre-configured Constructor client instance. Provide this instead of `apiKey` if you already build a client elsewhere, or when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`) — construct the client yourself and pass it here. |
+| `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
+| `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
+| `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
+
+> **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. AI Shopping Assistant must be enabled for your account — contact your Constructor representative if agent requests return errors. If you already instantiate a `ConstructorIOClient` elsewhere in your app, pass it via `cioClient` instead of `apiKey`.
+
+> **⚠️ `domain` is required.** `staticRequestConfigs` defaults to `{ domain: 'chatbot' }`, which is the ASA agent domain. If you pass your own `staticRequestConfigs`, you **must** include `domain` — otherwise `useAsaResults` (used internally by `Chat`) throws `"useAsaResults requires a configured cioClient and domain"`. Unless instructed otherwise by Constructor, keep `domain: 'chatbot'`.
+
+> **☁️ Server-side rendering.** The Constructor client is only instantiated in the browser (`typeof window !== 'undefined'`); during SSR it is `null`. Because `Chat` and `useAsaResults` throw when the client is unavailable, they must run **client-side only**. In Next.js App Router, put `'use client'` at the top of the file that renders them, and defer rendering until mounted so the component is skipped on the server and during hydration:
+>
+> ```jsx
+> 'use client';
+> import { useEffect, useState } from 'react';
+> import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
+> import '@constructor-io/constructorio-ui-asa/styles.css';
+>
+> export default function ShoppingAssistant() {
+>   const [mounted, setMounted] = useState(false);
+>   useEffect(() => setMounted(true), []);
+>   if (!mounted) return null;
+>
+>   return (
+>     <CioAsaProvider apiKey="YOUR_API_KEY">
+>       <Chat onClose={() => {}} />
+>     </CioAsaProvider>
+>   );
+> }
+> ```
+>
+> Equivalently, load the component with `next/dynamic` and `{ ssr: false }`. Note: `engines.node >= 20` refers to the build/tooling environment — it does **not** mean the components render on the server.
+
+<div className="step-heading">
+  <span className="step-number">4</span>
+  <h2>Rendering the Chat</h2>
+</div>
+
+Use the `Chat` component for a full-featured conversational UI:
+
+```jsx
+import { Chat } from '@constructor-io/constructorio-ui-asa';
+
+function ShoppingAssistant() {
+  return (
+    <Chat
+      onClose={() => setIsOpen(false)}
+      onProductClick={(product) => window.location.href = product.url}
+      onAddToCart={(product) => addToCart(product)}
+      onViewMore={(group) => navigateToCategory(group)}
+      aspectRatio="3:4"
+      currency="$"
+      initialSuggestions={[
+        'Show me summer dresses',
+        'Best running shoes under $100',
+      ]}
+    />
+  );
+}
+```
+
+The `Chat` component accepts:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `onClose` | `() => void` | Called when close button is clicked |
+| `className` | `string` | Additional CSS class for the root container |
+| `initialSuggestions` | `string[]` | Suggestion chips on the welcome screen |
+| `termsText` | `ReactNode` | Legal text below the welcome input |
+| `onProductClick` | `(product) => void` | Product card click handler |
+| `onAddToCart` | `(product) => void` | Add to cart button handler (hidden if not provided) |
+| `onViewMore` | `(group) => void` | View more link handler (hidden if not provided) |
+| `aspectRatio` | `'1:1' \| '3:4' \| '9:16' \| '4:3' \| '16:9'` | Product card image ratio |
+| `currency` | `string` | Currency symbol for prices |
+| `normalizeItem` | `(item, options?) => Product` | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
+| `translations` | `Translations` | Override UI strings (see Translations section) |
+| `componentOverrides` | `ChatComponentOverrides` | Override any sub-component (see Component Overrides section) |
+
+> **You control visibility and positioning.** `Chat` is a **content component**: it fills its container (`width: 100%; height: 100%`) and does not render a launcher button or manage its own open/closed state. Providing `onClose` only wires up the ✕ button — you decide whether `Chat` is mounted, and you own the layout, positioning, and overlay. A typical floating-panel pattern:
+>
+> ```jsx
+> import { useState } from 'react';
+> import { Chat, Button } from '@constructor-io/constructorio-ui-asa';
+>
+> function ShoppingAssistant() {
+>   const [isOpen, setIsOpen] = useState(false);
+>
+>   return (
+>     <>
+>       <Button onClick={() => setIsOpen(true)} />
+>       {isOpen && (
+>         <>
+>           <div className="cio-asa-chat-overlay" onClick={() => setIsOpen(false)} />
+>           <div className="cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right">
+>             <Chat onClose={() => setIsOpen(false)} />
+>           </div>
+>         </>
+>       )}
+>     </>
+>   );
+> }
+> ```
+>
+> The library ships ready-made positioning classes you can reuse (all included in `styles.css`):
+>
+> | Class | Purpose |
+> |-------|---------|
+> | `cio-asa-chat-overlay` | Fixed, full-screen dimmed backdrop (`z-index: 999`) |
+> | `cio-asa-chat-panel` | Fixed 420px panel docked right, slides in from the right (`z-index: 1000`) |
+> | `cio-asa-chat-fullscreen` | Absolutely positioned fill of the nearest positioned ancestor |
+> | `cio-asa-chat-fullscreen--right` | Fullscreen variant docked to a 504px right column |
+>
+> These are optional — you can size and position the `Chat` container however you like.
+
+<div className="step-heading">
+  <span className="step-number">5</span>
+  <h2>Translations</h2>
+</div>
+
+All user-facing text can be customized via the `translations` prop. Pass only the keys you want to override — all others fall back to English defaults.
+
+```jsx
+<Chat
+  translations={{
+    'CioAsa.welcome.title': 'Style Advisor',
+    'CioAsa.welcome.placeholder': 'What are you looking for?',
+    'CioAsa.welcome.sendButton': 'Ask',
+    'CioAsa.input.placeholder': 'Type a follow-up question...',
+    'CioAsa.results.addToCart': 'Add to bag',
+    'CioAsa.results.viewMore': 'See all products',
+  }}
+/>
+```
+
+Available translation keys:
+
+| Key | Default |
+|-----|---------|
+| `CioAsa.header.title` | Shopping Assistant |
+| `CioAsa.header.close` | Close |
+| `CioAsa.input.placeholder` | Ask a question about this product |
+| `CioAsa.input.ariaLabel` | Type your message |
+| `CioAsa.input.sendAriaLabel` | Send message |
+| `CioAsa.welcome.title` | Shopping Assistant |
+| `CioAsa.welcome.placeholder` | Ask anything |
+| `CioAsa.welcome.sendButton` | Chat |
+| `CioAsa.welcome.inputAriaLabel` | Type your question |
+| `CioAsa.welcome.sendAriaLabel` | Send message |
+| `CioAsa.welcome.suggestionsAriaLabel` | Suggested questions |
+| `CioAsa.messageList.ariaLabel` | Chat messages |
+| `CioAsa.typingIndicator.ariaLabel` | Assistant is typing |
+| `CioAsa.userMessage.ariaLabel` | You said |
+| `CioAsa.results.viewMore` | View more products |
+| `CioAsa.results.addToCart` | Add to cart |
+| `CioAsa.results.saleBadge` | Sale |
+| `CioAsa.error.message` | I can't assist you with that request. |
+
+<div className="step-heading">
+  <span className="step-number">6</span>
+  <h2>Component Overrides</h2>
+</div>
+
+The `componentOverrides` prop lets you replace any sub-component with your own custom React component using render props. Each override slot receives typed props you can use to build your custom UI.
+
+```jsx
+<Chat
+  componentOverrides={{
+    header: {
+      reactNode: ({ title, onClose }) => (
+        <div className="my-header">
+          <h1>{title}</h1>
+          <button onClick={onClose}>Close</button>
+        </div>
+      ),
+    },
+    aiMessage: {
+      loader: { reactNode: <MyCustomLoader /> },
+      text: {
+        reactNode: ({ text }) => <MyCustomBubble>{text}</MyCustomBubble>,
+      },
+    },
+    welcomeScreen: {
+      title: { reactNode: ({ text }) => <h1>{text}</h1> },
+      suggestedQuestions: {
+        reactNode: ({ suggestions, onSuggestionClick }) => (
+          <ul>
+            {suggestions.map((s) => (
+              <li key={s} onClick={() => onSuggestionClick(s)}>{s}</li>
+            ))}
+          </ul>
+        ),
+      },
+    },
+    resultsBlock: {
+      groupTitle: { reactNode: ({ label }) => <h4>{label}</h4> },
+      viewMore: {
+        reactNode: ({ group, onClick }) => (
+          <a onClick={onClick}>See all {group.display_name}</a>
+        ),
+      },
+    },
+  }}
+/>
+```
+
+Available override slots:
+
+| Slot | Render Props |
+|------|-------------|
+| `header` | `{ title, onClose? }` |
+| `input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
+| `userMessage` | `{ text }` |
+| `aiMessage.loader` | `{ translations? }` |
+| `aiMessage.text` | `{ text }` |
+| `welcomeScreen.title` | `{ text }` |
+| `welcomeScreen.input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
+| `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }` |
+| `resultsBlock.groupTitle` | `{ label }` |
+| `resultsBlock.viewMore` | `{ group, onClick }` |
+| `resultsBlock.carousel` | Carousel component overrides (previous, next, item) |
+
+Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a static ReactNode to completely replace the component, or a function to receive render props.
+
+<div className="step-heading">
+  <span className="step-number">7</span>
+  <h2>Using the Hook Directly</h2>
+</div>
+
+For custom UI implementations, use the `useAsaResults` hook. It takes **no arguments** — all configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. There is no way to pass an initial prompt or thread id; call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`.
+
+```jsx
+import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
+
+function CustomChat() {
+  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults();
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong> {msg.text}
+        </div>
+      ))}
+      <button onClick={() => sendMessage('Show me running shoes')}>Send</button>
+      <button onClick={clearHistory}>Reset</button>
+    </div>
+  );
+}
+```
+
+The hook returns exactly:
+
+| Return value | Type | Description |
+|--------------|------|-------------|
+| `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
+| `sendMessage` | `(text: string) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. |
+| `isStreaming` | `boolean` | Whether a response is currently streaming |
+| `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
+
+Each `ChatMessage` has this shape:
+
+```ts
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  groups?: ResultGroup[]; // present on assistant messages that return products
+  status: 'idle' | 'loading' | 'streaming' | 'done' | 'error';
+}
+
+interface ResultGroup {
+  group: { display_name: string; value?: string };
+  searchResults: Record<string, unknown>[]; // raw product items
+}
+```
+
+**Rendering products (`groups`).** Product results arrive on assistant messages in `msg.groups`. Each group has a title (`group.group.display_name`) and an array of raw product items in `group.searchResults`. You can render them yourself, or hand a group straight to the `ResultsBlock` component:
+
+```jsx
+import { useAsaResults, ResultsBlock } from '@constructor-io/constructorio-ui-asa';
+
+function CustomChat() {
+  const { messages, sendMessage, isStreaming } = useAsaResults();
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong> {msg.text}
+          {msg.groups?.length > 0 && (
+            <ResultsBlock
+              groups={msg.groups}
+              currency="$"
+              onProductClick={(product) => (window.location.href = product.url)}
+            />
+          )}
+        </div>
+      ))}
+      <button onClick={() => sendMessage('Show me running shoes')} disabled={isStreaming}>
+        Send
+      </button>
+    </div>
+  );
+}
+```
+
+<div className="step-heading">
+  <span className="step-number">8</span>
+  <h2>Standalone Components</h2>
+</div>
+
+`Chat` is the all-in-one component and already renders `ResultsBlock` internally for its product results — you do **not** need to add `ResultsBlock` yourself when using `Chat`. The library also exports these building blocks for custom layouts:
+
+**`ResultsBlock`** — renders grouped product results in a carousel. Use it standalone when you drive the conversation yourself via `useAsaResults` (see step 7) and want Constructor's product-card layout, or to display results outside the chat panel.
+
+```jsx
+import { ResultsBlock } from '@constructor-io/constructorio-ui-asa';
+
+<ResultsBlock
+  groups={message.groups}          // ResultGroup[] from useAsaResults
+  aspectRatio="3:4"
+  currency="$"
+  showTitle
+  onProductClick={(product) => (window.location.href = product.url)}
+  onAddToCart={(product) => addToCart(product)}   // omit to hide the button
+  onViewMore={(group) => navigateToCategory(group)} // omit to hide the link
+/>
+```
+
+Key props: `groups` (required), `aspectRatio`, `minCardWidth`, `gap`, `showTitle`, `currency`, `normalizeItem`, `viewMoreText`/`addToCartText`/`saleBadgeText`, `onProductClick`, `onAddToCart`, `onViewMore`, `componentOverrides`.
+
+**`Button`** — the launcher button used to open the assistant (see step 4). It renders a chat-bubble icon plus a label; you wire up its `onClick` to toggle your `Chat` visibility.
+
+```jsx
+import { Button } from '@constructor-io/constructorio-ui-asa';
+
+<Button theme="dark" size="lg" label="Shopping assistant" onClick={() => setIsOpen(true)} />
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `theme` | `'dark' \| 'light'` | `'dark'` | `dark` for light backgrounds, `light` for dark backgrounds |
+| `size` | `'sm' \| 'lg'` | `'sm'` | Button size |
+| `label` | `string` | `'Shopping assistant'` | Button text |
+| `onClick` | `() => void` | — | Click handler |
+
+> Both `onAddToCart` and `onViewMore` are optional on `Chat` **and** `ResultsBlock`. If you don't pass a handler, the corresponding button/link is not rendered — so the Add-to-cart button and View-more link only appear when you opt in.
+
+<div className="step-heading">
+  <span className="step-number">9</span>
+  <h2>CSS Customization</h2>
+</div>
+
+All components use BEM-style class names prefixed with `cio-asa-` for easy style overrides. The `Chat` component fills its container — control the layout by sizing the parent wrapper or using the `className` prop.
+
+```css
+.cio-asa-chat {
+  /* Chat container — fills parent width/height */
+}
+
+.cio-asa-product-card {
+  /* Product card in results */
+}
+
+.cio-asa-ai-message__bubble {
+  /* AI text bubble */
+}
+
+.cio-asa-ai-message__bubble--error {
+  /* AI text bubble in an error state */
+}
+
+.cio-asa-welcome-screen__title {
+  /* Welcome screen heading */
+}
+```
+
+<div className="step-heading">
+  <span className="step-number">10</span>
+  <h2>Mapping Product Data</h2>
+</div>
+
+Product results returned by the agent are raw search-result items. Before they reach a product card, each item is mapped to the `Product` shape the cards render:
+
+```ts
+interface Product {
+  id: string;
+  name: string;
+  url?: string;
+  imageUrl?: string;
+  price?: string | number;
+  salePrice?: string | number;
+  description?: string;
+  badge?: string;
+}
+```
+
+The library ships a **default mapping** (`normalizeItemToProduct`) that reads Constructor's standard metadata field names.
+
+**If your index metadata uses different field names**, images or prices may come up empty. Pass your own `normalizeItem` to `Chat` (or `ResultsBlock`) to map raw items to `Product` however your catalog is shaped — this is intentional, since metadata differs from company to company:
+
+```jsx
+<Chat
+  normalizeItem={(item) => ({
+    id: item.data.custom_id,        // your field name
+    name: item.value,               // your field name
+    url: item.data.pdp_url,         // your field name
+    imageUrl: item.data.thumbnail,  // your field name
+    price: item.data.list_price,    // your field name
+    salePrice: item.data.promo_price, // your field name
+  })}
+/>
+```
+
+`normalizeItem` receives the raw item and an `options` object (`{ saleBadgeText }`) and must return a `Product`. It defaults to `normalizeItemToProduct`, which is also exported if you want to extend the default rather than replace it:
+
+```jsx
+import { normalizeItemToProduct } from '@constructor-io/constructorio-ui-asa';
+
+<Chat
+  normalizeItem={(item, options) => ({
+    ...normalizeItemToProduct(item, options),
+    imageUrl: item.data.thumbnail, // override just the image field
+  })}
+/>
+```
+
+<div className="step-heading">
+  <span className="step-number">11</span>
+  <h2>Error Handling</h2>
+</div>
+
+If the agent returns a server error, or the response stream fails, the in-progress assistant message is marked with `status: 'error'`. The chat renders it as a normal assistant bubble carrying an error message, so failures stay inline in the conversation — there is no separate error UI to wire up.
+
+- If the agent had already streamed partial text before failing, that text is kept.
+- Otherwise the bubble shows the `CioAsa.error.message` string, which you can localize via `translations` (default: *"I can't assist you with that request."*).
+- The bubble also gets the `cio-asa-ai-message__bubble--error` class, so you can style the error state distinctly.
+
+```jsx
+<Chat
+  translations={{
+    'CioAsa.error.message': 'Sorry, something went wrong. Please try again.',
+  }}
+/>
+```
+
+```css
+.cio-asa-ai-message__bubble--error {
+  background: #fdecec;
+}
+```
+
+</div>
