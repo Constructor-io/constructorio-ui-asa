@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ChatMessageList from './ChatMessageList';
 import { ChatMessage } from '../../types';
 
@@ -50,19 +50,17 @@ describe('ChatMessageList', () => {
   });
 
   describe('auto-scroll', () => {
-    it('scrolls to the bottom when a new message arrives while near the bottom', async () => {
+    it('scrolls to the bottom when a new message arrives while near the bottom', () => {
       const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
       const log = screen.getByRole('log', { name: 'Chat messages' });
       log.scrollTo = jest.fn();
 
       rerender(<ChatMessageList messages={[userMsg, aiMsg]} />);
 
-      await waitFor(() =>
-        expect(log.scrollTo).toHaveBeenCalledWith({ top: log.scrollHeight, behavior: 'smooth' }),
-      );
+      expect(log.scrollTo).toHaveBeenCalledWith({ top: log.scrollHeight, behavior: 'smooth' });
     });
 
-    it('does not scroll on message updates once the user has scrolled up', async () => {
+    it('does not scroll on message updates once the user has scrolled up', () => {
       const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
       const log = screen.getByRole('log', { name: 'Chat messages' });
       log.scrollTo = jest.fn();
@@ -72,13 +70,10 @@ describe('ChatMessageList', () => {
 
       rerender(<ChatMessageList messages={[userMsg, aiMsg]} />);
 
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
       expect(log.scrollTo).not.toHaveBeenCalled();
     });
 
-    it('resumes auto-scrolling once the user scrolls back near the bottom', async () => {
+    it('resumes auto-scrolling once the user scrolls back near the bottom', () => {
       const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
       const log = screen.getByRole('log', { name: 'Chat messages' });
       log.scrollTo = jest.fn();
@@ -90,9 +85,7 @@ describe('ChatMessageList', () => {
 
       rerender(<ChatMessageList messages={[userMsg, aiMsg]} />);
 
-      await waitFor(() =>
-        expect(log.scrollTo).toHaveBeenCalledWith({ top: log.scrollHeight, behavior: 'smooth' }),
-      );
+      expect(log.scrollTo).toHaveBeenCalledWith({ top: log.scrollHeight, behavior: 'smooth' });
     });
   });
 });

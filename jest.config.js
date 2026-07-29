@@ -42,6 +42,8 @@ module.exports = {
       displayName: 'server',
       testEnvironment: 'node',
       testMatch: ['**/**/*.server.test.(js|jsx)'],
+      // No setupFilesAfterEnv here: spec/setupTests.ts touches `window`/`document`
+      // at module scope, which don't exist in this Node environment.
       moduleNameMapper,
     },
   ],

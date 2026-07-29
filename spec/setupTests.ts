@@ -76,10 +76,10 @@ if (!window.HTMLElement.prototype.scrollTo) {
   window.HTMLElement.prototype.scrollTo = () => {};
 }
 
-// Make requestAnimationFrame synchronous so scroll effects run within tests.
-if (!global.requestAnimationFrame) {
-  global.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-    cb(0);
-    return 0;
-  }) as typeof global.requestAnimationFrame;
-}
+// jsdom's requestAnimationFrame is asynchronous; override it to run
+// synchronously so scroll effects settle within the same tick as the test.
+global.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+  cb(0);
+  return 0;
+}) as typeof global.requestAnimationFrame;
+global.cancelAnimationFrame = () => {};

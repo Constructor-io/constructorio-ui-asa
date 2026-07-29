@@ -1,9 +1,11 @@
 import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 
-export interface StreamEvent {
-  type: string;
-  data?: any;
-}
+export type StreamEvent =
+  | { type: 'start'; data: { thread_id: string } }
+  | { type: 'group'; data: { display_name: string; value: string } }
+  | { type: 'search_result'; data: { response: { results: unknown[] } } }
+  | { type: 'message'; data: { text: string } }
+  | { type: 'server_error'; data?: Record<string, unknown> };
 
 /**
  * Builds a ReadableStream that yields the provided events one-by-one, matching
