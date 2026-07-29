@@ -54,7 +54,7 @@
     "check-types": "npx tsc --noEmit -p tsconfig.check.json",
     "copy-styles": "rsync -am --include='*/' --include='*.css' --exclude='*' src/ lib/mjs/ && rsync -am --include='*/' --include='*.css' --exclude='*' src/ lib/cjs/",
     "dev": "storybook dev -p 6006",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "test:coverage": "jest --coverage",
     "storybook:ci": "storybook dev --ci --quiet -p 6006",
     "test-storybook": "test-storybook",
