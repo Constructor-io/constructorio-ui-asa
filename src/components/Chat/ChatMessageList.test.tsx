@@ -1,7 +1,16 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ChatMessageList from './ChatMessageList';
 import { ChatMessage } from '../../types';
+
+function setScrollGeometry(
+  el: HTMLElement,
+  { scrollHeight, scrollTop, clientHeight }: Record<string, number>,
+) {
+  Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, configurable: true });
+  Object.defineProperty(el, 'scrollTop', { value: scrollTop, configurable: true });
+  Object.defineProperty(el, 'clientHeight', { value: clientHeight, configurable: true });
+}
 
 const userMsg: ChatMessage = { id: 'u1', role: 'user', text: 'question?', status: 'done' };
 const aiMsg: ChatMessage = { id: 'a1', role: 'assistant', text: 'answer.', status: 'done' };
@@ -38,5 +47,52 @@ describe('ChatMessageList', () => {
     rerender(<ChatMessageList messages={[aiWithGroups]} />);
     expect(document.querySelector('.cio-asa-results-block')).toBeInTheDocument();
     expect(screen.getByText('Shoes')).toBeInTheDocument();
+  });
+
+  describe('auto-scroll', () => {
+    it('scrolls to the bottom when a new message arrives while near the bottom', async () => {
+      const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
+      const log = screen.getByRole('log', { name: 'Chat messages' });
+      log.scrollTo = jest.fn();
+
+      rerender(<ChatMessageList messages={[userMsg, aiMsg]} />);
+
+      await waitFor(() =>
+        expect(log.scrollTo).toHaveBeenCalledWith({ top: log.scrollHeight, behavior: 'smooth' }),
+      );
+    });
+
+    it('does not scroll on message updates once the user has scrolled up', async () => {
+      const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
+      const log = screen.getByRole('log', { name: 'Chat messages' });
+      log.scrollTo = jest.fn();
+
+      setScrollGeometry(log, { scrollHeight: 1000, scrollTop: 0, clientHeight: 300 });
+      fireEvent.scroll(log);
+
+      rerender(<ChatMessageList messages={[userMsg, aiMsg]} />);
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+      expect(log.scrollTo).not.toHaveBeenCalled();
+    });
+
+    it('resumes auto-scrolling once the user scrolls back near the bottom', async () => {
+      const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
+      const log = screen.getByRole('log', { name: 'Chat messages' });
+      log.scrollTo = jest.fn();
+
+      setScrollGeometry(log, { scrollHeight: 1000, scrollTop: 0, clientHeight: 300 });
+      fireEvent.scroll(log);
+      setScrollGeometry(log, { scrollHeight: 1000, scrollTop: 950, clientHeight: 300 });
+      fireEvent.scroll(log);
+
+      rerender(<ChatMessageList messages={[userMsg, aiMsg]} />);
+
+      await waitFor(() =>
+        expect(log.scrollTo).toHaveBeenCalledWith({ top: log.scrollHeight, behavior: 'smooth' }),
+      );
+    });
   });
 });
