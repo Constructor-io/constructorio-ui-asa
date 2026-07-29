@@ -1,9 +1,16 @@
 // jest.config.js
+const moduleNameMapper = {
+  '\\.(css|less|scss|sass)$': '<rootDir>/spec/styleMock.js',
+  // The client's types live in a .d.ts-only directory that Jest cannot
+  // resolve at runtime; nothing runtime is needed from it.
+  '@constructor-io/constructorio-client-javascript/lib/types$': '<rootDir>/spec/styleMock.js',
+};
+
 module.exports = {
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.test.{ts,tsx}',
-    '!src/**/*.server.test.{js,jsx}',
+    '!src/**/*.server.test.{js,jsx,ts,tsx}',
     '!src/**/*.stories.{ts,tsx}',
     '!src/stories/**',
     '!src/**/*.d.ts',
@@ -29,25 +36,13 @@ module.exports = {
       testEnvironment: 'jsdom',
       testMatch: ['**/**/*.test.(js|jsx|ts|tsx)', '!**/**/*.server.test.(js|jsx|ts|tsx)'],
       setupFilesAfterEnv: ['<rootDir>/spec/setupTests.ts'],
-      moduleNameMapper: {
-        '\\.(css|less|scss|sass)$': '<rootDir>/spec/styleMock.js',
-        // The client's types live in a .d.ts-only directory that Jest cannot
-        // resolve at runtime; nothing runtime is needed from it.
-        '@constructor-io/constructorio-client-javascript/lib/types$':
-          '<rootDir>/spec/styleMock.js',
-      },
+      moduleNameMapper,
     },
     {
       displayName: 'server',
       testEnvironment: 'node',
       testMatch: ['**/**/*.server.test.(js|jsx)'],
-      moduleNameMapper: {
-        '\\.(css|less|scss|sass)$': '<rootDir>/spec/styleMock.js',
-        // The client's types live in a .d.ts-only directory that Jest cannot
-        // resolve at runtime; nothing runtime is needed from it.
-        '@constructor-io/constructorio-client-javascript/lib/types$':
-          '<rootDir>/spec/styleMock.js',
-      },
+      moduleNameMapper,
     },
   ],
 };

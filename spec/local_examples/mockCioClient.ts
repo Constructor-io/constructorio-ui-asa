@@ -68,6 +68,8 @@ export interface MockCioClientOptions {
   events?: StreamEvent[];
   /** When true, the stream throws on read. */
   error?: boolean;
+  /** When set, the agent stream returns this stream instead of one built from `events`. */
+  stream?: ReadableStream<StreamEvent>;
 }
 
 /**
@@ -75,9 +77,13 @@ export interface MockCioClientOptions {
  * useAsaResults touches: `agent.getAgentResultsStream`. The returned jest mock
  * is exposed as `getAgentResultsStream` for assertions.
  */
-export function createMockCioClient({ events = [], error = false }: MockCioClientOptions = {}) {
-  const getAgentResultsStream = jest.fn(() =>
-    error ? createErroringStream() : createEventStream(events),
+export function createMockCioClient({
+  events = [],
+  error = false,
+  stream,
+}: MockCioClientOptions = {}) {
+  const getAgentResultsStream = jest.fn(
+    () => stream ?? (error ? createErroringStream() : createEventStream(events)),
   );
 
   const client = {

@@ -131,8 +131,7 @@ describe('useAsaResults', () => {
 
     it('ignores a second send while a stream is already in flight', () => {
       const { stream } = createPendingStream();
-      const getAgentResultsStream = jest.fn(() => stream);
-      const client = { agent: { getAgentResultsStream } } as unknown as ConstructorIOClient;
+      const { client, getAgentResultsStream } = createMockCioClient({ stream });
       const { result } = renderUseAsaResults(client);
 
       act(() => result.current.sendMessage('first'));
@@ -186,8 +185,7 @@ describe('useAsaResults', () => {
 
     it('cancels the in-flight reader when cleared mid-stream', () => {
       const { stream, cancel } = createPendingStream();
-      const getAgentResultsStream = jest.fn(() => stream);
-      const client = { agent: { getAgentResultsStream } } as unknown as ConstructorIOClient;
+      const { client } = createMockCioClient({ stream });
       const { result } = renderUseAsaResults(client);
 
       act(() => result.current.sendMessage('hello'));
@@ -204,8 +202,7 @@ describe('useAsaResults', () => {
   describe('cleanup', () => {
     it('cancels the in-flight reader on unmount', () => {
       const { stream, cancel } = createPendingStream();
-      const getAgentResultsStream = jest.fn(() => stream);
-      const client = { agent: { getAgentResultsStream } } as unknown as ConstructorIOClient;
+      const { client } = createMockCioClient({ stream });
       const { result, unmount } = renderUseAsaResults(client);
 
       act(() => result.current.sendMessage('hello'));
