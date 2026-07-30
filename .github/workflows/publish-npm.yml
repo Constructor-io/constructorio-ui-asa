@@ -1,0 +1,79 @@
+name: 'Publish: Publish to NPM'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'The version to publish'
+        required: true
+        type: string
+
+  # This workflow is intended to be called from the primary publish workflow
+  # automatically. The manual trigger is maintained for partially failed workflows
+  # or edge cases that require this be run independently.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version to publish.'
+        required: true
+        type: string
+
+# It's required to set permissions to be able to:
+# - Authenticate to NPM with OIDC
+# See: https://docs.npmjs.com/trusted-publishers
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish-to-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Remove version prefix
+        uses: ./.github/actions/remove-version-prefix
+        id: version
+        with:
+          version: ${{ inputs.version }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.18.x
+
+      - name: Install npm 11
+        run: npm install -g npm@11
+
+      - name: Debug node and npm versions
+        run: node --version && npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build compiled package for publishing
+        uses: "./.github/actions/compile"
+        with:
+          version: ${{ inputs.version }}
+
+      - name: Update package.json version field
+        id: update-version
+        run: |
+          # updates the package.json version field
+          new_version="${{ steps.version.outputs.without_prefix }}"
+          jq --arg new_version "$new_version" '.version = $new_version' package.json > tmp.json && mv tmp.json package.json
+
+          echo "new-version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Publish to NPM
+        run: npm publish --access public
+
+      - name: Notify Slack about new publish to NPM
+        uses: ravsamhq/notify-slack-action@be814b201e233b2dc673608aa46e5447c8ab13f2 # 2.5.0
+        with:
+          notification_title: "☁️ New constructorio-ui-asa release published to npm at version ${{ steps.update-version.outputs.new-version }}"
+          status: ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
