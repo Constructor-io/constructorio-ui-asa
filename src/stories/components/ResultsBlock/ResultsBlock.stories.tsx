@@ -2,8 +2,7 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import ResultsBlock from '../../../components/ResultsBlock/ResultsBlock';
 
-const PRODUCT_IMAGE =
-  'https://example.com/images/product.jpg';
+const PRODUCT_IMAGE = 'https://example.com/images/active-pant.jpg';
 
 const mockGroups = [
   {

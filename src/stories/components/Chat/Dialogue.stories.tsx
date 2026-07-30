@@ -11,8 +11,7 @@ import '../../../components/Chat/ChatMessageList.css';
 import '../../../components/ResultsBlock/ResultsBlock.css';
 import { ChatMessage } from '../../../types';
 
-const PRODUCT_IMAGE =
-  'https://example.com/images/product.jpg';
+const PRODUCT_IMAGE = 'https://example.com/images/active-pant.jpg';
 
 const meta: Meta = {
   title: 'Components/Chat/Dialogue',
