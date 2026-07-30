@@ -47,10 +47,22 @@ describe('ResultsBlock', () => {
     expect(onViewMore).toHaveBeenCalledWith(groups[0].group);
   });
 
-  it('sets the aspect-ratio CSS variable', () => {
-    const { container } = render(<ResultsBlock groups={groups} aspectRatio='16:9' />);
+  it.each([
+    ['1:1', '1 / 1'],
+    ['3:4', '3 / 4'],
+    ['9:16', '9 / 16'],
+    ['4:3', '4 / 3'],
+    ['16:9', '16 / 9'],
+  ] as const)('sets the aspect-ratio CSS variable for %s', (aspectRatio, expected) => {
+    const { container } = render(<ResultsBlock groups={groups} aspectRatio={aspectRatio} />);
     const block = container.querySelector('.cio-asa-results-block') as HTMLElement;
-    expect(block.style.getPropertyValue('--cio-asa-image-ratio')).toBe('16 / 9');
+    expect(block.style.getPropertyValue('--cio-asa-image-ratio')).toBe(expected);
+  });
+
+  it('defaults to a 3:4 aspect ratio', () => {
+    const { container } = render(<ResultsBlock groups={groups} />);
+    const block = container.querySelector('.cio-asa-results-block') as HTMLElement;
+    expect(block.style.getPropertyValue('--cio-asa-image-ratio')).toBe('3 / 4');
   });
 
   it('renders a group title override', () => {

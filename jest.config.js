@@ -18,7 +18,7 @@ module.exports = {
   // Tests live in spec/, mirroring the src/ tree, so the published package
   // source stays free of test files. See spec/README.md.
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
+    'src/**/*.{ts,tsx,js,jsx}',
     '!src/**/*.stories.{ts,tsx}',
     '!src/stories/**',
     '!src/**/*.d.ts',
@@ -27,8 +27,6 @@ module.exports = {
     '!src/utils/typeHelpers.ts',
     '!src/version.ts',
     '!src/generateVersion.js',
-    '!src/bundled.jsx',
-    '!src/components/icons/**',
   ],
   coverageThreshold: {
     global: {
