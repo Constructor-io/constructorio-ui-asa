@@ -50,7 +50,7 @@
   },
   "types": "lib/types/index.d.ts",
   "scripts": {
-    "lint": "eslint src --ext js,ts,jsx,tsx",
+    "lint": "eslint src spec --ext js,ts,jsx,tsx",
     "check-types": "npx tsc --noEmit -p tsconfig.check.json",
     "copy-styles": "rsync -am --include='*/' --include='*.css' --exclude='*' src/ lib/mjs/ && rsync -am --include='*/' --include='*.css' --exclude='*' src/ lib/cjs/",
     "dev": "storybook dev -p 6006",

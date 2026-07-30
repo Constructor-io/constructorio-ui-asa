@@ -22,6 +22,18 @@
     "Trailmaker",
     "scrollability",
     "fygjnt",
-    "usvx"
+    "usvx",
+    "Catchify",
+    "WHATWG",
+    "embla",
+    // Non-English strings used by the translation-override tests
+    "Asistente",
+    "Cerrar",
+    "Votre",
+    "Verlauf",
+    "sagtest",
+    "Asystent",
+    "pisze",
+    "Akcja"
   ]
 }

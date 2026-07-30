@@ -73,9 +73,19 @@
       }
     },
     {
-      "files": "spec/*.jsx",
+      "files": "spec/**/*.jsx",
       "rules": {
         "react/prop-types": "off"
+      }
+    },
+    {
+      // Test setup legitimately declares several stateless stub classes
+      // (ResizeObserver, IntersectionObserver) and patches console.
+      "files": ["spec/setupTests.ts", "spec/setupTests.server.ts"],
+      "rules": {
+        "max-classes-per-file": "off",
+        "class-methods-use-this": "off",
+        "no-console": "off"
       }
     },
     {
