@@ -1,6 +1,6 @@
 name: 'Publish: Create GitHub release'
 
-# We need these permissions create new GitHub releases
+# We need these permissions to create new GitHub releases
 permissions: write-all
 
 on:

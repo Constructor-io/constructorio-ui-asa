@@ -1,6 +1,6 @@
 # Pull Request Checklist
 
-Before you submit a pull request, please make sure you have to following:
+Before you submit a pull request, please make sure you have the following:
 
 - [ ] I have added or updated TypeScript types for my changes, ensuring they are compatible with the existing codebase.
 - [ ] I have added JSDoc comments to my TypeScript definitions for improved documentation.

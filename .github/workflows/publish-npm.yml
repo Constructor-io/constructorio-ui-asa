@@ -62,7 +62,8 @@ jobs:
         id: update-version
         run: |
           # updates the package.json version field
-          jq --arg new_version "${{ steps.version.outputs.without_prefix }}" '.version = $new_version' package.json > tmp.json && mv tmp.json package.json
+          new_version="${{ steps.version.outputs.without_prefix }}"
+          jq --arg new_version "$new_version" '.version = $new_version' package.json > tmp.json && mv tmp.json package.json
 
           echo "new-version=$new_version" >> $GITHUB_OUTPUT
 
