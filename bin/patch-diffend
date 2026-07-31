@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+# The diffend npm wrapper is unmaintained (last release 2022) and crashes with
+# `s.warn is not a function` on npm 11+ because its custom logger relies on an
+# npm internal that no longer exists. Repoint it at console.warn.
+# CI-only: this patches the global diffend install.
+diffend_lib="$(npm root -g)/@diffend/npm/lib/diffend.js"
+
+if [ ! -f "$diffend_lib" ]; then
+  echo "patch-diffend: expected diffend at $diffend_lib but it was not found" >&2
+  exit 1
+fi
+
+sed -i -e "s/s\.warn/console.warn/g" "$diffend_lib"

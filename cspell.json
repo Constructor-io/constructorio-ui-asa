@@ -26,7 +26,6 @@
     "Catchify",
     "WHATWG",
     "embla",
-    // Non-English strings used by the translation-override tests
     "Asistente",
     "Cerrar",
     "Votre",
@@ -34,6 +33,7 @@
     "sagtest",
     "Asystent",
     "pisze",
-    "Akcja"
+    "Akcja",
+    "Catchify"
   ]
 }

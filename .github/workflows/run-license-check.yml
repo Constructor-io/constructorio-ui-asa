@@ -1,10 +1,10 @@
-name: Run tests
+name: Run license check
 on:
   pull_request:
     branches:
       - "**"
 concurrency:
-  group: run-tests-${{ github.head_ref }}
+  group: run-license-${{ github.head_ref }}
   cancel-in-progress: true
 jobs:
   build:
@@ -19,10 +19,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Check types
-        run: npm run check-types
-      - name: Run tests
-        run: npm run test
+      - name: Run license check
+        run: npm run check-license

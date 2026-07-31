@@ -1,0 +1,28 @@
+name: Compile Code
+
+description: 'Creates all code artifacts required to publish a new version.'
+
+inputs:
+  version:
+    description: 'The current version.'
+    type: string
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Remove version prefix
+      uses: ./.github/actions/remove-version-prefix
+      id: version
+      with:
+        version: ${{ inputs.version }}
+
+    - name: Update package.json version field
+      shell: bash
+      run: |
+        # ASA's compile script generates src/version.ts from package.json,
+        # so set the version here before compiling.
+        jq --arg new_version "${{ steps.version.outputs.without_prefix }}" '.version = $new_version' package.json > tmp.json && mv tmp.json package.json
+
+    - run: npm run compile
+      shell: bash
