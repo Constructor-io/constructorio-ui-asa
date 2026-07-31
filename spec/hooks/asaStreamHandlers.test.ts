@@ -4,125 +4,149 @@ import {
   handleServerError,
   handleStreamEnd,
   handleStreamError,
-  MessageUpdater,
 } from '../../src/hooks/asaStreamHandlers';
-import type { ChatMessage, ResultGroupMeta } from '../../src/types';
+import { ChatMessage, ResultGroupMeta } from '../../src/types';
 
-const ASSISTANT_ID = 'assistant-1';
+const ASSISTANT_ID = 'msg-1';
 
-function makeAssistant(overrides: Partial<ChatMessage> = {}): ChatMessage {
-  return {
-    id: ASSISTANT_ID,
-    role: 'assistant',
-    text: '',
-    groups: [],
-    status: 'loading',
-    ...overrides,
-  };
-}
+const baseMessage: ChatMessage = {
+  id: ASSISTANT_ID,
+  role: 'assistant',
+  text: '',
+  groups: [],
+  status: 'loading',
+};
 
+/**
+ * Runs the setMessages updater produced by a handler against a starting list
+ * and returns the resulting assistant message.
+ */
 function applyUpdater(
-  start: ChatMessage[],
-  run: (setMessages: MessageUpdater) => void,
-): ChatMessage[] {
-  let state = start;
-  const setMessages: MessageUpdater = (action) => {
-    state = typeof action === 'function' ? action(state) : action;
-  };
-  run(setMessages);
-  return state;
+  setMessages: jest.Mock,
+  start: ChatMessage[] = [{ ...baseMessage }],
+): ChatMessage {
+  const updater = setMessages.mock.calls[setMessages.mock.calls.length - 1][0];
+  const next: ChatMessage[] = updater(start);
+  return next.find((m) => m.id === ASSISTANT_ID)!;
 }
 
 describe('asaStreamHandlers', () => {
   describe('handleSearchResult', () => {
-    it('appends a new group using the pending group label and clears it', () => {
+    it('uses the pending group and appends normalized results, returning null', () => {
+      const setMessages = jest.fn();
       const pending: ResultGroupMeta = { display_name: 'Shoes', value: 'shoes' };
-      const data = { response: { results: [{ id: 'p1' }] } };
+      const data = { response: { results: [{ value: 'a' }, { value: 'b' }] } };
 
-      let returned: ResultGroupMeta | null = pending;
-      const result = applyUpdater([makeAssistant()], (setMessages) => {
-        returned = handleSearchResult(data, pending, ASSISTANT_ID, setMessages);
-      });
+      const returned = handleSearchResult(data, pending, ASSISTANT_ID, setMessages);
 
       expect(returned).toBeNull();
-      expect(result[0].groups).toHaveLength(1);
-      expect(result[0].groups?.[0].group).toEqual(pending);
-      expect(result[0].groups?.[0].searchResults).toEqual([{ id: 'p1' }]);
-      expect(result[0].status).toBe('streaming');
+      const msg = applyUpdater(setMessages);
+      expect(msg.status).toBe('streaming');
+      expect(msg.groups).toHaveLength(1);
+      expect(msg.groups![0]).toEqual({
+        group: pending,
+        searchResults: [{ value: 'a' }, { value: 'b' }],
+      });
     });
 
-    it('derives the group label from the payload when no pending group exists', () => {
+    it('derives the group from search_request when there is no pending group', () => {
+      const setMessages = jest.fn();
       const data = {
         response: {
-          search_request: { display_name: 'Hats', search_term: 'hats' },
-          results: [{ id: 'p2' }],
+          search_request: { display_name: 'Recipes', search_term: 'picnic' },
+          results: [{ value: 'x' }],
         },
       };
 
-      const result = applyUpdater([makeAssistant()], (setMessages) => {
-        handleSearchResult(data, null, ASSISTANT_ID, setMessages);
-      });
-
-      expect(result[0].groups?.[0].group).toEqual({ display_name: 'Hats', value: 'hats' });
+      handleSearchResult(data, null, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages);
+      expect(msg.groups![0].group).toEqual({ display_name: 'Recipes', value: 'picnic' });
     });
 
-    it('only updates the message with the matching id', () => {
-      const other = makeAssistant({ id: 'other' });
-      const result = applyUpdater([other, makeAssistant()], (setMessages) => {
-        handleSearchResult({ results: [{ id: 'p3' }] }, null, ASSISTANT_ID, setMessages);
-      });
+    it('falls back to wrapping the raw data when no results array is present', () => {
+      const setMessages = jest.fn();
+      const data = { title: 'T', foo: 'bar' };
+      handleSearchResult(data, null, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages);
+      expect(msg.groups![0].searchResults).toEqual([data]);
+      expect(msg.groups![0].group).toEqual({ display_name: 'T', value: 'T' });
+    });
 
-      expect(result[0].groups).toHaveLength(0);
-      expect(result[1].groups).toHaveLength(1);
+    it('appends to existing groups without clobbering them', () => {
+      const setMessages = jest.fn();
+      const existing: ChatMessage = {
+        ...baseMessage,
+        groups: [{ group: { display_name: 'first' }, searchResults: [] }],
+      };
+      handleSearchResult(
+        { results: [{ v: 1 }] },
+        { display_name: 'second' },
+        ASSISTANT_ID,
+        setMessages,
+      );
+      const msg = applyUpdater(setMessages, [existing]);
+      expect(msg.groups).toHaveLength(2);
+      expect(msg.groups![1].searchResults).toEqual([{ v: 1 }]);
+    });
+
+    it('derives an empty group when neither search_request nor title is present', () => {
+      const setMessages = jest.fn();
+      handleSearchResult({}, null, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages);
+      expect(msg.groups![0].group).toEqual({ display_name: '', value: '' });
     });
   });
 
   describe('handleMessage', () => {
-    it('appends streamed text and marks the message streaming', () => {
-      const result = applyUpdater([makeAssistant({ text: 'Hel' })], (setMessages) => {
-        handleMessage({ text: 'lo' }, ASSISTANT_ID, setMessages);
-      });
+    it('concatenates streamed text tokens', () => {
+      const setMessages = jest.fn();
+      handleMessage({ text: 'Hello ' }, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: 'Hi. ' }]);
+      expect(msg.text).toBe('Hi. Hello ');
+      expect(msg.status).toBe('streaming');
+    });
 
-      expect(result[0].text).toBe('Hello');
-      expect(result[0].status).toBe('streaming');
+    it('handles missing text data as empty string', () => {
+      const setMessages = jest.fn();
+      handleMessage({}, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: 'keep' }]);
+      expect(msg.text).toBe('keep');
     });
   });
 
   describe('handleServerError', () => {
-    it('marks the message as error while preserving any partial text', () => {
-      const result = applyUpdater(
-        [makeAssistant({ text: 'partial', status: 'streaming' })],
-        (setMessages) => {
-          handleServerError(ASSISTANT_ID, setMessages);
-        },
-      );
-
-      expect(result[0].status).toBe('error');
-      expect(result[0].text).toBe('partial');
+    it('keeps existing text and sets error status', () => {
+      const setMessages = jest.fn();
+      handleServerError(ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: 'partial' }]);
+      expect(msg.text).toBe('partial');
+      expect(msg.status).toBe('error');
     });
   });
 
   describe('handleStreamEnd', () => {
     it('marks the message as done', () => {
-      const result = applyUpdater([makeAssistant({ status: 'streaming' })], (setMessages) => {
-        handleStreamEnd(ASSISTANT_ID, setMessages);
-      });
-
-      expect(result[0].status).toBe('done');
+      const setMessages = jest.fn();
+      handleStreamEnd(ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, status: 'streaming' }]);
+      expect(msg.status).toBe('done');
     });
   });
 
   describe('handleStreamError', () => {
-    it('marks the message as error and keeps partial text', () => {
-      const result = applyUpdater(
-        [makeAssistant({ text: 'partial', status: 'streaming' })],
-        (setMessages) => {
-          handleStreamError(ASSISTANT_ID, setMessages);
-        },
-      );
+    it('keeps partial text but sets error status', () => {
+      const setMessages = jest.fn();
+      handleStreamError(ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: 'partial answer' }]);
+      expect(msg.text).toBe('partial answer');
+      expect(msg.status).toBe('error');
+    });
 
-      expect(result[0].status).toBe('error');
-      expect(result[0].text).toBe('partial');
+    it('leaves text empty when there is no partial text', () => {
+      const setMessages = jest.fn();
+      handleStreamError(ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: '' }]);
+      expect(msg.text).toBe('');
     });
   });
 });

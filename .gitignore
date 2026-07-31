@@ -6,4 +6,7 @@ node_modules
 dist
 lib
 
+# Pertaining to Testing
+coverage
+
 .DS_Store

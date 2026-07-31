@@ -20,5 +20,12 @@
   },
   "lib": ["dom"],
   "include": ["src/**/*.ts", "generateVersion.js"],
-  "exclude": ["src/stories/**", "node_modules", "lib", "storybook-static", ".storybook"]
+  "exclude": [
+    "src/stories/**",
+    "spec/**",
+    "node_modules",
+    "lib",
+    "storybook-static",
+    ".storybook"
+  ]
 }
