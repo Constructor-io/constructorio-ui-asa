@@ -2,7 +2,8 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import ResultsBlock from '../../../components/ResultsBlock/ResultsBlock';
 
-const PRODUCT_IMAGE = 'https://example.com/images/active-pant.jpg';
+const PRODUCT_IMAGE =
+  'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
 
 const mockGroups = [
   {

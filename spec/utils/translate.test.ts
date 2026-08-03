@@ -1,35 +1,23 @@
 import translate from '../../src/utils/translate';
-import type { Translations } from '../../src/types';
 
 describe('translate', () => {
-  it('returns the default translation for a known key', () => {
+  it('returns the override translation when provided', () => {
+    expect(translate('CioAsa.header.title', { 'CioAsa.header.title': 'Custom Title' })).toBe(
+      'Custom Title',
+    );
+  });
+
+  it('returns an empty-string override rather than falling back to the default', () => {
+    expect(translate('CioAsa.header.title', { 'CioAsa.header.title': '' })).toBe('');
+  });
+
+  it('falls back to the default English string when no override is given', () => {
     expect(translate('CioAsa.header.title')).toBe('Shopping Assistant');
-    expect(translate('CioAsa.results.addToCart')).toBe('Add to cart');
+    expect(translate('CioAsa.results.addToCart', {})).toBe('Add to cart');
   });
 
-  it('prefers a user-provided override over the default', () => {
-    const translations: Translations = {
-      'CioAsa.header.title': 'Custom Title',
-    };
-    expect(translate('CioAsa.header.title', translations)).toBe('Custom Title');
-  });
-
-  it('falls back to the default when the override does not define the key', () => {
-    const translations: Translations = {
-      'CioAsa.header.title': 'Custom Title',
-    };
-    expect(translate('CioAsa.header.close', translations)).toBe('Close');
-  });
-
-  it('respects an empty-string override', () => {
-    const translations: Translations = {
-      'CioAsa.header.close': '',
-    };
-    expect(translate('CioAsa.header.close', translations)).toBe('');
-  });
-
-  it('falls back to the key itself when neither override nor default exists', () => {
-    const key = 'CioAsa.unknown.key' as keyof Translations;
-    expect(translate(key)).toBe('CioAsa.unknown.key');
+  it('falls back to the key itself when no default exists', () => {
+    // @ts-expect-error — exercising the runtime fallback for an unknown key
+    expect(translate('CioAsa.unknown.key')).toBe('CioAsa.unknown.key');
   });
 });

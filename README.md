@@ -5,7 +5,7 @@
 
 A UI library that provides React components to manage the fetching and rendering logic for [Constructor.io's AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/). TypeScript support is available.
 
-## Table of Contents
+A UI Library that provides React components to manage the fetching and rendering logic for [AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/) powered by Constructor.io. Typescript support is available.
 
 - [Overview](#overview)
 - [Installation](#installation)

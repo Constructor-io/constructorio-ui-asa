@@ -11,7 +11,8 @@ import '../../../components/Chat/ChatMessageList.css';
 import '../../../components/ResultsBlock/ResultsBlock.css';
 import { ChatMessage } from '../../../types';
 
-const PRODUCT_IMAGE = 'https://example.com/images/active-pant.jpg';
+const PRODUCT_IMAGE =
+  'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
 
 const meta: Meta = {
   title: 'Components/Chat/Dialogue',

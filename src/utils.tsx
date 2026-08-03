@@ -40,7 +40,9 @@ export function rgbToHsl(r: number, g: number, b: number) {
   let h = 0;
 
   if (delta === 0) h = 0;
-  else if (max === rConverted) h = ((gConverted - bConverted) / delta) % 6;
+  // `%` in JS keeps the sign, so a red-dominant hue in the 270-360° sector
+  // (g < b) would yield a negative value. Normalize back into [0, 6).
+  else if (max === rConverted) h = ((((gConverted - bConverted) / delta) % 6) + 6) % 6;
   else if (max === gConverted) h = (bConverted - rConverted) / delta + 2;
   else if (max === bConverted) h = (rConverted - gConverted) / delta + 4;
 

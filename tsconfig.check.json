@@ -1,0 +1,10 @@
+{
+  // Type-checking only (noEmit): unlike the build config this DOES include the
+  // test files (both .ts and .tsx) and spec helpers so they stay type-safe.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node", "@testing-library/jest-dom"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "spec/**/*.ts", "spec/**/*.tsx", "generateVersion.js"],
+  "exclude": ["src/stories/**", "node_modules", "lib", "storybook-static", ".storybook"]
+}
