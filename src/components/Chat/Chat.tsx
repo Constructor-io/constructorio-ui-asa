@@ -75,9 +75,15 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     useEffect(() => {
       const root = isWelcome ? containerRef.current : chatViewRef.current;
       const input = root?.querySelector('input');
-      // preventScroll: focusing must not scroll the page — the host may render Chat
-      // below the fold (or, as in Storybook docs, several instances on one page).
-      input?.focus({ preventScroll: true });
+      if (input) {
+        // preventScroll: focusing must not scroll the page — the host may render Chat
+        // below the fold (or, as in Storybook docs, several instances on one page).
+        try {
+          input.focus({ preventScroll: true });
+        } catch {
+          input.focus();
+        }
+      }
     }, [isWelcome]);
 
     useFocusTrap(containerRef, { onEscape: onClose });
