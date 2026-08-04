@@ -21,7 +21,7 @@ const meta: Meta<typeof Chat> = {
           'The component fills its container (`width: 100%; height: 100%`). ' +
           'Control the layout (sidebar, fullscreen, panel) by styling the parent wrapper or using the `className` prop.\n\n' +
           '**Content** — You can swap the sections for a customized version of the AI Chat dialog component.\n\n' +
-          '**Results** — Product results are rendered using the [ResultsBlock](?path=/docs/components-resultsblock--docs) component internally. ' +
+          '**Results** — Product results are rendered using the <a href="./?path=/docs/components-resultsblock--variants" target="_top">ResultsBlock</a> component internally. ' +
           'See its documentation for available layout and display options (`aspectRatio`, `minCardWidth`, `gap`, `showTitle`, etc.).',
       },
     },
@@ -49,7 +49,7 @@ const meta: Meta<typeof Chat> = {
     currency: {
       control: 'text',
       description:
-        'Currency symbol for product prices. For additional results layout options see [ResultsBlock](?path=/docs/components-resultsblock--docs).',
+        'Currency symbol for product prices. For additional results layout options see <a href="./?path=/docs/components-resultsblock--variants" target="_top">ResultsBlock</a>.',
       table: { category: 'Results' },
     },
     normalizeItem: {
