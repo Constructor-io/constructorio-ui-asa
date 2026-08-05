@@ -16,7 +16,7 @@ describe('WelcomeScreen', () => {
     const onSend = jest.fn();
     render(<WelcomeScreen onSend={onSend} suggestions={['Suggest me']} />);
     await userEvent.click(screen.getByRole('button', { name: 'Suggest me' }));
-    expect(onSend).toHaveBeenCalledWith('Suggest me');
+    expect(onSend).toHaveBeenCalledWith('Suggest me', 'suggestion');
   });
 
   it('calls onSend from the input on submit', async () => {

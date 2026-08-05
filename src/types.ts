@@ -30,6 +30,8 @@ export interface AsaContextValue {
   staticRequestConfigs: RequestConfigs;
   formatters: Formatters;
   urlHelpers: UrlHelpers;
+  callbacks?: AsaCallbacks;
+  section?: string;
 }
 
 export interface RequestConfigs extends IAgentParameters {
@@ -91,6 +93,9 @@ export interface ChatMessage {
   text: string;
   groups?: ResultGroup[];
   status: ChatMessageStatus;
+  intent?: string;
+  intentResultId?: string;
+  threadId?: string;
 }
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
@@ -104,13 +109,69 @@ export interface ResultGroupMeta {
 export interface ResultGroup {
   group: ResultGroupMeta;
   searchResults: Record<string, unknown>[];
+  searchResultId?: string;
+  intentResultId?: string;
 }
 
 export interface UseChatReturn {
   messages: ChatMessage[];
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string, source?: AssistantSubmitSource) => void;
   isStreaming: boolean;
   clearHistory: () => void;
+}
+
+// --- Behavioral tracking ---
+
+/** How an intent was submitted: typed into the input, or a suggestion chip clicked. */
+export type AssistantSubmitSource = 'input' | 'suggestion';
+
+/** An item within a viewed/clicked search_result pod. */
+export interface AssistantTrackedItem {
+  itemId?: string;
+  itemName?: string;
+  variationId?: string;
+}
+
+/**
+ * Optional consumer callbacks fired alongside the built-in behavioral tracking.
+ * Each fires immediately after its corresponding `trackAssistant*` beacon is sent,
+ * so consumers can mirror ASA analytics into their own systems. All are optional.
+ */
+export interface AsaCallbacks {
+  /** User submitted an intent (typed) or clicked a suggestion. */
+  onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
+  /** The ASA response stream started. */
+  onResultLoadStart?: (payload: { intent: string; intentResultId?: string }) => void;
+  /** The ASA response stream finished; `searchResultCount` = number of pods loaded. */
+  onResultLoadFinish?: (payload: {
+    intent: string;
+    searchResultCount: number;
+    intentResultId?: string;
+  }) => void;
+  /** A product inside a search_result pod was clicked. */
+  onResultClick?: (payload: {
+    intent: string;
+    searchResultId: string;
+    intentResultId?: string;
+    item: AssistantTrackedItem;
+  }) => void;
+  /** A search_result pod scrolled into view. */
+  onResultView?: (payload: {
+    intent: string;
+    searchResultId: string;
+    intentResultId?: string;
+    numResultsViewed: number;
+    items?: AssistantTrackedItem[];
+  }) => void;
+  /** A search query inside a search_result pod was submitted (e.g. "View more"). */
+  onSearchSubmit?: (payload: {
+    intent: string;
+    searchTerm: string;
+    userInput: string;
+    searchResultId: string;
+    intentResultId?: string;
+    groupId?: string;
+  }) => void;
 }
 
 /**

@@ -1,16 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Carousel, RenderPropsWrapper } from '@constructor-io/constructorio-ui-components';
-import {
-  ResultGroup,
-  ResultGroupMeta,
-  ResultsBlockOverrides,
-  ResultsGroupTitleRenderProps,
-  ResultsViewMoreRenderProps,
-} from '../../types';
+import { ResultGroup, ResultGroupMeta, ResultsBlockOverrides } from '../../types';
 import { normalizeItemToProduct, Product, NormalizeOptions } from '../../utils/productNormalizer';
-import { ArrowRightIcon } from '../icons';
+import { useCioAsaContext } from '../../hooks/useCioAsaContext';
+import useAsaTracking from '../../hooks/useAsaTracking';
 import { AspectRatio, PEEK_FRACTION, aspectRatioMap } from './constants';
-import createProductCardRenderer from './renderProductCard';
+import ResultsGroup from './ResultsGroup';
 import './ResultsBlock.css';
 
 export type { AspectRatio } from './constants';
@@ -25,6 +19,9 @@ interface ResultsBlockProps {
   addToCartText?: string;
   saleBadgeText?: string;
   currency?: string;
+  intent?: string;
+  intentResultId?: string;
+  threadId?: string;
   /**
    * Map a raw search-result item to the `Product` shape rendered by the card.
    * Override this when your index metadata uses non-default field names
@@ -37,14 +34,6 @@ interface ResultsBlockProps {
   componentOverrides?: ResultsBlockOverrides;
 }
 
-function PreviousButton() {
-  return null;
-}
-
-function NextButton() {
-  return null;
-}
-
 function ResultsBlock({
   groups,
   aspectRatio = '3:4',
@@ -55,6 +44,9 @@ function ResultsBlock({
   addToCartText = 'Add to cart',
   saleBadgeText = 'Sale',
   currency,
+  intent,
+  intentResultId,
+  threadId,
   normalizeItem = normalizeItemToProduct,
   onProductClick,
   onAddToCart,
@@ -63,6 +55,14 @@ function ResultsBlock({
 }: ResultsBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [slidesToShow, setSlidesToShow] = useState(3 + PEEK_FRACTION);
+
+  const context = useCioAsaContext();
+  const tracking = useAsaTracking({
+    tracker: context?.cioClient?.tracker ?? undefined,
+    section: context?.section,
+    threadId,
+  });
+  const callbacks = context?.callbacks;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -83,14 +83,6 @@ function ResultsBlock({
 
   if (!groups || groups.length === 0) return null;
 
-  const renderProductCard = createProductCardRenderer({
-    currency,
-    addToCartText,
-    onProductClick,
-    onAddToCart,
-    componentOverrides: componentOverrides?.carousel?.item?.productCard,
-  });
-
   return (
     <div
       ref={containerRef}
@@ -99,60 +91,28 @@ function ResultsBlock({
       {groups.map((groupData, index) => {
         const label = groupData.group?.display_name || groupData.group?.value || '';
         const groupKey = `${groupData.group?.value || label}-${index}`;
-        const products = groupData.searchResults.map((item) =>
-          normalizeItem(item, { saleBadgeText }),
-        );
-
-        const titleRenderProps: ResultsGroupTitleRenderProps = { label };
-        const viewMoreRenderProps: ResultsViewMoreRenderProps = {
-          group: groupData.group,
-          onClick: () => onViewMore?.(groupData.group),
-        };
-
-        const userCarousel = componentOverrides?.carousel;
-        const carouselOverrides = {
-          previous: { reactNode: PreviousButton },
-          next: { reactNode: NextButton },
-          ...userCarousel,
-          item: {
-            ...userCarousel?.item,
-            productCard: {
-              reactNode: renderProductCard,
-            },
-          },
-        };
-
         return (
-          <div className='cio-asa-results-group' key={groupKey}>
-            {showTitle && label && (
-              <RenderPropsWrapper
-                override={componentOverrides?.groupTitle?.reactNode}
-                props={titleRenderProps}>
-                <h3 className='cio-asa-results-group__label'>{label}</h3>
-              </RenderPropsWrapper>
-            )}
-            <Carousel<Product>
-              items={products}
-              loop={false}
-              responsive={{
-                0: { gap, slidesToShow },
-              }}
-              componentOverrides={carouselOverrides}
-            />
-            {onViewMore && (
-              <RenderPropsWrapper
-                override={componentOverrides?.viewMore?.reactNode}
-                props={viewMoreRenderProps}>
-                <button
-                  type='button'
-                  className='cio-asa-results-group__view-more'
-                  onClick={() => onViewMore(groupData.group)}>
-                  <span className='cio-asa-results-group__view-more-text'>{viewMoreText}</span>
-                  <ArrowRightIcon />
-                </button>
-              </RenderPropsWrapper>
-            )}
-          </div>
+          <ResultsGroup
+            key={groupKey}
+            groupData={groupData}
+            label={label}
+            slidesToShow={slidesToShow}
+            gap={gap}
+            showTitle={showTitle}
+            viewMoreText={viewMoreText}
+            addToCartText={addToCartText}
+            saleBadgeText={saleBadgeText}
+            currency={currency}
+            intent={intent}
+            intentResultId={intentResultId}
+            normalizeItem={normalizeItem}
+            onProductClick={onProductClick}
+            onAddToCart={onAddToCart}
+            onViewMore={onViewMore}
+            componentOverrides={componentOverrides}
+            tracking={tracking}
+            callbacks={callbacks}
+          />
         );
       })}
     </div>
