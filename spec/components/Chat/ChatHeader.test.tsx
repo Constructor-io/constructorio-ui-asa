@@ -14,7 +14,6 @@ describe('ChatHeader', () => {
 
     const title = screen.getByRole('heading', { name: 'Shopping Assistant' });
     expect(title.tagName).toBe('H2');
-    expect(title).toHaveAttribute('id', 'cio-asa-chat-title');
   });
 
   it('renders a close button only when onClose is provided and calls it', async () => {

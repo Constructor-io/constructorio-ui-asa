@@ -7,7 +7,7 @@ describe('ChatHeader (SSR)', () => {
     const html = renderServerSide(<ChatHeader />);
 
     expect(html).toContain('Shopping Assistant');
-    expect(html).toContain('id="cio-asa-chat-title"');
+    expect(html).toContain('<h2');
   });
 
   it('omits the close button when no onClose handler is supplied', () => {

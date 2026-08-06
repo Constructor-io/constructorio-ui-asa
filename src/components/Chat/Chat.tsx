@@ -94,8 +94,8 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         ref={containerRef}
         role='dialog'
         aria-modal='true'
-        aria-labelledby='cio-asa-chat-title'
-        // Fallback name for when componentOverrides replace the node carrying the title id
+        // aria-label rather than aria-labelledby: componentOverrides can replace the
+        // title node, which would leave the reference dangling
         aria-label={translate(
           isWelcome ? 'CioAsa.welcome.title' : 'CioAsa.header.title',
           translations,

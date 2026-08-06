@@ -71,9 +71,7 @@ export default function WelcomeScreen({
         <RenderPropsWrapper
           override={componentOverrides?.title?.reactNode}
           props={titleRenderProps}>
-          <h2 id='cio-asa-chat-title' className='cio-asa-welcome-screen__title'>
-            {titleRenderProps.text}
-          </h2>
+          <h2 className='cio-asa-welcome-screen__title'>{titleRenderProps.text}</h2>
         </RenderPropsWrapper>
         <RenderPropsWrapper
           override={componentOverrides?.input?.reactNode}
