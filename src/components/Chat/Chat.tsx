@@ -93,7 +93,13 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         className={['cio-asa', 'cio-asa-chat', className].filter(Boolean).join(' ')}
         ref={containerRef}
         role='dialog'
-        aria-labelledby='cio-asa-chat-title'>
+        aria-modal='true'
+        aria-labelledby='cio-asa-chat-title'
+        // Fallback name for when componentOverrides replace the node carrying the title id
+        aria-label={translate(
+          isWelcome ? 'CioAsa.welcome.title' : 'CioAsa.header.title',
+          translations,
+        )}>
         <div className='cio-asa-chat-body'>
           {isWelcome ? (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>

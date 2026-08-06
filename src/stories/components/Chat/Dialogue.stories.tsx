@@ -17,6 +17,7 @@ const PRODUCT_IMAGE =
 const meta: Meta = {
   title: 'Components/Chat/Dialogue',
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
     docs: {
       description: {

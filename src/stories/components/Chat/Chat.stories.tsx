@@ -13,6 +13,7 @@ const meta: Meta<typeof Chat> = {
   title: 'Components/Chat',
   component: Chat,
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
     docs: {
       description: {

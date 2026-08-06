@@ -37,6 +37,16 @@ describe('AiMessage', () => {
     expect(screen.getByText("I can't assist you with that request.")).toBeInTheDocument();
   });
 
+  it('announces errors through a live region instead of color alone', () => {
+    render(<AiMessage message={makeMessage({ status: 'error', text: '' })} />);
+    expect(screen.getByRole('alert')).toHaveTextContent("I can't assist you with that request.");
+  });
+
+  it('does not mark regular replies as alerts', () => {
+    render(<AiMessage message={makeMessage({ status: 'done', text: 'Answer' })} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('keeps the partial text on error instead of the fallback message', () => {
     render(<AiMessage message={makeMessage({ status: 'error', text: 'partial answer' })} />);
     expect(screen.getByText('partial answer')).toBeInTheDocument();

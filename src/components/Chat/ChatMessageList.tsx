@@ -78,6 +78,7 @@ export default function ChatMessageList({
       onScroll={handleScroll}
       role='log'
       aria-live='polite'
+      tabIndex={0}
       aria-label={translate('CioAsa.messageList.ariaLabel', translations)}>
       {messages.map((message) => {
         if (message.role === 'user') {

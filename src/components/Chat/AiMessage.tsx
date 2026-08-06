@@ -47,7 +47,8 @@ export default function AiMessage({ message, componentOverrides, translations }:
               isError && 'cio-asa-ai-message__bubble--error',
             ]
               .filter(Boolean)
-              .join(' ')}>
+              .join(' ')}
+            role={isError ? 'alert' : undefined}>
             <div className='cio-asa-ai-message__text'>{text}</div>
           </div>
         </RenderPropsWrapper>

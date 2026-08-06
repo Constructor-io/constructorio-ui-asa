@@ -5,6 +5,7 @@ const meta = {
   title: 'Hooks/useAsaResults',
   component: AsaResultsTemplateComponent,
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
   },
   tags: ['autodocs'],

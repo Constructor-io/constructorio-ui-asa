@@ -11,6 +11,7 @@ export default function TypingIndicator({ translations }: TypingIndicatorProps) 
     <div
       className='cio-asa-typing-indicator'
       role='status'
+      aria-busy='true'
       aria-label={translate('CioAsa.typingIndicator.ariaLabel', translations)}>
       <div className='cio-asa-typing-indicator__dots'>
         <span className='cio-asa-typing-indicator__dot' />

@@ -34,6 +34,11 @@ describe('ChatMessageList', () => {
     expect(log).toHaveAttribute('aria-live', 'polite');
   });
 
+  it('makes the scrollable message list reachable by keyboard', () => {
+    render(<ChatMessageList messages={[]} />);
+    expect(screen.getByRole('log')).toHaveAttribute('tabindex', '0');
+  });
+
   it('renders user and assistant messages', () => {
     render(<ChatMessageList messages={[userMsg, aiMsg]} />);
     expect(screen.getByText('question?')).toBeInTheDocument();

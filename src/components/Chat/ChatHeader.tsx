@@ -18,9 +18,9 @@ export default function ChatHeader({ onClose, translations, componentOverrides }
   return (
     <RenderPropsWrapper override={componentOverrides?.reactNode} props={renderProps}>
       <div className='cio-asa-chat-header'>
-        <span id='cio-asa-chat-title' className='cio-asa-chat-header__title'>
+        <h2 id='cio-asa-chat-title' className='cio-asa-chat-header__title'>
           {renderProps.title}
-        </span>
+        </h2>
         {onClose && (
           <button
             type='button'

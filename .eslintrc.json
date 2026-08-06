@@ -20,6 +20,15 @@
   },
   "plugins": ["@typescript-eslint", "prettier", "jsx-a11y"],
   "rules": {
+    "jsx-a11y/control-has-associated-label": "error",
+    "jsx-a11y/no-aria-hidden-on-focusable": "error",
+    "jsx-a11y/no-autofocus": "error",
+    // Scrollable regions must be keyboard focusable (WCAG 2.1.1), so allow
+    // tabIndex on the roles we use for scroll containers.
+    "jsx-a11y/no-noninteractive-tabindex": [
+      "error",
+      { "tags": [], "roles": ["tabpanel", "log"], "allowExpressionValues": true }
+    ],
     "react/require-default-props": "off",
     "react/jsx-uses-react": "off",
     "react/react-in-jsx-scope": "off",

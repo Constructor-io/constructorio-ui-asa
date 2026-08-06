@@ -29,6 +29,7 @@ const meta = {
   title: 'Components/Chat/Component Overrides',
   component: Chat,
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
   },
   tags: [],

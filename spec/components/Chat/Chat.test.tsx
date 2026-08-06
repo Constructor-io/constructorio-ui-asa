@@ -30,6 +30,21 @@ describe('Chat', () => {
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-labelledby', 'cio-asa-chat-title');
   });
 
+  it('declares the dialog modal to match its focus trap', () => {
+    renderChat();
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('keeps an accessible dialog name when a title override drops the labelled element', () => {
+    renderChat({
+      componentOverrides: {
+        welcomeScreen: { title: { reactNode: () => <div>Custom title</div> } },
+      },
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Shopping Assistant' })).toBeInTheDocument();
+  });
+
   it('switches to the chat view after sending a message', async () => {
     renderChat({}, [{ type: 'message', data: { text: 'An answer' } }]);
 

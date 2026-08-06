@@ -8,6 +8,11 @@ describe('TypingIndicator', () => {
     expect(screen.getByRole('status', { name: 'Assistant is typing' })).toBeInTheDocument();
   });
 
+  it('marks the status region busy while the assistant is typing', () => {
+    render(<TypingIndicator />);
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+  });
+
   it('applies a translation override for the aria-label', () => {
     render(
       <TypingIndicator translations={{ 'CioAsa.typingIndicator.ariaLabel': 'Loading reply' }} />,

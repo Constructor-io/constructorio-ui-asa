@@ -62,6 +62,7 @@ const meta: Meta<typeof ResultsBlock> = {
   title: 'Components/ResultsBlock',
   component: ResultsBlock,
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
     docs: {
       description: {
