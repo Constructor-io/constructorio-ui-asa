@@ -127,11 +127,6 @@ export type Translations = {
   'CioAsa.welcome.placeholder'?: string;
   'CioAsa.welcome.sendButton'?: string;
   'CioAsa.welcome.inputAriaLabel'?: string;
-  /**
-   * @deprecated No longer applied. The welcome send button is named by its visible
-   * text (`CioAsa.welcome.sendButton`) to satisfy WCAG 2.5.3 (Label in Name).
-   */
-  'CioAsa.welcome.sendAriaLabel'?: string;
   'CioAsa.welcome.suggestionsAriaLabel'?: string;
   'CioAsa.messageList.ariaLabel'?: string;
   'CioAsa.typingIndicator.ariaLabel'?: string;

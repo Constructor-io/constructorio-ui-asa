@@ -10,7 +10,6 @@ const defaultTranslations: Translations = {
   'CioAsa.welcome.placeholder': 'Ask anything',
   'CioAsa.welcome.sendButton': 'Chat',
   'CioAsa.welcome.inputAriaLabel': 'Type your question',
-  'CioAsa.welcome.sendAriaLabel': 'Send message',
   'CioAsa.welcome.suggestionsAriaLabel': 'Suggested questions',
   'CioAsa.messageList.ariaLabel': 'Chat messages',
   'CioAsa.typingIndicator.ariaLabel': 'Assistant is typing',

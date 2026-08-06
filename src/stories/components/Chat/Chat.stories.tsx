@@ -114,7 +114,6 @@ const meta: Meta<typeof Chat> = {
         '- `CioAsa.welcome.placeholder`\n' +
         '- `CioAsa.welcome.sendButton`\n' +
         '- `CioAsa.welcome.inputAriaLabel`\n' +
-        '- `CioAsa.welcome.sendAriaLabel`\n' +
         '- `CioAsa.welcome.suggestionsAriaLabel`\n' +
         '- `CioAsa.messageList.ariaLabel`\n' +
         '- `CioAsa.typingIndicator.ariaLabel`\n' +
