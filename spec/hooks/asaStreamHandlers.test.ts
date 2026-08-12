@@ -95,6 +95,32 @@ describe('asaStreamHandlers', () => {
       const msg = applyUpdater(setMessages);
       expect(msg.groups![0].group).toEqual({ display_name: '', value: '' });
     });
+
+    it('captures result_id and intent_result_id onto the group', () => {
+      const setMessages = jest.fn();
+      const data = {
+        result_id: 'sr-42',
+        intent_result_id: 'ir-7',
+        response: { results: [{ value: 'a' }] },
+      };
+      handleSearchResult(data, { display_name: 'Shoes' }, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages);
+      expect(msg.groups![0].searchResultId).toBe('sr-42');
+      expect(msg.groups![0].intentResultId).toBe('ir-7');
+    });
+
+    it('omits the id fields when the event does not carry them', () => {
+      const setMessages = jest.fn();
+      handleSearchResult(
+        { response: { results: [{ value: 'a' }] } },
+        { display_name: 'Shoes' },
+        ASSISTANT_ID,
+        setMessages,
+      );
+      const msg = applyUpdater(setMessages);
+      expect(msg.groups![0]).not.toHaveProperty('searchResultId');
+      expect(msg.groups![0]).not.toHaveProperty('intentResultId');
+    });
   });
 
   describe('handleMessage', () => {

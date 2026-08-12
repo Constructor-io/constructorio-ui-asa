@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   name: string;
+  variationId?: string;
   url?: string;
   imageUrl?: string;
   price?: string | number;
@@ -18,6 +19,7 @@ export function normalizeItemToProduct(item: any, options?: NormalizeOptions): P
   return {
     id: String(data.id ?? data.result_id ?? item.value ?? ''),
     name: String(item.value ?? data.item_name ?? ''),
+    ...(data.variation_id != null && { variationId: String(data.variation_id) }),
     url: data.url,
     imageUrl: data.image_url ?? data.imageUrl,
     price: data.price,

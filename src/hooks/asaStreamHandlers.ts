@@ -22,7 +22,14 @@ export function handleSearchResult(
     value: data?.response?.search_request?.search_term ?? data?.title ?? '',
   };
   const results = data?.response?.results ?? (data?.results ? data.results : [data]);
-  const newGroup: ResultGroup = { group: resolvedGroup, searchResults: results };
+  // `result_id` is unique per search_result event; `intent_result_id` is shared across
+  // the stream. Both sit at the top level of the SSE event payload.
+  const newGroup: ResultGroup = {
+    group: resolvedGroup,
+    searchResults: results,
+    ...(data?.result_id && { searchResultId: data.result_id }),
+    ...(data?.intent_result_id && { intentResultId: data.intent_result_id }),
+  };
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
     status: 'streaming',

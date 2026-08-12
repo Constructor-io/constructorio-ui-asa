@@ -1,11 +1,38 @@
 import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 
 export type StreamEvent =
-  | { type: 'start'; data: { thread_id: string } }
+  | { type: 'start'; data: { thread_id?: string; intent_result_id?: string } }
   | { type: 'group'; data: { display_name: string; value: string } }
-  | { type: 'search_result'; data: { response: { results: unknown[] } } }
+  | {
+      type: 'search_result';
+      data: {
+        result_id?: string;
+        intent_result_id?: string;
+        response: { results: unknown[]; search_request?: Record<string, unknown> };
+      };
+    }
   | { type: 'message'; data: { text: string } }
   | { type: 'server_error'; data?: Record<string, unknown> };
+
+export type MockTracker = {
+  trackAssistantSubmit: jest.Mock;
+  trackAssistantResultLoadStarted: jest.Mock;
+  trackAssistantResultLoadFinished: jest.Mock;
+  trackAssistantResultClick: jest.Mock;
+  trackAssistantResultView: jest.Mock;
+  trackAssistantSearchSubmit: jest.Mock;
+};
+
+export function createMockTracker(): MockTracker {
+  return {
+    trackAssistantSubmit: jest.fn(),
+    trackAssistantResultLoadStarted: jest.fn(),
+    trackAssistantResultLoadFinished: jest.fn(),
+    trackAssistantResultClick: jest.fn(),
+    trackAssistantResultView: jest.fn(),
+    trackAssistantSearchSubmit: jest.fn(),
+  };
+}
 
 /**
  * Builds a ReadableStream that yields the provided events one-by-one, matching
@@ -88,9 +115,12 @@ export function createMockCioClient({
     () => stream ?? (error ? createErroringStream() : createEventStream(events)),
   );
 
+  const tracker = createMockTracker();
+
   const client = {
     agent: { getAgentResultsStream },
+    tracker,
   } as unknown as ConstructorIOClient;
 
-  return { client, getAgentResultsStream };
+  return { client, getAgentResultsStream, tracker };
 }
