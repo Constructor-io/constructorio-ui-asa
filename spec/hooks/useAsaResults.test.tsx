@@ -89,6 +89,50 @@ describe('useAsaResults', () => {
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
     });
 
+    it('forwards numResultsPerEvent to the agent stream', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { result } = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot', numResultsPerEvent: 6 }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('hello'));
+
+      expect(getAgentResultsStream).toHaveBeenCalledWith('hello', {
+        domain: 'chatbot',
+        numResultsPerEvent: 6,
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
+    it('forwards numResultEvents to the agent stream', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { result } = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot', numResultEvents: 1 }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('hello'));
+
+      expect(getAgentResultsStream).toHaveBeenCalledWith('hello', {
+        domain: 'chatbot',
+        numResultEvents: 1,
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
     it('processes a full start -> group -> search_result -> message stream', async () => {
       const events: StreamEvent[] = [
         { type: 'start', data: { thread_id: 'thread-1' } },

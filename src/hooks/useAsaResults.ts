@@ -24,7 +24,7 @@ export default function useAsaResults(): UseChatReturn {
     throw new Error('useAsaResults must be used within a CioAsaProvider.');
   }
   const { cioClient, staticRequestConfigs, callbacks, section } = contextValue;
-  const { domain } = staticRequestConfigs || {};
+  const { domain, numResultsPerEvent, numResultEvents } = staticRequestConfigs || {};
   if (!cioClient || !domain) {
     throw new Error(
       'useAsaResults requires a configured cioClient and domain. Check your CioAsaProvider props.',
@@ -78,6 +78,8 @@ export default function useAsaResults(): UseChatReturn {
       const stream = cioClient.agent.getAgentResultsStream(intent, {
         domain,
         ...(threadIdRef.current && { threadId: threadIdRef.current }),
+        ...(numResultsPerEvent && { numResultsPerEvent }),
+        ...(numResultEvents && { numResultEvents }),
       });
       const reader = stream.getReader();
       readerRef.current = reader;
@@ -173,7 +175,7 @@ export default function useAsaResults(): UseChatReturn {
         }
       })();
     },
-    [cioClient, domain, nextMessageId],
+    [cioClient, domain, nextMessageId, numResultsPerEvent, numResultEvents],
   );
 
   useEffect(
