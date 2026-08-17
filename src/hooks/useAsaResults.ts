@@ -40,6 +40,8 @@ export default function useAsaResults(): UseChatReturn {
   trackingRef.current = tracking;
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
+  const staticRequestConfigsRef = useRef(staticRequestConfigs);
+  staticRequestConfigsRef.current = staticRequestConfigs;
 
   const nextMessageId = useCallback(() => {
     idCounterRef.current += 1;
@@ -75,7 +77,15 @@ export default function useAsaResults(): UseChatReturn {
       isStreamingRef.current = true;
       killSwitchRef.current = false;
 
+      // `intent` is passed as the first argument and `threadId` is managed per-stream
+      // below, so both are stripped here. Everything else configured on the provider
+      // (filters, guard, numResultsPerEvent, numResultEvents, qsParam,
+      // preFilterExpression, fmtOptions, ...) is forwarded to the agent as-is.
+      const agentParams = { ...staticRequestConfigsRef.current };
+      delete agentParams.intent;
+      delete agentParams.threadId;
       const stream = cioClient.agent.getAgentResultsStream(intent, {
+        ...agentParams,
         domain,
         ...(threadIdRef.current && { threadId: threadIdRef.current }),
       });

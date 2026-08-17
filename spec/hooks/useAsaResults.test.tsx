@@ -89,6 +89,56 @@ describe('useAsaResults', () => {
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
     });
 
+    it('forwards all configured agent params (filters, guard, numResultsPerEvent, numResultEvents) to the stream', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { result } = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{
+              domain: 'chatbot',
+              filters: { color: 'red' },
+              guard: true,
+              numResultsPerEvent: 6,
+              numResultEvents: 1,
+            }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('hello'));
+
+      expect(getAgentResultsStream).toHaveBeenCalledWith('hello', {
+        domain: 'chatbot',
+        filters: { color: 'red' },
+        guard: true,
+        numResultsPerEvent: 6,
+        numResultEvents: 1,
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
+    it('does not forward `intent` from staticRequestConfigs (it is passed as the message)', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { result } = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot', intent: 'preset-intent' }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('hello'));
+
+      expect(getAgentResultsStream).toHaveBeenCalledWith('hello', { domain: 'chatbot' });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
     it('processes a full start -> group -> search_result -> message stream', async () => {
       const events: StreamEvent[] = [
         { type: 'start', data: { thread_id: 'thread-1' } },
