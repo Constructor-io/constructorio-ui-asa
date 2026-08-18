@@ -104,6 +104,9 @@ export default function ChatMessageList({
             {hasGroups && (
               <ResultsBlock
                 groups={message.groups!}
+                intent={message.intent}
+                intentResultId={message.intentResultId}
+                threadId={message.threadId}
                 onProductClick={onProductClick}
                 onViewMore={onViewMore}
                 onAddToCart={onAddToCart}

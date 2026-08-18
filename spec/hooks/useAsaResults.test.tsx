@@ -167,6 +167,63 @@ describe('useAsaResults', () => {
     });
   });
 
+  describe('tracking', () => {
+    it('fires trackAssistantSubmit on send with the trimmed intent', () => {
+      const { client, tracker } = createMockCioClient({ events: [] });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('  shoes  '));
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'shoes' }),
+      );
+    });
+
+    it('fires load-start once and load-finish with the group count', async () => {
+      const events: StreamEvent[] = [
+        { type: 'start', data: { thread_id: 'thread-1', intent_result_id: 'ir-1' } },
+        { type: 'group', data: { display_name: 'Shoes', value: 'shoes' } },
+        {
+          type: 'search_result',
+          data: { result_id: 'sr-1', response: { results: [{ value: 'Sneaker' }] } },
+        },
+        { type: 'message', data: { text: 'Here are some shoes' } },
+      ];
+      const { client, tracker } = createMockCioClient({ events });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('shoes'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      expect(tracker.trackAssistantResultLoadStarted).toHaveBeenCalledTimes(1);
+      expect(tracker.trackAssistantResultLoadStarted).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'shoes', intentResultId: 'ir-1' }),
+      );
+      expect(tracker.trackAssistantResultLoadFinished).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'shoes', searchResultCount: 1, intentResultId: 'ir-1' }),
+      );
+    });
+
+    it('invokes the onAssistantSubmit callback with the submit source', () => {
+      const { client } = createMockCioClient({ events: [] });
+      const onAssistantSubmit = jest.fn();
+      const { result } = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            callbacks={{ onAssistantSubmit }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('shoes', 'suggestion'));
+
+      expect(onAssistantSubmit).toHaveBeenCalledWith({ intent: 'shoes', source: 'suggestion' });
+    });
+  });
+
   describe('clearHistory', () => {
     it('resets messages and streaming state', async () => {
       const { client } = createMockCioClient({

@@ -14,6 +14,8 @@ export default function CioAsaProvider(
     urlHelpers,
     staticRequestConfigs = { domain: 'chatbot' },
     cioClient: customCioClient,
+    callbacks,
+    section = 'Products',
     children,
   } = props;
 
@@ -28,8 +30,10 @@ export default function CioAsaProvider(
       staticRequestConfigs,
       formatters: { ...defaultFormatters, ...formatters },
       urlHelpers: { ...defaultUrlHelpers, ...urlHelpers },
+      callbacks,
+      section,
     }),
-    [cioClient, cioClientOptions, formatters, urlHelpers, staticRequestConfigs],
+    [cioClient, cioClientOptions, formatters, urlHelpers, staticRequestConfigs, callbacks, section],
   );
 
   return (

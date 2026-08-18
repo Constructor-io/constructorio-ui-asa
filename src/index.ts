@@ -9,6 +9,8 @@ export type { ButtonProps } from './components/Button/Button';
 
 // Hooks
 export { default as useAsaResults } from './hooks/useAsaResults';
+export { default as useAsaTracking } from './hooks/useAsaTracking';
+export type { UseAsaTrackingProps, UseAsaTrackingReturn } from './hooks/useAsaTracking';
 
 // Utils
 export { normalizeItemToProduct } from './utils/productNormalizer';
@@ -38,6 +40,10 @@ export type {
   ResultGroup,
   ResultGroupMeta,
   UseChatReturn,
+  // Behavioral tracking
+  AsaCallbacks,
+  AssistantSubmitSource,
+  AssistantTrackedItem,
   // Customization via componentOverrides
   ChatComponentOverrides,
   WelcomeScreenOverrides,

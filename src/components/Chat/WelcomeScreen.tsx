@@ -1,6 +1,7 @@
 import React from 'react';
 import { RenderPropsWrapper } from '@constructor-io/constructorio-ui-components';
 import {
+  AssistantSubmitSource,
   SuggestedQuestionsRenderProps,
   Translations,
   WelcomeScreenInputRenderProps,
@@ -13,7 +14,7 @@ import useMessageInput from '../../hooks/useMessageInput';
 
 interface WelcomeScreenProps {
   suggestions?: string[];
-  onSend: (text: string) => void;
+  onSend: (text: string, source?: AssistantSubmitSource) => void;
   onClose?: () => void;
   termsText?: React.ReactNode;
   disabled?: boolean;
@@ -51,9 +52,11 @@ export default function WelcomeScreen({
     isDisabled: disabled,
   };
 
+  const handleSuggestionClick = (suggestion: string) => onSend(suggestion, 'suggestion');
+
   const suggestionsRenderProps: SuggestedQuestionsRenderProps = {
     suggestions,
-    onSuggestionClick: onSend,
+    onSuggestionClick: handleSuggestionClick,
   };
 
   return (
@@ -112,7 +115,7 @@ export default function WelcomeScreen({
                   type='button'
                   className='cio-asa-welcome-screen__suggestion-chip'
                   disabled={disabled}
-                  onClick={() => onSend(suggestion)}>
+                  onClick={() => handleSuggestionClick(suggestion)}>
                   {suggestion}
                 </button>
               ))}
