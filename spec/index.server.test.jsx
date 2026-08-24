@@ -13,8 +13,10 @@ describe('public entry point (SSR)', () => {
     expect(typeof publicApi.Button).toBe('function');
   });
 
-  it('exports the public hook and utils', () => {
+  it('exports the public hooks and utils', () => {
     expect(typeof publicApi.useAsaResults).toBe('function');
+    expect(typeof publicApi.useAsaTracking).toBe('function');
+    expect(typeof publicApi.useCioAsaContext).toBe('function');
     expect(typeof publicApi.normalizeItemToProduct).toBe('function');
   });
 

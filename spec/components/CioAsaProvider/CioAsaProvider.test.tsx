@@ -34,7 +34,7 @@ describe('CioAsaProvider', () => {
     const { result } = renderHook(() => useCioAsaContext(), {
       wrapper: ({ children }) => <CioAsaProvider apiKey={DEMO_API_KEY}>{children}</CioAsaProvider>,
     });
-    expect(result.current.staticRequestConfigs).toEqual({ domain: 'chatbot' });
+    expect(result.current!.staticRequestConfigs).toEqual({ domain: 'chatbot' });
   });
 
   it('merges custom formatters over the defaults', () => {
@@ -46,7 +46,7 @@ describe('CioAsaProvider', () => {
         </CioAsaProvider>
       ),
     });
-    expect(result.current.formatters.formatPrice).toBe(customFormatPrice);
+    expect(result.current!.formatters.formatPrice).toBe(customFormatPrice);
   });
 
   it('exposes default urlHelpers and merges overrides', () => {
@@ -58,9 +58,9 @@ describe('CioAsaProvider', () => {
         </CioAsaProvider>
       ),
     });
-    expect(result.current.urlHelpers.getUrl).toBe(getUrl);
+    expect(result.current!.urlHelpers.getUrl).toBe(getUrl);
     // default helpers still present
-    expect(typeof result.current.urlHelpers.getStateFromUrl).toBe('function');
+    expect(typeof result.current!.urlHelpers.getStateFromUrl).toBe('function');
   });
 
   it('passes through a provided cioClient', () => {
@@ -68,6 +68,6 @@ describe('CioAsaProvider', () => {
     const { result } = renderHook(() => useCioAsaContext(), {
       wrapper: ({ children }) => <CioAsaProvider cioClient={fakeClient}>{children}</CioAsaProvider>,
     });
-    expect(result.current.cioClient).toBe(fakeClient);
+    expect(result.current!.cioClient).toBe(fakeClient);
   });
 });

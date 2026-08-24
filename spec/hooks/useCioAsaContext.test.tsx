@@ -35,11 +35,11 @@ describe('useCioAsaContext', () => {
   it('gives the consumer the client, configs and helpers it needs', () => {
     const { result } = renderHook(() => useCioAsaContext(), { wrapper });
 
-    expect(result.current.cioClient).toBe(contextValue.cioClient);
-    expect(result.current.staticRequestConfigs).toEqual({ domain: 'chatbot' });
-    expect(typeof result.current.setCioClientOptions).toBe('function');
-    expect(typeof result.current.formatters.formatPrice).toBe('function');
-    expect(typeof result.current.urlHelpers.getUrl).toBe('function');
+    expect(result.current!.cioClient).toBe(contextValue.cioClient);
+    expect(result.current!.staticRequestConfigs).toEqual({ domain: 'chatbot' });
+    expect(typeof result.current!.setCioClientOptions).toBe('function');
+    expect(typeof result.current!.formatters.formatPrice).toBe('function');
+    expect(typeof result.current!.urlHelpers.getUrl).toBe('function');
   });
 
   it('reads from the closest provider when they are nested', () => {
@@ -53,7 +53,7 @@ describe('useCioAsaContext', () => {
       ),
     });
 
-    expect(result.current.staticRequestConfigs).toEqual({ domain: 'pdp' });
+    expect(result.current!.staticRequestConfigs).toEqual({ domain: 'pdp' });
   });
 
   it('exposes the same hook as a default export', () => {

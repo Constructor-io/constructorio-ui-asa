@@ -10,6 +10,7 @@ export type { ButtonProps } from './components/Button/Button';
 // Hooks
 export { default as useAsaResults } from './hooks/useAsaResults';
 export { default as useAsaTracking } from './hooks/useAsaTracking';
+export { default as useCioAsaContext } from './hooks/useCioAsaContext';
 export type { UseAsaTrackingProps, UseAsaTrackingReturn } from './hooks/useAsaTracking';
 
 // Utils
