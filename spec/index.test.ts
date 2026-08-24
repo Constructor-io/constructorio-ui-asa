@@ -8,9 +8,11 @@ describe('public API barrel', () => {
     expect(publicApi.Button).toBeDefined();
   });
 
-  it('exports the public hook', () => {
+  it('exports the public hooks', () => {
     expect(publicApi.useAsaResults).toBeDefined();
     expect(typeof publicApi.useAsaResults).toBe('function');
+    expect(typeof publicApi.useAsaTracking).toBe('function');
+    expect(typeof publicApi.useCioAsaContext).toBe('function');
   });
 
   it('exports the product normalizer util', () => {
