@@ -28,10 +28,10 @@ const aiWithGroups: ChatMessage = {
 };
 
 describe('ChatMessageList', () => {
-  it('is a polite live log region', () => {
+  it('keeps the log silent — announcements come from the Chat-level announcer', () => {
     render(<ChatMessageList messages={[]} />);
     const log = screen.getByRole('log', { name: 'Chat messages' });
-    expect(log).toHaveAttribute('aria-live', 'polite');
+    expect(log).toHaveAttribute('aria-live', 'off');
   });
 
   it('makes the scrollable message list reachable by keyboard', () => {

@@ -10,7 +10,6 @@
 }
 
 .cio-asa-chat-header__title {
-  margin: 0;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);

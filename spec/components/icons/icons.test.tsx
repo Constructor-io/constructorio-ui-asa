@@ -5,8 +5,7 @@ import * as icons from '../../../src/components/icons';
 
 const iconNames = Object.keys(icons) as (keyof typeof icons)[];
 
-// Every icon this library renders is decorative: each one sits next to a
-// visible text label or inside a control that carries its own accessible name.
+// Every icon this library renders is decorative.
 const decorativeIcons = iconNames;
 
 describe('icons', () => {

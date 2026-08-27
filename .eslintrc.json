@@ -20,9 +20,7 @@
   },
   "plugins": ["@typescript-eslint", "prettier", "jsx-a11y"],
   "settings": {
-    // Lint imported primitives as the element they render. Only `CioButton` is mapped:
-    // this repo's own `Button` wrapper takes its text via a `label` prop, which
-    // jsx-a11y cannot see, so mapping it would flag every correct call site.
+    // Lint imported primitives as the element they render.
     "jsx-a11y": {
       "components": {
         "CioButton": "button"
@@ -33,8 +31,7 @@
     "jsx-a11y/control-has-associated-label": "error",
     "jsx-a11y/no-aria-hidden-on-focusable": "error",
     "jsx-a11y/no-autofocus": "error",
-    // Scrollable regions must be keyboard focusable (WCAG 2.1.1), so allow
-    // tabIndex on the roles we use for scroll containers.
+    // Scrollable regions must be keyboard focusable (WCAG 2.1.1).
     "jsx-a11y/no-noninteractive-tabindex": [
       "error",
       { "tags": [], "roles": ["log"], "allowExpressionValues": true }

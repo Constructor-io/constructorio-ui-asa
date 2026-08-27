@@ -6,11 +6,7 @@ const FOCUSABLE_SELECTOR =
 interface UseFocusTrapOptions {
   /** Called when the Escape key is pressed while focus is inside the container. */
   onEscape?: () => void;
-  /**
-   * Cycle Tab/Shift+Tab inside the container. Defaults to true. Set to false for a
-   * container rendered inline in the host page: trapping Tab there is a keyboard trap
-   * (WCAG 2.1.2), not an affordance. Escape handling is unaffected.
-   */
+  /** Cycle Tab/Shift+Tab inside the container. Defaults to true. */
   trapFocus?: boolean;
 }
 

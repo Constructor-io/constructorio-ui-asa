@@ -43,8 +43,6 @@ describe('AiMessage', () => {
   });
 
   it('remounts the bubble when a streamed reply turns into an error', () => {
-    // A role added to a node already on screen is not announced; the alert has to be a
-    // newly inserted node for assistive tech to pick it up.
     const { rerender } = render(
       <AiMessage message={makeMessage({ status: 'streaming', text: 'partial answer' })} />,
     );

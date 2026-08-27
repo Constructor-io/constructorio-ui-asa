@@ -28,6 +28,21 @@ export default function createProductCardRenderer({
 
   return function renderProductCard(renderProps: ProductCardProps) {
     const product = renderProps.product as Product;
+    const hasTitleOverride = Boolean(componentOverrides?.content?.title?.reactNode);
+    const shownPrice = product.salePrice ?? product.price;
+    const titleAriaLabel =
+      currency && shownPrice != null ? `${product.name}, ${currency} ${shownPrice}` : undefined;
+    const renderTitleButton =
+      onProductClick && !hasTitleOverride
+        ? () => (
+            <button
+              type='button'
+              className='cio-product-card-title-section cio-asa-product-card__name cio-asa-product-card__name-btn'
+              aria-label={titleAriaLabel}>
+              {product.name}
+            </button>
+          )
+        : undefined;
     return (
       <ProductCard
         product={product}
@@ -42,7 +57,9 @@ export default function createProductCardRenderer({
           {product.badge && <span className='cio-asa-product-card__badge'>{product.badge}</span>}
         </ProductCard.ImageSection>
         <ProductCard.Content className='cio-asa-product-card__info'>
-          <ProductCard.TitleSection className='cio-asa-product-card__name' />
+          <ProductCard.TitleSection className='cio-asa-product-card__name'>
+            {renderTitleButton}
+          </ProductCard.TitleSection>
           {currency && (
             <ProductCard.PriceSection
               className='cio-asa-product-card__price'

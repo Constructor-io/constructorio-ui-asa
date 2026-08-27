@@ -42,8 +42,6 @@ export default function AiMessage({ message, componentOverrides, translations }:
       {hasText && (
         <RenderPropsWrapper override={componentOverrides?.text?.reactNode} props={textRenderProps}>
           <div
-            // The key forces a remount on error: screen readers announce a newly
-            // inserted role='alert' node, but not a role added to an existing one.
             key={isError ? 'error' : 'text'}
             className={[
               'cio-asa-ai-message__bubble',

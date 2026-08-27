@@ -118,6 +118,7 @@ const meta: Meta<typeof Chat> = {
         '- `CioAsa.messageList.ariaLabel`\n' +
         '- `CioAsa.typingIndicator.ariaLabel`\n' +
         '- `CioAsa.userMessage.ariaLabel`\n' +
+        '- `CioAsa.aiMessage.ariaLabel`\n' +
         '- `CioAsa.results.viewMore`\n' +
         '- `CioAsa.results.addToCart`\n' +
         '- `CioAsa.results.saleBadge`\n' +
@@ -154,6 +155,13 @@ export const Default: Story = {
   parameters: {
     layout: 'fullscreen',
   },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '504px', height: '100%', margin: '0 auto' }}>
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
@@ -438,22 +446,20 @@ export const IntegrationMobile: Story = {
 };
 
 /**
- * Embedded inline in the host page, with no `onClose`: Tab must be able to leave the
- * chat in both directions, hence the focusable elements around it.
- *
- * Rendered through `render` rather than `args` on purpose: `argTypesRegex` in
- * preview.ts would auto-fill `onClose` with an action and flip the story back into
- * modal mode.
+ * Embedded inline (no `onClose`): Tab must be able to leave the chat in both
+ * directions. Uses `render`, not `args` — `argTypesRegex` would auto-fill `onClose`.
  */
 export const Inline: Story = {
   name: 'Inline (no onClose)',
   render: () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '480px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '504px' }}>
       <a href='#after-chat'>Focusable element before the chat</a>
-      <Chat
-        initialSuggestions={['I need luggage suitable for holiday travel']}
-        onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
-      />
+      <div style={{ height: '700px' }}>
+        <Chat
+          initialSuggestions={['I need luggage suitable for holiday travel']}
+          onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+        />
+      </div>
       <button id='after-chat' type='button' onClick={() => alert('Reached the page again')}>
         Focusable element after the chat
       </button>

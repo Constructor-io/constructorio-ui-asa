@@ -50,6 +50,20 @@ describe('Chat', () => {
     expect(screen.getByRole('dialog', { name: 'Shopping Assistant' })).toBeInTheDocument();
   });
 
+  it('announces the sent message, the typing state, and then the reply', async () => {
+    renderChat();
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'hello' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    const statusTexts = screen.getAllByRole('status').map((el) => el.textContent);
+    expect(statusTexts).toContain('You said: hello. Assistant is typing');
+
+    await waitFor(() => expect(screen.getByText('An answer')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent('Assistant said: An answer');
+  });
+
   it('switches to the chat view after sending a message', async () => {
     renderChat({}, [{ type: 'message', data: { text: 'An answer' } }]);
 

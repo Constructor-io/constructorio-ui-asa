@@ -68,6 +68,17 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
 
     const isWelcome = messages.length === 0;
     const isModal = typeof onClose === 'function';
+    // VoiceOver drops insertions into the log, so the conversation is voiced explicitly.
+    const lastMessage = messages[messages.length - 1];
+    let announcement = '';
+    if (lastMessage?.role === 'assistant') {
+      if (lastMessage.status === 'loading' || lastMessage.status === 'streaming') {
+        const userText = messages[messages.length - 2]?.text ?? '';
+        announcement = `${translate('CioAsa.userMessage.ariaLabel', translations)}: ${userText}. ${translate('CioAsa.typingIndicator.ariaLabel', translations)}`;
+      } else if (lastMessage.status === 'done' && lastMessage.text) {
+        announcement = `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${lastMessage.text}`;
+      }
+    }
 
     useImperativeHandle(ref, () => ({
       clearHistory,
@@ -95,12 +106,13 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
         ref={containerRef}
         role='dialog'
         aria-modal={isModal ? 'true' : undefined}
-        // aria-label rather than aria-labelledby: componentOverrides can replace the
-        // title node, which would leave the reference dangling
         aria-label={translate(
           isWelcome ? 'CioAsa.welcome.title' : 'CioAsa.header.title',
           translations,
         )}>
+        <div className='cio-sr-only' role='status'>
+          {announcement}
+        </div>
         <div className='cio-asa-chat-body'>
           {isWelcome ? (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>

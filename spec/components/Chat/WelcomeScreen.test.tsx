@@ -75,6 +75,16 @@ describe('WelcomeScreen', () => {
       expect(sendButton).not.toHaveAttribute('aria-label');
     });
 
+    it('still honors an explicitly provided sendAriaLabel for backward compatibility', () => {
+      render(
+        <WelcomeScreen
+          onSend={jest.fn()}
+          translations={{ 'CioAsa.welcome.sendAriaLabel': 'Chat — send message' }}
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Chat — send message' })).toBeInTheDocument();
+    });
+
     it('keeps the send button name in sync with the translated visible label', () => {
       render(
         <WelcomeScreen
