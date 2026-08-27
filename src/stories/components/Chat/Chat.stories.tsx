@@ -438,15 +438,12 @@ export const IntegrationMobile: Story = {
 };
 
 /**
- * Embedded inline in the host page, with no `onClose`.
+ * Embedded inline in the host page, with no `onClose`: Tab must be able to leave the
+ * chat in both directions, hence the focusable elements around it.
  *
  * Rendered through `render` rather than `args` on purpose: `argTypesRegex` in
- * preview.ts auto-fills every `on*` arg with an action, which would hand this story an
- * `onClose` and flip it back into modal mode.
- *
- * The link and the button around it are the point of the story: in this mode Tab must
- * be able to leave the chat in both directions, and the surrounding content must stay
- * visible to a screen reader.
+ * preview.ts would auto-fill `onClose` with an action and flip the story back into
+ * modal mode.
  */
 export const Inline: Story = {
   name: 'Inline (no onClose)',
