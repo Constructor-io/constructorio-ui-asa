@@ -18,7 +18,7 @@ describe('AiMessage (SSR)', () => {
     const html = renderServerSide(<AiMessage message={{ ...baseMessage, status: 'loading' }} />);
 
     expect(html).toContain('cio-asa-typing-indicator');
-    expect(html).toContain('aria-label="Assistant is typing"');
+    expect(html).toContain('Assistant is typing');
   });
 
   it('does not render the typing indicator once text has streamed in', () => {

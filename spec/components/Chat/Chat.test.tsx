@@ -30,9 +30,14 @@ describe('Chat', () => {
     expect(screen.getByRole('dialog', { name: 'Shopping Assistant' })).toBeInTheDocument();
   });
 
-  it('declares the dialog modal to match its focus trap', () => {
-    renderChat();
+  it('declares the dialog modal to match its focus trap when it is dismissible', () => {
+    renderChat({ onClose: jest.fn() });
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('omits aria-modal when embedded inline, so the host page stays readable', () => {
+    renderChat();
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-modal');
   });
 
   it('keeps an accessible dialog name when the title is overridden', () => {

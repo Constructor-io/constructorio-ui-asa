@@ -19,6 +19,21 @@
     "project": "tsconfig.eslint.json"
   },
   "plugins": ["@typescript-eslint", "prettier", "jsx-a11y"],
+  "settings": {
+    // Teach jsx-a11y about primitives from the components peer dep, so they are linted
+    // as the elements they actually render. `Button` renders a native <button> unless
+    // `asChild` is passed, which this repo never does.
+    //
+    // Only the imported primitive is mapped, not this repo's `Button` wrapper: the
+    // wrapper takes its text through a `label` prop rather than children, which
+    // jsx-a11y cannot see, so mapping it makes `control-has-associated-label` fire on
+    // every correct call site.
+    "jsx-a11y": {
+      "components": {
+        "CioButton": "button"
+      }
+    }
+  },
   "rules": {
     "jsx-a11y/control-has-associated-label": "error",
     "jsx-a11y/no-aria-hidden-on-focusable": "error",

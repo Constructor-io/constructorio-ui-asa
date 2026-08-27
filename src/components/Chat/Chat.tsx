@@ -67,6 +67,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const isWelcome = messages.length === 0;
+    const isModal = typeof onClose === 'function';
 
     useImperativeHandle(ref, () => ({
       clearHistory,
@@ -86,14 +87,14 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       }
     }, [isWelcome]);
 
-    useFocusTrap(containerRef, { onEscape: onClose });
+    useFocusTrap(containerRef, { onEscape: onClose, trapFocus: isModal });
 
     return (
       <div
         className={['cio-asa', 'cio-asa-chat', className].filter(Boolean).join(' ')}
         ref={containerRef}
         role='dialog'
-        aria-modal='true'
+        aria-modal={isModal ? 'true' : undefined}
         // aria-label rather than aria-labelledby: componentOverrides can replace the
         // title node, which would leave the reference dangling
         aria-label={translate(

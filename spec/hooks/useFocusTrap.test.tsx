@@ -2,9 +2,9 @@ import React, { useRef } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import useFocusTrap from '../../src/hooks/useFocusTrap';
 
-function TrapFixture({ onEscape }: { onEscape?: () => void }) {
+function TrapFixture({ onEscape, trapFocus }: { onEscape?: () => void; trapFocus?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  useFocusTrap(ref, { onEscape });
+  useFocusTrap(ref, { onEscape, trapFocus });
   return (
     <div ref={ref} data-testid='container'>
       <button type='button'>first</button>
@@ -59,6 +59,22 @@ describe('useFocusTrap', () => {
 
     fireEvent.keyDown(getByTestId('container'), { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(last);
+  });
+
+  it('leaves Tab alone when trapFocus is false', () => {
+    const { getByText, getByTestId } = render(<TrapFixture trapFocus={false} />);
+    const last = getByText('last');
+    last.focus();
+
+    fireEvent.keyDown(getByTestId('container'), { key: 'Tab' });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('still invokes onEscape when trapFocus is false', () => {
+    const onEscape = jest.fn();
+    const { getByTestId } = render(<TrapFixture onEscape={onEscape} trapFocus={false} />);
+    fireEvent.keyDown(getByTestId('container'), { key: 'Escape' });
+    expect(onEscape).toHaveBeenCalledTimes(1);
   });
 
   it('invokes onEscape when Escape is pressed', () => {

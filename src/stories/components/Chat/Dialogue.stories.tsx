@@ -281,3 +281,17 @@ export const FullConversation: StoryObj = {
     </div>
   ),
 };
+
+export const AiError: StoryObj = {
+  name: 'AI - Error',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An error reply. The bubble carries `role="alert"`, so the text is announced as ' +
+          'soon as it is inserted rather than relying on the red styling alone.',
+      },
+    },
+  },
+  render: () => <AiMessage message={{ id: '1', role: 'assistant', text: '', status: 'error' }} />,
+};

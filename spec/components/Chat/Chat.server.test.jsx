@@ -22,6 +22,7 @@ describe('Chat (SSR)', () => {
 
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-label="Shopping Assistant"');
+    expect(html).toContain('id="cio-asa-chat-title"');
   });
 
   it('renders initial suggestions and terms text', () => {

@@ -436,3 +436,30 @@ export const IntegrationMobile: Story = {
   },
   render: () => <MobileIntegrationExample />,
 };
+
+/**
+ * Embedded inline in the host page, with no `onClose`.
+ *
+ * Rendered through `render` rather than `args` on purpose: `argTypesRegex` in
+ * preview.ts auto-fills every `on*` arg with an action, which would hand this story an
+ * `onClose` and flip it back into modal mode.
+ *
+ * The link and the button around it are the point of the story: in this mode Tab must
+ * be able to leave the chat in both directions, and the surrounding content must stay
+ * visible to a screen reader.
+ */
+export const Inline: Story = {
+  name: 'Inline (no onClose)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '480px' }}>
+      <a href='#after-chat'>Focusable element before the chat</a>
+      <Chat
+        initialSuggestions={['I need luggage suitable for holiday travel']}
+        onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+      />
+      <button id='after-chat' type='button' onClick={() => alert('Reached the page again')}>
+        Focusable element after the chat
+      </button>
+    </div>
+  ),
+};
