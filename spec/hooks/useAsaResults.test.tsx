@@ -161,6 +161,47 @@ describe('useAsaResults', () => {
       expect(assistant.groups![0].searchResults).toEqual([{ value: 'Sneaker' }]);
     });
 
+    it('forwards `initialThreadId` on the first request', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { result } = renderHook(() => useAsaResults({ initialThreadId: 'thread-seed' }), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('hello'));
+
+      expect(getAgentResultsStream).toHaveBeenCalledWith('hello', {
+        domain: 'chatbot',
+        threadId: 'thread-seed',
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
+    it('clearHistory drops the seeded thread id', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { result } = renderHook(() => useAsaResults({ initialThreadId: 'thread-seed' }), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage('first'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      act(() => result.current.clearHistory());
+
+      act(() => result.current.sendMessage('second'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      expect(getAgentResultsStream).toHaveBeenNthCalledWith(2, 'second', { domain: 'chatbot' });
+    });
+
     it('reuses the captured thread_id on the next message', async () => {
       const { client, getAgentResultsStream } = createMockCioClient({
         events: [{ type: 'start', data: { thread_id: 'thread-xyz' } }],

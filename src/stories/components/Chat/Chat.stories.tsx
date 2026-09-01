@@ -101,6 +101,18 @@ const meta: Meta<typeof Chat> = {
         defaultValue: { summary: 'undefined' },
       },
     },
+    initialThreadId: {
+      description:
+        'Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. ' +
+        'Read once on mount; the thread id is then tracked internally across turns and reset when ' +
+        '`clearHistory()` is called on the chat handle.',
+      control: 'text',
+      table: {
+        category: 'Content',
+        type: { summary: 'string' },
+        defaultValue: { summary: 'undefined' },
+      },
+    },
     translations: {
       description:
         'Translation overrides for internationalizing UI strings. All keys are optional.\n\n' +

@@ -389,7 +389,7 @@ Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a stat
   <h2>Using the Hook Directly</h2>
 </div>
 
-For custom UI implementations, use the `useAsaResults` hook. It takes **no arguments** — all configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. There is no way to pass an initial prompt or thread id; call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`.
+For custom UI implementations, use the `useAsaResults` hook. Configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. The hook takes a single optional argument `{ initialThreadId }` to resume a conversation persisted outside the hook (e.g. reloaded from browser storage); `initialThreadId` is read once on mount. Call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`.
 
 ```jsx
 import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
@@ -410,6 +410,32 @@ function CustomChat() {
   );
 }
 ```
+
+**Resuming a conversation from browser storage.** Pass `initialThreadId` to seed the hook's thread id at mount. Combine it with your own persistence of `messages` (e.g. `localStorage`) to survive page reloads on the same server-side thread:
+
+```jsx
+import { useEffect } from 'react';
+import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
+
+function CustomChat() {
+  const savedThreadId = typeof window !== 'undefined'
+    ? window.localStorage.getItem('cio-asa-thread-id') ?? undefined
+    : undefined;
+
+  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
+    initialThreadId: savedThreadId,
+  });
+
+  useEffect(() => {
+    const latest = messages.findLast?.((m) => m.threadId)?.threadId;
+    if (latest) window.localStorage.setItem('cio-asa-thread-id', latest);
+  }, [messages]);
+
+  // ...
+}
+```
+
+`Chat` accepts the same prop — pass `initialThreadId` to resume without touching the hook directly.
 
 The hook returns exactly:
 
