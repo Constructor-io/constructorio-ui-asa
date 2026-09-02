@@ -8,15 +8,15 @@ interface TypingIndicatorProps {
 
 export default function TypingIndicator({ translations }: TypingIndicatorProps) {
   return (
-    <div
-      className='cio-asa-typing-indicator'
-      role='status'
-      aria-label={translate('CioAsa.typingIndicator.ariaLabel', translations)}>
-      <div className='cio-asa-typing-indicator__dots'>
+    <div className='cio-asa-typing-indicator' role='status'>
+      <div className='cio-asa-typing-indicator__dots' aria-hidden='true'>
         <span className='cio-asa-typing-indicator__dot' />
         <span className='cio-asa-typing-indicator__dot' />
         <span className='cio-asa-typing-indicator__dot' />
       </div>
+      <span className='cio-sr-only'>
+        {translate('CioAsa.typingIndicator.ariaLabel', translations)}
+      </span>
     </div>
   );
 }

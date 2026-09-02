@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
 import useFocusTrap from '../../hooks/useFocusTrap';
-import { ChatComponentOverrides, ResultGroupMeta, Translations } from '../../types';
+import { ChatComponentOverrides, ChatMessage, ResultGroupMeta, Translations } from '../../types';
 import { Product, NormalizeOptions } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
@@ -46,6 +46,25 @@ interface ChatProps {
   initialThreadId?: string;
 }
 
+// a11y: text for the screen-reader live region that voices the conversation
+function getAnnouncement(messages: ChatMessage[], translations?: Translations): string {
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage?.role !== 'assistant') return '';
+
+  if (lastMessage.status === 'loading' || lastMessage.status === 'streaming') {
+    const userText = messages[messages.length - 2]?.text ?? '';
+    const youSaid = translate('CioAsa.userMessage.ariaLabel', translations);
+    const typing = translate('CioAsa.typingIndicator.ariaLabel', translations);
+    return `${youSaid}: ${userText}. ${typing}`;
+  }
+
+  if (lastMessage.status === 'done' && lastMessage.text) {
+    return `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${lastMessage.text}`;
+  }
+
+  return '';
+}
+
 const Chat = forwardRef<ChatHandle, ChatProps>(
   (
     {
@@ -72,6 +91,8 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const isWelcome = messages.length === 0;
+    const isModal = typeof onClose === 'function';
+    const announcement = getAnnouncement(messages, translations);
 
     useImperativeHandle(ref, () => ({
       clearHistory,
@@ -91,14 +112,21 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       }
     }, [isWelcome]);
 
-    useFocusTrap(containerRef, { onEscape: onClose });
+    useFocusTrap(containerRef, { onEscape: onClose, trapFocus: isModal });
 
     return (
       <div
         className={['cio-asa', 'cio-asa-chat', className].filter(Boolean).join(' ')}
         ref={containerRef}
         role='dialog'
-        aria-labelledby='cio-asa-chat-title'>
+        aria-modal={isModal ? 'true' : undefined}
+        aria-label={translate(
+          isWelcome ? 'CioAsa.welcome.title' : 'CioAsa.header.title',
+          translations,
+        )}>
+        <div className='cio-sr-only' role='status'>
+          {announcement}
+        </div>
         <div className='cio-asa-chat-body'>
           {isWelcome ? (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>

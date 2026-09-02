@@ -7,15 +7,15 @@ describe('TypingIndicator (SSR)', () => {
     const html = renderServerSide(<TypingIndicator />);
 
     expect(html).toContain('role="status"');
-    expect(html).toContain('aria-label="Assistant is typing"');
+    expect(html).toContain('Assistant is typing');
   });
 
-  it('uses the translation override for the aria label', () => {
+  it('uses the translation override for the announcement', () => {
     const html = renderServerSide(
       <TypingIndicator translations={{ 'CioAsa.typingIndicator.ariaLabel': 'Asystent pisze' }} />,
     );
 
-    expect(html).toContain('aria-label="Asystent pisze"');
+    expect(html).toContain('Asystent pisze');
     expect(html).not.toContain('Assistant is typing');
   });
 });

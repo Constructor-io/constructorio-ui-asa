@@ -29,6 +29,6 @@
 
 .cio-asa button:focus-visible,
 .cio-asa [role='button']:focus-visible {
-  outline: 2px solid #A980FF;
+  outline: 2px solid var(--cio-asa-focus-color, #0F1324);
   outline-offset: 2px;
 }

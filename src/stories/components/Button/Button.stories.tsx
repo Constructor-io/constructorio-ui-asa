@@ -7,6 +7,7 @@ const meta = {
   title: 'Components/Button',
   component: Button,
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
     docs: {
       description: {

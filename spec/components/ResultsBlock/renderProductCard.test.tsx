@@ -59,4 +59,38 @@ describe('createProductCardRenderer', () => {
     renderCard({});
     expect(screen.queryByRole('button', { name: /add to cart/i })).not.toBeInTheDocument();
   });
+
+  it('exposes the title as a keyboard-focusable button when onProductClick is provided', async () => {
+    const onProductClick = jest.fn();
+    renderCard({ onProductClick });
+
+    const title = screen.getByRole('button', { name: 'Sneaker' });
+    title.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onProductClick).toHaveBeenCalledWith(product);
+  });
+
+  it('keeps the title non-interactive when onProductClick is not provided', () => {
+    renderCard({});
+    expect(screen.queryByRole('button', { name: 'Sneaker' })).not.toBeInTheDocument();
+    expect(screen.getByText('Sneaker')).toBeInTheDocument();
+  });
+
+  it('includes the price in the title button name when a currency is provided', () => {
+    renderCard({ onProductClick: jest.fn(), currency: '$' });
+    expect(screen.getByRole('button', { name: 'Sneaker, $ 20' })).toBeInTheDocument();
+  });
+
+  it('prefers the sale price in the title button name', () => {
+    renderCard({ onProductClick: jest.fn(), currency: '$' }, { ...product, salePrice: 15 });
+    expect(screen.getByRole('button', { name: 'Sneaker, $ 15' })).toBeInTheDocument();
+  });
+
+  it('does not fire onProductClick twice when the title button is clicked', async () => {
+    const onProductClick = jest.fn();
+    renderCard({ onProductClick });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sneaker' }));
+    expect(onProductClick).toHaveBeenCalledTimes(1);
+  });
 });

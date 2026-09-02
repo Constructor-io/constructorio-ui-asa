@@ -5,14 +5,8 @@ import * as icons from '../../../src/components/icons';
 
 const iconNames = Object.keys(icons) as (keyof typeof icons)[];
 
-// Icons rendered next to their own visible label are hidden from assistive
-// tech; ArrowRightIcon sits inside a button that already has a text label.
-const decorativeIcons = [
-  'ChatBubbleDarkIcon',
-  'ChatBubbleLightIcon',
-  'SendArrowIcon',
-  'SendPlaneIcon',
-];
+// Every icon this library renders is decorative.
+const decorativeIcons = iconNames;
 
 describe('icons', () => {
   it('exports every icon the library renders', () => {
@@ -38,7 +32,9 @@ describe('icons', () => {
     const Icon = icons[name as keyof typeof icons];
     const { container } = render(<Icon />);
 
-    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    const svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
+    expect(svg).toHaveAttribute('focusable', 'false');
   });
 
   it.each(iconNames)('%s exposes no accessible name of its own', (name) => {

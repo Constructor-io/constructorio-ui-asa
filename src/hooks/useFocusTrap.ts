@@ -6,6 +6,8 @@ const FOCUSABLE_SELECTOR =
 interface UseFocusTrapOptions {
   /** Called when the Escape key is pressed while focus is inside the container. */
   onEscape?: () => void;
+  /** Cycle Tab/Shift+Tab inside the container. Defaults to true. */
+  trapFocus?: boolean;
 }
 
 /**
@@ -14,7 +16,7 @@ interface UseFocusTrapOptions {
  */
 export default function useFocusTrap(
   containerRef: RefObject<HTMLElement>,
-  { onEscape }: UseFocusTrapOptions = {},
+  { onEscape, trapFocus = true }: UseFocusTrapOptions = {},
 ) {
   useEffect(() => {
     const container = containerRef.current;
@@ -25,7 +27,7 @@ export default function useFocusTrap(
         onEscape();
       }
 
-      if (e.key === 'Tab') {
+      if (e.key === 'Tab' && trapFocus) {
         const focusableElements = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
         if (focusableElements.length === 0) return;
 
@@ -44,5 +46,5 @@ export default function useFocusTrap(
 
     container.addEventListener('keydown', handleKeyDown);
     return () => container.removeEventListener('keydown', handleKeyDown);
-  }, [containerRef, onEscape]);
+  }, [containerRef, onEscape, trapFocus]);
 }

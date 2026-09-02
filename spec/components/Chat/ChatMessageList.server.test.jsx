@@ -27,7 +27,7 @@ describe('ChatMessageList (SSR)', () => {
     const html = renderServerSide(<ChatMessageList messages={[]} />);
 
     expect(html).toContain('role="log"');
-    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain('aria-live="off"');
     expect(html).toContain('aria-label="Chat messages"');
   });
 

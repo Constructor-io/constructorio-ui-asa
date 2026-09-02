@@ -193,11 +193,13 @@ export type Translations = {
   'CioAsa.welcome.placeholder'?: string;
   'CioAsa.welcome.sendButton'?: string;
   'CioAsa.welcome.inputAriaLabel'?: string;
+  /** @deprecated No default; the send button is named by its visible label. */
   'CioAsa.welcome.sendAriaLabel'?: string;
   'CioAsa.welcome.suggestionsAriaLabel'?: string;
   'CioAsa.messageList.ariaLabel'?: string;
   'CioAsa.typingIndicator.ariaLabel'?: string;
   'CioAsa.userMessage.ariaLabel'?: string;
+  'CioAsa.aiMessage.ariaLabel'?: string;
   'CioAsa.results.viewMore'?: string;
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;

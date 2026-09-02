@@ -1,0 +1,28 @@
+name: Run a11y checks
+on:
+  pull_request:
+    branches:
+      - "**"
+concurrency:
+  group: run-a11y-${{ github.head_ref }}
+  cancel-in-progress: true
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["20"]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run axe against Storybook stories
+        run: npm run test-storybook:ci

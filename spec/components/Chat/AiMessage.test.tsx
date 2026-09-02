@@ -10,7 +10,7 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
 describe('AiMessage', () => {
   it('shows the typing indicator while loading with no content', () => {
     render(<AiMessage message={makeMessage({ status: 'loading', text: '' })} />);
-    expect(screen.getByRole('status', { name: 'Assistant is typing' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Assistant is typing');
   });
 
   it('renders the text bubble once text arrives', () => {
@@ -35,6 +35,29 @@ describe('AiMessage', () => {
   it('falls back to the default error message when an error has no partial text', () => {
     render(<AiMessage message={makeMessage({ status: 'error', text: '' })} />);
     expect(screen.getByText("I can't assist you with that request.")).toBeInTheDocument();
+  });
+
+  it('announces errors through a live region instead of color alone', () => {
+    render(<AiMessage message={makeMessage({ status: 'error', text: '' })} />);
+    expect(screen.getByRole('alert')).toHaveTextContent("I can't assist you with that request.");
+  });
+
+  it('remounts the bubble when a streamed reply turns into an error', () => {
+    const { rerender } = render(
+      <AiMessage message={makeMessage({ status: 'streaming', text: 'partial answer' })} />,
+    );
+    const streamingBubble = screen.getByText('partial answer').parentElement;
+
+    rerender(<AiMessage message={makeMessage({ status: 'error', text: 'partial answer' })} />);
+    const alert = screen.getByRole('alert');
+
+    expect(alert).toHaveTextContent('partial answer');
+    expect(alert).not.toBe(streamingBubble);
+  });
+
+  it('does not mark regular replies as alerts', () => {
+    render(<AiMessage message={makeMessage({ status: 'done', text: 'Answer' })} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('keeps the partial text on error instead of the fallback message', () => {

@@ -13,6 +13,7 @@ const meta: Meta<typeof Chat> = {
   title: 'Components/Chat',
   component: Chat,
   parameters: {
+    a11y: { test: 'error' },
     layout: 'centered',
     docs: {
       description: {
@@ -125,11 +126,11 @@ const meta: Meta<typeof Chat> = {
         '- `CioAsa.welcome.placeholder`\n' +
         '- `CioAsa.welcome.sendButton`\n' +
         '- `CioAsa.welcome.inputAriaLabel`\n' +
-        '- `CioAsa.welcome.sendAriaLabel`\n' +
         '- `CioAsa.welcome.suggestionsAriaLabel`\n' +
         '- `CioAsa.messageList.ariaLabel`\n' +
         '- `CioAsa.typingIndicator.ariaLabel`\n' +
         '- `CioAsa.userMessage.ariaLabel`\n' +
+        '- `CioAsa.aiMessage.ariaLabel`\n' +
         '- `CioAsa.results.viewMore`\n' +
         '- `CioAsa.results.addToCart`\n' +
         '- `CioAsa.results.saleBadge`\n' +
@@ -166,6 +167,13 @@ export const Default: Story = {
   parameters: {
     layout: 'fullscreen',
   },
+  decorators: [
+    (Story) => (
+      <div style={{ width: '504px', height: '100%', margin: '0 auto' }}>
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     onClose: () => alert('Close clicked'),
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
@@ -447,4 +455,22 @@ export const IntegrationMobile: Story = {
     layout: 'fullscreen',
   },
   render: () => <MobileIntegrationExample />,
+};
+
+export const Inline: Story = {
+  name: 'Inline (no onClose)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '504px' }}>
+      <a href='#after-chat'>Focusable element before the chat</a>
+      <div style={{ height: '700px' }}>
+        <Chat
+          initialSuggestions={['I need luggage suitable for holiday travel']}
+          onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+        />
+      </div>
+      <button id='after-chat' type='button' onClick={() => alert('Reached the page again')}>
+        Focusable element after the chat
+      </button>
+    </div>
+  ),
 };

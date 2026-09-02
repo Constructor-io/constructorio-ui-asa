@@ -98,7 +98,7 @@ export default function WelcomeScreen({
               className='cio-asa-welcome-screen__send-btn'
               onClick={handleSubmit}
               disabled={disabled || !inputValue.trim()}
-              aria-label={translate('CioAsa.welcome.sendAriaLabel', translations)}>
+              aria-label={translations?.['CioAsa.welcome.sendAriaLabel']?.trim() || undefined}>
               {translate('CioAsa.welcome.sendButton', translations)}
               <SendPlaneIcon />
             </button>
@@ -108,8 +108,9 @@ export default function WelcomeScreen({
           <RenderPropsWrapper
             override={componentOverrides?.suggestedQuestions?.reactNode}
             props={suggestionsRenderProps}>
-            <nav
+            <div
               className='cio-asa-welcome-screen__suggestions'
+              role='group'
               aria-label={translate('CioAsa.welcome.suggestionsAriaLabel', translations)}>
               {suggestions.map((suggestion) => (
                 <button
@@ -121,7 +122,7 @@ export default function WelcomeScreen({
                   {suggestion}
                 </button>
               ))}
-            </nav>
+            </div>
           </RenderPropsWrapper>
         )}
       </div>

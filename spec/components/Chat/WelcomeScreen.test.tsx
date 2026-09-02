@@ -45,9 +45,70 @@ describe('WelcomeScreen', () => {
     expect(screen.getByRole('button', { name: 'A' })).toBeDisabled();
   });
 
-  it('does not render the suggestions nav when there are none', () => {
+  it('does not render the suggestions group when there are none', () => {
     render(<WelcomeScreen onSend={jest.fn()} />);
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+  });
+
+  describe('accessibility', () => {
+    it('exposes the suggestions as a named group, not a navigation landmark', () => {
+      render(<WelcomeScreen onSend={jest.fn()} suggestions={['A']} />);
+      expect(screen.getByRole('group', { name: 'Suggested questions' })).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    });
+
+    it('translates the suggestions group label', () => {
+      render(
+        <WelcomeScreen
+          onSend={jest.fn()}
+          suggestions={['A']}
+          translations={{ 'CioAsa.welcome.suggestionsAriaLabel': 'Preguntas sugeridas' }}
+        />,
+      );
+      expect(screen.getByRole('group', { name: 'Preguntas sugeridas' })).toBeInTheDocument();
+    });
+
+    it('names the send button by its visible label (WCAG 2.5.3 Label in Name)', () => {
+      render(<WelcomeScreen onSend={jest.fn()} />);
+
+      const sendButton = screen.getByRole('button', { name: 'Chat' });
+      expect(sendButton).not.toHaveAttribute('aria-label');
+    });
+
+    it('ignores an empty sendAriaLabel so the visible label stays the accessible name', () => {
+      render(
+        <WelcomeScreen onSend={jest.fn()} translations={{ 'CioAsa.welcome.sendAriaLabel': ' ' }} />,
+      );
+      expect(screen.getByRole('button', { name: 'Chat' })).not.toHaveAttribute('aria-label');
+    });
+
+    it('still honors an explicitly provided sendAriaLabel for backward compatibility', () => {
+      render(
+        <WelcomeScreen
+          onSend={jest.fn()}
+          translations={{ 'CioAsa.welcome.sendAriaLabel': 'Chat — send message' }}
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Chat — send message' })).toBeInTheDocument();
+    });
+
+    it('keeps the send button name in sync with the translated visible label', () => {
+      render(
+        <WelcomeScreen
+          onSend={jest.fn()}
+          translations={{ 'CioAsa.welcome.sendButton': 'Enviar' }}
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Enviar' })).toBeInTheDocument();
+    });
+
+    it('hides the decorative send icon from assistive technology', () => {
+      render(<WelcomeScreen onSend={jest.fn()} />);
+
+      const icon = screen.getByRole('button', { name: 'Chat' }).querySelector('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+    });
   });
 
   it('renders a title override', () => {

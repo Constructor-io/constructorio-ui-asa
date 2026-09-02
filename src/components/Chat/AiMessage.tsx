@@ -42,12 +42,14 @@ export default function AiMessage({ message, componentOverrides, translations }:
       {hasText && (
         <RenderPropsWrapper override={componentOverrides?.text?.reactNode} props={textRenderProps}>
           <div
+            key={isError ? 'error' : 'text'}
             className={[
               'cio-asa-ai-message__bubble',
               isError && 'cio-asa-ai-message__bubble--error',
             ]
               .filter(Boolean)
-              .join(' ')}>
+              .join(' ')}
+            role={isError ? 'alert' : undefined}>
             <div className='cio-asa-ai-message__text'>{text}</div>
           </div>
         </RenderPropsWrapper>

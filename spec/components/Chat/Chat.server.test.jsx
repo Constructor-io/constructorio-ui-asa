@@ -15,13 +15,13 @@ describe('Chat (SSR)', () => {
     expect(html).toContain('placeholder="Ask anything"');
   });
 
-  it('renders the dialog landmark labelled by the chat title', () => {
+  it('renders a labelled dialog landmark', () => {
     const { client } = createMockCioClient();
 
     const html = renderServerSideWithCioAsa(<Chat />, { cioClient: client });
 
     expect(html).toContain('role="dialog"');
-    expect(html).toContain('aria-labelledby="cio-asa-chat-title"');
+    expect(html).toContain('aria-label="Shopping Assistant"');
     expect(html).toContain('id="cio-asa-chat-title"');
   });
 

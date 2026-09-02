@@ -7,6 +7,8 @@ describe('ChatHeader (SSR)', () => {
     const html = renderServerSide(<ChatHeader />);
 
     expect(html).toContain('Shopping Assistant');
+    expect(html).toContain('role="heading"');
+    expect(html).toContain('aria-level="2"');
     expect(html).toContain('id="cio-asa-chat-title"');
   });
 

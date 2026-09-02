@@ -9,6 +9,13 @@ describe('ChatHeader', () => {
     expect(screen.getByText('Shopping Assistant')).toBeInTheDocument();
   });
 
+  it('exposes the title as a level-2 heading without adding a real heading tag', () => {
+    render(<ChatHeader />);
+
+    const title = screen.getByRole('heading', { name: 'Shopping Assistant', level: 2 });
+    expect(title.tagName).toBe('SPAN');
+  });
+
   it('renders a close button only when onClose is provided and calls it', async () => {
     const { rerender } = render(<ChatHeader />);
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
