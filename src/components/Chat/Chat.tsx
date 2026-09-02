@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
 import useFocusTrap from '../../hooks/useFocusTrap';
-import { ChatComponentOverrides, ResultGroupMeta, Translations } from '../../types';
+import { ChatComponentOverrides, ChatMessage, ResultGroupMeta, Translations } from '../../types';
 import { Product, NormalizeOptions } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
@@ -44,6 +44,26 @@ interface ChatProps {
   translations?: Translations;
 }
 
+// VoiceOver drops insertions into the message log, so the conversation is voiced
+// through a dedicated live region fed by this announcement.
+function getAnnouncement(messages: ChatMessage[], translations?: Translations): string {
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage?.role !== 'assistant') return '';
+
+  if (lastMessage.status === 'loading' || lastMessage.status === 'streaming') {
+    const userText = messages[messages.length - 2]?.text ?? '';
+    const youSaid = translate('CioAsa.userMessage.ariaLabel', translations);
+    const typing = translate('CioAsa.typingIndicator.ariaLabel', translations);
+    return `${youSaid}: ${userText}. ${typing}`;
+  }
+
+  if (lastMessage.status === 'done' && lastMessage.text) {
+    return `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${lastMessage.text}`;
+  }
+
+  return '';
+}
+
 const Chat = forwardRef<ChatHandle, ChatProps>(
   (
     {
@@ -68,17 +88,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
 
     const isWelcome = messages.length === 0;
     const isModal = typeof onClose === 'function';
-    // VoiceOver drops insertions into the log, so the conversation is voiced explicitly.
-    const lastMessage = messages[messages.length - 1];
-    let announcement = '';
-    if (lastMessage?.role === 'assistant') {
-      if (lastMessage.status === 'loading' || lastMessage.status === 'streaming') {
-        const userText = messages[messages.length - 2]?.text ?? '';
-        announcement = `${translate('CioAsa.userMessage.ariaLabel', translations)}: ${userText}. ${translate('CioAsa.typingIndicator.ariaLabel', translations)}`;
-      } else if (lastMessage.status === 'done' && lastMessage.text) {
-        announcement = `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${lastMessage.text}`;
-      }
-    }
+    const announcement = getAnnouncement(messages, translations);
 
     useImperativeHandle(ref, () => ({
       clearHistory,
