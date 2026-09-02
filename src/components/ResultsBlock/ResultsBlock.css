@@ -158,7 +158,6 @@
 }
 
 /* Carousel overrides */
-/* Vertical breathing room so focus rings are not clipped; margin compensates layout */
 .cio-asa-results-group [data-slot="carousel-content"] {
   padding: 6px 0 !important;
   margin: -6px 0;

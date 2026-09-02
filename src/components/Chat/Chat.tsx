@@ -44,8 +44,7 @@ interface ChatProps {
   translations?: Translations;
 }
 
-// VoiceOver drops insertions into the message log, so the conversation is voiced
-// through a dedicated live region fed by this announcement.
+// a11y: text for the screen-reader live region that voices the conversation
 function getAnnouncement(messages: ChatMessage[], translations?: Translations): string {
   const lastMessage = messages[messages.length - 1];
   if (lastMessage?.role !== 'assistant') return '';
