@@ -120,6 +120,11 @@ export interface UseChatReturn {
   clearHistory: () => void;
 }
 
+export interface UseAsaResultsOptions {
+  /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
+  initialThreadId?: string;
+}
+
 // --- Behavioral tracking ---
 
 /** How an intent was submitted: typed into the input, or a suggestion chip clicked. */

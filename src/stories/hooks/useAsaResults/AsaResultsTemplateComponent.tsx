@@ -5,6 +5,7 @@ import { DEMO_API_KEY } from '../../../constants';
 
 interface AsaResultsDisplayProps {
   defaultPrompt: string;
+  initialThreadId?: string;
 }
 
 function JsonNode({ label, value }: { label: string; value: any }) {
@@ -100,8 +101,8 @@ function StatusBadge({ isStreaming }: { isStreaming: boolean }) {
   );
 }
 
-function AsaResultsDisplay({ defaultPrompt }: AsaResultsDisplayProps) {
-  const { messages, sendMessage, isStreaming } = useAsaResults();
+function AsaResultsDisplay({ defaultPrompt, initialThreadId }: AsaResultsDisplayProps) {
+  const { messages, sendMessage, isStreaming } = useAsaResults({ initialThreadId });
   const [inputValue, setInputValue] = useState(defaultPrompt || '');
 
   const handleSend = () => {
@@ -167,10 +168,13 @@ function AsaResultsDisplay({ defaultPrompt }: AsaResultsDisplayProps) {
   );
 }
 
-export default function AsaResultsTemplateComponent({ defaultPrompt }: AsaResultsDisplayProps) {
+export default function AsaResultsTemplateComponent({
+  defaultPrompt,
+  initialThreadId,
+}: AsaResultsDisplayProps) {
   return (
     <CioAsaProvider apiKey={DEMO_API_KEY}>
-      <AsaResultsDisplay defaultPrompt={defaultPrompt} />
+      <AsaResultsDisplay defaultPrompt={defaultPrompt} initialThreadId={initialThreadId} />
     </CioAsaProvider>
   );
 }

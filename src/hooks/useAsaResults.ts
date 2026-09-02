@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
-import { AssistantSubmitSource, ResultGroupMeta, ChatMessage, UseChatReturn } from '../types';
+import {
+  AssistantSubmitSource,
+  ResultGroupMeta,
+  ChatMessage,
+  UseAsaResultsOptions,
+  UseChatReturn,
+} from '../types';
 import {
   handleSearchResult,
   handleMessage,
@@ -10,13 +16,13 @@ import {
 } from './asaStreamHandlers';
 import useAsaTracking from './useAsaTracking';
 
-export default function useAsaResults(): UseChatReturn {
+export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const isStreamingRef = useRef(false);
   const killSwitchRef = useRef(false);
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
-  const threadIdRef = useRef<string | null>(null);
+  const threadIdRef = useRef<string | null>(options?.initialThreadId ?? null);
   const idCounterRef = useRef(0);
 
   const contextValue = useCioAsaContext();

@@ -42,6 +42,8 @@ interface ChatProps {
   componentOverrides?: ChatComponentOverrides;
   /** Translation overrides for internationalizing UI strings */
   translations?: Translations;
+  /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
+  initialThreadId?: string;
 }
 
 const Chat = forwardRef<ChatHandle, ChatProps>(
@@ -59,10 +61,13 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       normalizeItem,
       componentOverrides,
       translations,
+      initialThreadId,
     },
     ref,
   ) => {
-    const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults();
+    const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
+      initialThreadId,
+    });
     const chatViewRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
