@@ -98,7 +98,7 @@ export default function WelcomeScreen({
               className='cio-asa-welcome-screen__send-btn'
               onClick={handleSubmit}
               disabled={disabled || !inputValue.trim()}
-              aria-label={translations?.['CioAsa.welcome.sendAriaLabel']}>
+              aria-label={translations?.['CioAsa.welcome.sendAriaLabel']?.trim() || undefined}>
               {translate('CioAsa.welcome.sendButton', translations)}
               <SendPlaneIcon />
             </button>

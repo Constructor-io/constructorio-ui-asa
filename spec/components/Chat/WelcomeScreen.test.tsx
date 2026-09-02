@@ -75,6 +75,13 @@ describe('WelcomeScreen', () => {
       expect(sendButton).not.toHaveAttribute('aria-label');
     });
 
+    it('ignores an empty sendAriaLabel so the visible label stays the accessible name', () => {
+      render(
+        <WelcomeScreen onSend={jest.fn()} translations={{ 'CioAsa.welcome.sendAriaLabel': ' ' }} />,
+      );
+      expect(screen.getByRole('button', { name: 'Chat' })).not.toHaveAttribute('aria-label');
+    });
+
     it('still honors an explicitly provided sendAriaLabel for backward compatibility', () => {
       render(
         <WelcomeScreen
