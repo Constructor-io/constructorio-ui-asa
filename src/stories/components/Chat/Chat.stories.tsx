@@ -445,7 +445,6 @@ export const IntegrationMobile: Story = {
   render: () => <MobileIntegrationExample />,
 };
 
-
 export const Inline: Story = {
   name: 'Inline (no onClose)',
   render: () => (
