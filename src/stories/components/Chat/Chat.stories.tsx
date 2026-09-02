@@ -445,10 +445,7 @@ export const IntegrationMobile: Story = {
   render: () => <MobileIntegrationExample />,
 };
 
-/**
- * Embedded inline (no `onClose`): Tab must be able to leave the chat in both
- * directions. Uses `render`, not `args` — `argTypesRegex` would auto-fill `onClose`.
- */
+
 export const Inline: Story = {
   name: 'Inline (no onClose)',
   render: () => (

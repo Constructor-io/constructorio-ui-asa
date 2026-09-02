@@ -159,8 +159,7 @@
 
 /* Carousel overrides */
 .cio-asa-results-group [data-slot="carousel-content"] {
-  padding: 6px 0 !important;
-  margin: -6px 0;
+  padding: 0 !important;
 }
 
 .cio-asa-results-group [data-slot="carousel-item"] {
