@@ -40,6 +40,8 @@ export type {
   ChatMessageStatus,
   ResultGroup,
   ResultGroupMeta,
+  SearchResultEventRequest,
+  SearchRequestMeta,
   UseAsaResultsOptions,
   UseChatReturn,
   // Behavioral tracking

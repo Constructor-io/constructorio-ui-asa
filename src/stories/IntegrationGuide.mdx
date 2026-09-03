@@ -232,7 +232,7 @@ The `Chat` component accepts:
 | `termsText` | `ReactNode` | Legal text below the welcome input |
 | `onProductClick` | `(product) => void` | Product card click handler |
 | `onAddToCart` | `(product) => void` | Add to cart button handler (hidden if not provided) |
-| `onViewMore` | `(group) => void` | View more link handler (hidden if not provided) |
+| `onViewMore` | `(group) => void` | View more link handler (hidden if not provided). See Building a View More URL. |
 | `aspectRatio` | `'1:1' \| '3:4' \| '9:16' \| '4:3' \| '16:9'` | Product card image ratio |
 | `currency` | `string` | Currency symbol for prices |
 | `normalizeItem` | `(item, options?) => Product` | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
@@ -274,6 +274,104 @@ The `Chat` component accepts:
 > | `cio-asa-chat-fullscreen--right` | Fullscreen variant docked to a 504px right column |
 >
 > These are optional — you can size and position the `Chat` container however you like.
+
+### Building a View More URL
+
+`onViewMore` receives the group, which carries the echoed CIO request the backend used to build
+that pod. You need it because **`display_name` and `value` alone cannot produce a correct
+destination.**
+
+Keyword pods, category (browse) pods, recommendation pods and bestseller pods all arrive as the
+same `search_result` event, and nothing at the event level distinguishes them — a category pod
+needs a category page, a keyword pod needs a search page. The request is the only place that
+difference is recoverable.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `display_name` | `string` | Human-readable pod heading (e.g. `"Blackout Curtains"`) |
+| `value` | `string` | The pod's search term. **See the warning below — not safe as a query.** |
+| `request` | `SearchResultEventRequest` | The echoed CIO request. Everything needed to re-issue the pod's exact query. |
+| `search_request` | `SearchRequestMeta` | `{ display_name, search_term, params }`. Absent on recommendation pods. `params.filters` restates the pod's filters *including* the category (`group_id`), where `request.filters` has it hoisted out to `browse_filter_name`/`browse_filter_value`. |
+| `facets` | `Record<string, unknown>[]` | Facets available for this result set |
+| `alternative_search_requests` | `SearchRequestMeta[]` | Alternative search requests, when the backend supplies them |
+
+> **Do not use `group.value` (or `search_request.search_term`) as a search term.** For category
+> pods the backend sets `search_term` to the pod's `display_name`, so
+> `` `/search?q=${group.value}` `` fires a literal search for the pod's own heading and lands on
+> a near-empty page. Branch on `request.term` instead.
+
+Branch on `request.term`, and carry the filters and sort across or the destination will show a
+different result set than the pod that was clicked:
+
+```jsx
+<Chat
+  onViewMore={(group) => {
+    const req = group.request;
+    if (!req) return;
+
+    const { term, filters, filter_match_types, sort_by, sort_order, browse_filter_value } = req;
+
+    // Keyword pod: `term` is populated. Category pod: `term` is '' and the pod
+    // browses on `browse_filter_name`/`browse_filter_value` (e.g. group_id/cat100260235).
+    window.location.href = term
+      ? buildSearchUrl({ term, filters, filter_match_types, sort_by, sort_order })
+      : buildCategoryUrl({ id: browse_filter_value, filters, filter_match_types, sort_by, sort_order });
+  }}
+/>
+```
+
+> **`filters` are not optional.** A single response commonly returns several pods that share
+> one `browse_filter_value` and differ *only* by `filters`. A real example — three pods, all
+> `group_id: 'cat100260235'`:
+>
+> | Pod | `filters` |
+> |-----|-----------|
+> | "Patterned & Textured Blackout Curtains" | `features: ['blackout']`, `intended_room: ['bedroom']`, `item_type: ['curtain panels']` |
+> | "Solid & Energy-Saving Blackout Curtains" | same |
+> | "Budget-Friendly Blackout Panels" | same **plus** `s1_deals_and_promotions: ['SALE', 'CLEARANCE']` |
+>
+> Build the URL from `browse_filter_value` alone and all three "View more" links go to the same
+> page — silently, with no error to notice.
+>
+> **Filters won't always be enough either.** In that example the first two pods carry *identical*
+> filters; what separates them ("patterned & textured" vs "solid & energy-saving") is a semantic
+> distinction the agent expresses only in the title and in which products it selected. It is not
+> represented anywhere in `request`. When two pods resolve to the same category and filters, your
+> options are to accept one shared destination, or to use `request.ids` to land on that pod's
+> exact product set.
+
+Useful fields on `request`:
+
+| Field | Notes |
+|-------|-------|
+| `term` | Non-empty on keyword pods, `''` on category pods. Use it to pick the destination type. |
+| `browse_filter_name` / `browse_filter_value` | The facet a category pod browses on, e.g. `'group_id'` / `'cat100260235'` |
+| `filters` / `filter_match_types` | Filters the agent applied, e.g. `{ event: ['wedding'] }` / `{ event: 'any' }` |
+| `sort_by` / `sort_order` | e.g. `'relevance'` / `'descending'` |
+| `pre_filter_expression` | Present when you configured one on the provider |
+| `ids` | The exact products in this pod, if you want to land on precisely that set |
+| `section`, `page`, `num_results_per_page`, `fmt_options` | As issued |
+
+Because these are your own index's facet and group identifiers, they usually map onto your
+category URLs with no translation. A typical shape:
+
+```
+/g/<any-slug>?<facet name>=<value>&…&id=<browse_filter_value>
+```
+
+- `browse_filter_value` is the category id your category route already expects.
+- Each key in `filters` is a facet name from your index, so it can be emitted as a query
+  parameter under that same name. Values are arrays — encode multiples the way your own
+  category pages already do.
+- A slug segment, where your routes use one, is typically presentation-only; derive it from
+  `display_name` if you need one.
+
+Confirm the details against your own URL scheme, but the identifiers themselves need no mapping
+table.
+
+> `request` is passed through whole rather than cherry-picked, so new backend fields reach you
+> without a library upgrade. The two exceptions are `features` and `feature_variants` — internal
+> A/B configuration, which the library strips out.
 
 <div className="step-heading">
   <span className="step-number">5</span>
@@ -379,7 +477,7 @@ Available override slots:
 | `welcomeScreen.input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
 | `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }` |
 | `resultsBlock.groupTitle` | `{ label }` |
-| `resultsBlock.viewMore` | `{ group, onClick }` |
+| `resultsBlock.viewMore` | `{ group, onClick }` — `group` carries the same search metadata described in Building a View More URL |
 | `resultsBlock.carousel` | Carousel component overrides (previous, next, item) |
 
 Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a static ReactNode to completely replace the component, or a function to receive render props.

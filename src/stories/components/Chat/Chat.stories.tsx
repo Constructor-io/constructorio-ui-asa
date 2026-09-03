@@ -78,7 +78,10 @@ const meta: Meta<typeof Chat> = {
       table: { category: 'Callbacks' },
     },
     onViewMore: {
-      description: 'Called when "View more" link is clicked. If not provided, the link is hidden.',
+      description:
+        'Called when "View more" link is clicked. If not provided, the link is hidden. ' +
+        "The `group` argument carries the pod's search metadata — `search_request`, the " +
+        'echoed CIO `request`, and `facets` — for building a destination URL.',
       table: { category: 'Callbacks' },
     },
     componentOverrides: {

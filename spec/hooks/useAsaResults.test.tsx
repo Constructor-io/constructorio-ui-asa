@@ -161,6 +161,56 @@ describe('useAsaResults', () => {
       expect(assistant.groups![0].searchResults).toEqual([{ value: 'Sneaker' }]);
     });
 
+    it('surfaces the echoed search request on the group for URL building', async () => {
+      const request = {
+        num_results_per_page: 20,
+        ids: ['1', '2'],
+        term: '',
+        page: 1,
+        sort_by: 'relevance',
+        sort_order: 'descending',
+        section: 'Products',
+        pre_filter_expression: { name: 'Nutrition', value: 'Organic' },
+      };
+      const searchRequest = {
+        display_name: 'Organic Whole Milk',
+        search_term: 'Organic Whole Milk',
+        params: {},
+      };
+      const facets = [{ type: 'range', name: 'price', display_name: 'Price' }];
+      const events: StreamEvent[] = [
+        { type: 'start', data: { thread_id: 'thread-1' } },
+        {
+          type: 'search_result',
+          data: {
+            result_id: 'sr-1',
+            title: 'Organic Whole Milk',
+            request,
+            response: {
+              search_request: searchRequest,
+              alternative_search_requests: [],
+              facets,
+              results: [{ value: 'Milk' }],
+            },
+          },
+        },
+      ];
+      const { client } = createMockCioClient({ events });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('organic milk'));
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      const { group } = result.current.messages[1].groups![0];
+      expect(group.request).toEqual(request);
+      expect(group.search_request).toEqual(searchRequest);
+      expect(group.facets).toEqual(facets);
+      // Labels still derive from the search_request when no `group` event preceded the pod.
+      expect(group.display_name).toBe('Organic Whole Milk');
+      expect(group.value).toBe('Organic Whole Milk');
+    });
+
     it('forwards `initialThreadId` on the first request', async () => {
       const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
       const { result } = renderHook(() => useAsaResults({ initialThreadId: 'thread-seed' }), {
