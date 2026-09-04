@@ -1,9 +1,9 @@
 import { Meta } from '@storybook/blocks';
 
-<Meta title='General/Integration Guide' />
+<Meta title="General/Integration Guide" />
 
 <style>
-  {`
+{`
   .guide-wrapper {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     max-width: 760px;
@@ -93,8 +93,8 @@ import { Meta } from '@storybook/blocks';
 
 Get up and running with Constructor's AI Shopping Assistant UI in minutes.
 
-<div className='step-heading'>
-  <span className='step-number'>1</span>
+<div className="step-heading">
+  <span className="step-number">1</span>
   <h2>Installation</h2>
 </div>
 
@@ -108,13 +108,13 @@ On npm 7+ this pulls in the peer dependencies automatically.
 
 This library declares the following as peer dependencies, so they must be present in your project:
 
-| Package                                           | Version     |
-| ------------------------------------------------- | ----------- |
-| `@constructor-io/constructorio-client-javascript` | `^2.88.0`   |
-| `@constructor-io/constructorio-ui-components`     | `^1.6.0`    |
-| `react`                                           | `>=16.12.0` |
-| `react-dom`                                       | `>=16.12.0` |
-| `tslib`                                           | `^2.4.0`    |
+| Package | Version |
+|---------|---------|
+| `@constructor-io/constructorio-client-javascript` | `^2.88.0` |
+| `@constructor-io/constructorio-ui-components` | `^1.6.0` |
+| `react` | `>=16.12.0` |
+| `react-dom` | `>=16.12.0` |
+| `tslib` | `^2.4.0` |
 
 If your package manager doesn't install peer dependencies automatically (yarn, pnpm, npm 6 and below), or you see an `unmet peer dependency` warning, install any that are missing from your project:
 
@@ -127,8 +127,8 @@ npm install \
 
 Only add what's missing — packages already installed with a compatible version can be left as-is. If an existing package is **below** the required version, upgrade it to a compatible one.
 
-<div className='step-heading'>
-  <span className='step-number'>2</span>
+<div className="step-heading">
+  <span className="step-number">2</span>
   <h2>Import Styles</h2>
 </div>
 
@@ -138,8 +138,8 @@ Import the stylesheet once, at your application's entry point. Without it, all `
 import '@constructor-io/constructorio-ui-asa/styles.css';
 ```
 
-<div className='step-heading'>
-  <span className='step-number'>3</span>
+<div className="step-heading">
+  <span className="step-number">3</span>
   <h2>Provider Setup</h2>
 </div>
 
@@ -149,19 +149,23 @@ Wrap your application (or the relevant subtree) with `CioAsaProvider`. This prov
 import { CioAsaProvider } from '@constructor-io/constructorio-ui-asa';
 
 function App() {
-  return <CioAsaProvider apiKey='YOUR_API_KEY'>{/* Your app content */}</CioAsaProvider>;
+  return (
+    <CioAsaProvider apiKey="YOUR_API_KEY">
+      {/* Your app content */}
+    </CioAsaProvider>
+  );
 }
 ```
 
 The provider accepts the following props:
 
-| Prop                   | Type                  | Description                                                                                                                                                                                                                                                      |
-| ---------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apiKey`               | `string`              | Your Constructor index key. Required unless you pass your own `cioClient`.                                                                                                                                                                                       |
-| `cioClient`            | `ConstructorIOClient` | A pre-configured Constructor client instance. Provide this instead of `apiKey` if you already build a client elsewhere, or when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`) — construct the client yourself and pass it here. |
-| `staticRequestConfigs` | `RequestConfigs`      | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`.                                                                                                                                                                               |
-| `formatters`           | `Formatters`          | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults.                                                                                                                                                                                     |
-| `urlHelpers`           | `UrlHelpers`          | Override built-in URL read/write helpers. Merged over the defaults.                                                                                                                                                                                              |
+| Prop | Type | Description |
+|------|------|-------------|
+| `apiKey` | `string` | Your Constructor index key. Required unless you pass your own `cioClient`. |
+| `cioClient` | `ConstructorIOClient` | A pre-configured Constructor client instance. Provide this instead of `apiKey` if you already build a client elsewhere, or when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`) — construct the client yourself and pass it here. |
+| `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
+| `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
+| `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. AI Shopping Assistant must be enabled for your account — contact your Constructor representative if agent requests return errors. If you already instantiate a `ConstructorIOClient` elsewhere in your app, pass it via `cioClient` instead of `apiKey`.
 
@@ -181,7 +185,7 @@ The provider accepts the following props:
 >   if (!mounted) return null;
 >
 >   return (
->     <CioAsaProvider apiKey='YOUR_API_KEY'>
+>     <CioAsaProvider apiKey="YOUR_API_KEY">
 >       <Chat onClose={() => {}} />
 >     </CioAsaProvider>
 >   );
@@ -190,8 +194,8 @@ The provider accepts the following props:
 >
 > Equivalently, load the component with `next/dynamic` and `{ ssr: false }`. Note: `engines.node >= 20` refers to the build/tooling environment — it does **not** mean the components render on the server.
 
-<div className='step-heading'>
-  <span className='step-number'>4</span>
+<div className="step-heading">
+  <span className="step-number">4</span>
   <h2>Rendering the Chat</h2>
 </div>
 
@@ -204,12 +208,15 @@ function ShoppingAssistant() {
   return (
     <Chat
       onClose={() => setIsOpen(false)}
-      onProductClick={(product) => (window.location.href = product.url)}
+      onProductClick={(product) => window.location.href = product.url}
       onAddToCart={(product) => addToCart(product)}
       onViewMore={(group) => navigateToCategory(group)}
-      aspectRatio='3:4'
-      currency='$'
-      initialSuggestions={['Show me summer dresses', 'Best running shoes under $100']}
+      aspectRatio="3:4"
+      currency="$"
+      initialSuggestions={[
+        'Show me summer dresses',
+        'Best running shoes under $100',
+      ]}
     />
   );
 }
@@ -217,20 +224,20 @@ function ShoppingAssistant() {
 
 The `Chat` component accepts:
 
-| Prop                 | Type                                          | Description                                                                                                                                        |
-| -------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onClose`            | `() => void`                                  | Called when close button is clicked                                                                                                                |
-| `className`          | `string`                                      | Additional CSS class for the root container                                                                                                        |
-| `initialSuggestions` | `string[]`                                    | Suggestion chips on the welcome screen                                                                                                             |
-| `termsText`          | `ReactNode`                                   | Legal text below the welcome input                                                                                                                 |
-| `onProductClick`     | `(product) => void`                           | Product card click handler                                                                                                                         |
-| `onAddToCart`        | `(product) => void`                           | Add to cart button handler (hidden if not provided)                                                                                                |
-| `onViewMore`         | `(group) => void`                             | View more link handler (hidden if not provided). See Building a View More URL.                                                                     |
-| `aspectRatio`        | `'1:1' \| '3:4' \| '9:16' \| '4:3' \| '16:9'` | Product card image ratio                                                                                                                           |
-| `currency`           | `string`                                      | Currency symbol for prices                                                                                                                         |
-| `normalizeItem`      | `(item, options?) => Product`                 | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
-| `translations`       | `Translations`                                | Override UI strings (see Translations section)                                                                                                     |
-| `componentOverrides` | `ChatComponentOverrides`                      | Override any sub-component (see Component Overrides section)                                                                                       |
+| Prop | Type | Description |
+|------|------|-------------|
+| `onClose` | `() => void` | Called when close button is clicked |
+| `className` | `string` | Additional CSS class for the root container |
+| `initialSuggestions` | `string[]` | Suggestion chips on the welcome screen |
+| `termsText` | `ReactNode` | Legal text below the welcome input |
+| `onProductClick` | `(product) => void` | Product card click handler |
+| `onAddToCart` | `(product) => void` | Add to cart button handler (hidden if not provided) |
+| `onViewMore` | `(group) => void` | View more link handler (hidden if not provided). See Building a View More URL. |
+| `aspectRatio` | `'1:1' \| '3:4' \| '9:16' \| '4:3' \| '16:9'` | Product card image ratio |
+| `currency` | `string` | Currency symbol for prices |
+| `normalizeItem` | `(item, options?) => Product` | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
+| `translations` | `Translations` | Override UI strings (see Translations section) |
+| `componentOverrides` | `ChatComponentOverrides` | Override any sub-component (see Component Overrides section) |
 
 > **You control visibility and positioning.** `Chat` is a **content component**: it fills its container (`width: 100%; height: 100%`) and does not render a launcher button or manage its own open/closed state. Providing `onClose` only wires up the ✕ button — you decide whether `Chat` is mounted, and you own the layout, positioning, and overlay. A typical floating-panel pattern:
 >
@@ -246,8 +253,8 @@ The `Chat` component accepts:
 >       <Button onClick={() => setIsOpen(true)} />
 >       {isOpen && (
 >         <>
->           <div className='cio-asa-chat-overlay' onClick={() => setIsOpen(false)} />
->           <div className='cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right'>
+>           <div className="cio-asa-chat-overlay" onClick={() => setIsOpen(false)} />
+>           <div className="cio-asa-chat-fullscreen cio-asa-chat-fullscreen--right">
 >             <Chat onClose={() => setIsOpen(false)} />
 >           </div>
 >         </>
@@ -259,12 +266,12 @@ The `Chat` component accepts:
 >
 > The library ships ready-made positioning classes you can reuse (all included in `styles.css`):
 >
-> | Class                            | Purpose                                                                    |
-> | -------------------------------- | -------------------------------------------------------------------------- |
-> | `cio-asa-chat-overlay`           | Fixed, full-screen dimmed backdrop (`z-index: 999`)                        |
-> | `cio-asa-chat-panel`             | Fixed 420px panel docked right, slides in from the right (`z-index: 1000`) |
-> | `cio-asa-chat-fullscreen`        | Absolutely positioned fill of the nearest positioned ancestor              |
-> | `cio-asa-chat-fullscreen--right` | Fullscreen variant docked to a 504px right column                          |
+> | Class | Purpose |
+> |-------|---------|
+> | `cio-asa-chat-overlay` | Fixed, full-screen dimmed backdrop (`z-index: 999`) |
+> | `cio-asa-chat-panel` | Fixed 420px panel docked right, slides in from the right (`z-index: 1000`) |
+> | `cio-asa-chat-fullscreen` | Absolutely positioned fill of the nearest positioned ancestor |
+> | `cio-asa-chat-fullscreen--right` | Fullscreen variant docked to a 504px right column |
 >
 > These are optional — you can size and position the `Chat` container however you like.
 
@@ -279,16 +286,15 @@ same `search_result` event, and nothing at the event level distinguishes them �
 needs a category page, a keyword pod needs a search page. The request is the only place that
 difference is recoverable.
 
-| Field          | Type                       | Description                                                                  |
-| -------------- | -------------------------- | ---------------------------------------------------------------------------- |
-| `display_name` | `string`                   | Human-readable pod heading (e.g. `"Blackout Curtains"`)                      |
-| `value`        | `string`                   | The pod's search term. **See the warning below — not safe as a query.**      |
+| Field | Type | Description |
+|-------|------|-------------|
+| `display_name` | `string` | Human-readable pod heading (e.g. `"Blackout Curtains"`) |
+| `value` | `string` | The pod's search term. **See the warning below — not safe as a query.** |
 | `data.request` | `SearchResultEventRequest` | The echoed CIO request. Everything needed to re-issue the pod's exact query. |
 
 > **Do not use `group.value` as a search term.** For category pods the backend sets it to the
-> pod's `display_name`, so
-> `` `/search?q=${group.value}` `` fires a literal search for the pod's own heading and lands on
-> a near-empty page. Branch on `data.request.term` instead.
+> pod's `display_name`, so `` `/search?q=${group.value}` `` fires a literal search for the pod's
+> own heading and lands on a near-empty page. Branch on `data.request.term` instead.
 
 Branch on `data.request.term`, and carry the filters and sort across or the destination will show a
 different result set than the pod that was clicked:
@@ -305,31 +311,25 @@ different result set than the pod that was clicked:
     // browses on `browse_filter_name`/`browse_filter_value` (e.g. group_id/cat100260235).
     window.location.href = term
       ? buildSearchUrl({ term, filters, filter_match_types, sort_by, sort_order })
-      : buildCategoryUrl({
-          id: browse_filter_value,
-          filters,
-          filter_match_types,
-          sort_by,
-          sort_order,
-        });
+      : buildCategoryUrl({ id: browse_filter_value, filters, filter_match_types, sort_by, sort_order });
   }}
 />
 ```
 
 > **`filters` are not optional.** A single response commonly returns several pods that share
-> one `browse_filter_value` and differ _only_ by `filters`. A real example — three pods, all
+> one `browse_filter_value` and differ *only* by `filters`. A real example — three pods, all
 > `group_id: 'cat100260235'`:
 >
-> | Pod                                       | `filters`                                                                               |
-> | ----------------------------------------- | --------------------------------------------------------------------------------------- |
-> | "Patterned & Textured Blackout Curtains"  | `features: ['blackout']`, `intended_room: ['bedroom']`, `item_type: ['curtain panels']` |
-> | "Solid & Energy-Saving Blackout Curtains" | same                                                                                    |
-> | "Budget-Friendly Blackout Panels"         | same **plus** `s1_deals_and_promotions: ['SALE', 'CLEARANCE']`                          |
+> | Pod | `filters` |
+> |-----|-----------|
+> | "Patterned & Textured Blackout Curtains" | `features: ['blackout']`, `intended_room: ['bedroom']`, `item_type: ['curtain panels']` |
+> | "Solid & Energy-Saving Blackout Curtains" | same |
+> | "Budget-Friendly Blackout Panels" | same **plus** `s1_deals_and_promotions: ['SALE', 'CLEARANCE']` |
 >
 > Build the URL from `browse_filter_value` alone and all three "View more" links go to the same
 > page — silently, with no error to notice.
 >
-> **Filters won't always be enough either.** In that example the first two pods carry _identical_
+> **Filters won't always be enough either.** In that example the first two pods carry *identical*
 > filters; what separates them ("patterned & textured" vs "solid & energy-saving") is a semantic
 > distinction the agent expresses only in the title and in which products it selected. It is not
 > represented anywhere in `data.request`. When two pods resolve to the same category and filters, your
@@ -338,15 +338,15 @@ different result set than the pod that was clicked:
 
 Useful fields on `data.request`:
 
-| Field                                                    | Notes                                                                                  |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `term`                                                   | Non-empty on keyword pods, `''` on category pods. Use it to pick the destination type. |
-| `browse_filter_name` / `browse_filter_value`             | The facet a category pod browses on, e.g. `'group_id'` / `'cat100260235'`              |
-| `filters` / `filter_match_types`                         | Filters the agent applied, e.g. `{ event: ['wedding'] }` / `{ event: 'any' }`          |
-| `sort_by` / `sort_order`                                 | e.g. `'relevance'` / `'descending'`                                                    |
-| `pre_filter_expression`                                  | Present when you configured one on the provider                                        |
-| `ids`                                                    | The exact products in this pod, if you want to land on precisely that set              |
-| `section`, `page`, `num_results_per_page`, `fmt_options` | As issued                                                                              |
+| Field | Notes |
+|-------|-------|
+| `term` | Non-empty on keyword pods, `''` on category pods. Use it to pick the destination type. |
+| `browse_filter_name` / `browse_filter_value` | The facet a category pod browses on, e.g. `'group_id'` / `'cat100260235'` |
+| `filters` / `filter_match_types` | Filters the agent applied, e.g. `{ event: ['wedding'] }` / `{ event: 'any' }` |
+| `sort_by` / `sort_order` | e.g. `'relevance'` / `'descending'` |
+| `pre_filter_expression` | Present when you configured one on the provider |
+| `ids` | The exact products in this pod, if you want to land on precisely that set |
+| `section`, `page`, `num_results_per_page`, `fmt_options` | As issued |
 
 Because these are your own index's facet and group identifiers, they usually map onto your
 category URLs with no translation. A typical shape:
@@ -369,8 +369,8 @@ table.
 > without a library upgrade. The two exceptions are `features` and `feature_variants` — internal
 > A/B configuration, which the library strips out.
 
-<div className='step-heading'>
-  <span className='step-number'>5</span>
+<div className="step-heading">
+  <span className="step-number">5</span>
   <h2>Translations</h2>
 </div>
 
@@ -391,29 +391,29 @@ All user-facing text can be customized via the `translations` prop. Pass only th
 
 Available translation keys:
 
-| Key                                   | Default                               |
-| ------------------------------------- | ------------------------------------- |
-| `CioAsa.header.title`                 | Shopping Assistant                    |
-| `CioAsa.header.close`                 | Close                                 |
-| `CioAsa.input.placeholder`            | Ask a question about this product     |
-| `CioAsa.input.ariaLabel`              | Type your message                     |
-| `CioAsa.input.sendAriaLabel`          | Send message                          |
-| `CioAsa.welcome.title`                | Shopping Assistant                    |
-| `CioAsa.welcome.placeholder`          | Ask anything                          |
-| `CioAsa.welcome.sendButton`           | Chat                                  |
-| `CioAsa.welcome.inputAriaLabel`       | Type your question                    |
-| `CioAsa.welcome.suggestionsAriaLabel` | Suggested questions                   |
-| `CioAsa.messageList.ariaLabel`        | Chat messages                         |
-| `CioAsa.typingIndicator.ariaLabel`    | Assistant is typing                   |
-| `CioAsa.userMessage.ariaLabel`        | You said                              |
-| `CioAsa.aiMessage.ariaLabel`          | Assistant said                        |
-| `CioAsa.results.viewMore`             | View more products                    |
-| `CioAsa.results.addToCart`            | Add to cart                           |
-| `CioAsa.results.saleBadge`            | Sale                                  |
-| `CioAsa.error.message`                | I can't assist you with that request. |
+| Key | Default |
+|-----|---------|
+| `CioAsa.header.title` | Shopping Assistant |
+| `CioAsa.header.close` | Close |
+| `CioAsa.input.placeholder` | Ask a question about this product |
+| `CioAsa.input.ariaLabel` | Type your message |
+| `CioAsa.input.sendAriaLabel` | Send message |
+| `CioAsa.welcome.title` | Shopping Assistant |
+| `CioAsa.welcome.placeholder` | Ask anything |
+| `CioAsa.welcome.sendButton` | Chat |
+| `CioAsa.welcome.inputAriaLabel` | Type your question |
+| `CioAsa.welcome.suggestionsAriaLabel` | Suggested questions |
+| `CioAsa.messageList.ariaLabel` | Chat messages |
+| `CioAsa.typingIndicator.ariaLabel` | Assistant is typing |
+| `CioAsa.userMessage.ariaLabel` | You said |
+| `CioAsa.aiMessage.ariaLabel` | Assistant said |
+| `CioAsa.results.viewMore` | View more products |
+| `CioAsa.results.addToCart` | Add to cart |
+| `CioAsa.results.saleBadge` | Sale |
+| `CioAsa.error.message` | I can't assist you with that request. |
 
-<div className='step-heading'>
-  <span className='step-number'>6</span>
+<div className="step-heading">
+  <span className="step-number">6</span>
   <h2>Component Overrides</h2>
 </div>
 
@@ -424,7 +424,7 @@ The `componentOverrides` prop lets you replace any sub-component with your own c
   componentOverrides={{
     header: {
       reactNode: ({ title, onClose }) => (
-        <div className='my-header'>
+        <div className="my-header">
           <h1>{title}</h1>
           <button onClick={onClose}>Close</button>
         </div>
@@ -442,8 +442,8 @@ The `componentOverrides` prop lets you replace any sub-component with your own c
         reactNode: ({ suggestions, onSuggestionClick }) => (
           <ul>
             {suggestions.map((s) => (
-              <li key={s} onClick={() => onSuggestionClick(s)}>
-                {s}
+              <li key={s}>
+                <button type="button" onClick={() => onSuggestionClick(s)}>{s}</button>
               </li>
             ))}
           </ul>
@@ -453,7 +453,9 @@ The `componentOverrides` prop lets you replace any sub-component with your own c
     resultsBlock: {
       groupTitle: { reactNode: ({ label }) => <h4>{label}</h4> },
       viewMore: {
-        reactNode: ({ group, onClick }) => <a onClick={onClick}>See all {group.display_name}</a>,
+        reactNode: ({ group, onClick }) => (
+          <button type="button" onClick={onClick}>See all {group.display_name}</button>
+        ),
       },
     },
   }}
@@ -462,24 +464,24 @@ The `componentOverrides` prop lets you replace any sub-component with your own c
 
 Available override slots:
 
-| Slot                               | Render Props                                                                                                         |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `header`                           | `{ title, onClose? }`                                                                                                |
-| `input`                            | `{ value, onChange, onSubmit, placeholder, isDisabled }`                                                             |
-| `userMessage`                      | `{ text }`                                                                                                           |
-| `aiMessage.loader`                 | `{ translations? }`                                                                                                  |
-| `aiMessage.text`                   | `{ text }`                                                                                                           |
-| `welcomeScreen.title`              | `{ text }`                                                                                                           |
-| `welcomeScreen.input`              | `{ value, onChange, onSubmit, placeholder, isDisabled }`                                                             |
-| `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }`                                                                                 |
-| `resultsBlock.groupTitle`          | `{ label }`                                                                                                          |
-| `resultsBlock.viewMore`            | `{ group, onClick }` — `group` carries the echoed request under `data.request` described in Building a View More URL |
-| `resultsBlock.carousel`            | Carousel component overrides (previous, next, item)                                                                  |
+| Slot | Render Props |
+|------|-------------|
+| `header` | `{ title, onClose? }` |
+| `input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
+| `userMessage` | `{ text }` |
+| `aiMessage.loader` | `{ translations? }` |
+| `aiMessage.text` | `{ text }` |
+| `welcomeScreen.title` | `{ text }` |
+| `welcomeScreen.input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
+| `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }` |
+| `resultsBlock.groupTitle` | `{ label }` |
+| `resultsBlock.viewMore` | `{ group, onClick }` — `group` carries the echoed request under `data.request` described in Building a View More URL |
+| `resultsBlock.carousel` | Carousel component overrides (previous, next, item) |
 
 Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a static ReactNode to completely replace the component, or a function to receive render props.
 
-<div className='step-heading'>
-  <span className='step-number'>7</span>
+<div className="step-heading">
+  <span className="step-number">7</span>
   <h2>Using the Hook Directly</h2>
 </div>
 
@@ -512,10 +514,9 @@ import { useEffect } from 'react';
 import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
 
 function CustomChat() {
-  const savedThreadId =
-    typeof window !== 'undefined'
-      ? window.localStorage.getItem('cio-asa-thread-id') ?? undefined
-      : undefined;
+  const savedThreadId = typeof window !== 'undefined'
+    ? window.localStorage.getItem('cio-asa-thread-id') ?? undefined
+    : undefined;
 
   const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
     initialThreadId: savedThreadId,
@@ -534,12 +535,12 @@ function CustomChat() {
 
 The hook returns exactly:
 
-| Return value   | Type                     | Description                                                                  |
-| -------------- | ------------------------ | ---------------------------------------------------------------------------- |
-| `messages`     | `ChatMessage[]`          | Full conversation, user and assistant messages in order                      |
-| `sendMessage`  | `(text: string) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. |
-| `isStreaming`  | `boolean`                | Whether a response is currently streaming                                    |
-| `clearHistory` | `() => void`             | Cancel any active stream, reset messages and the thread                      |
+| Return value | Type | Description |
+|--------------|------|-------------|
+| `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
+| `sendMessage` | `(text: string) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. |
+| `isStreaming` | `boolean` | Whether a response is currently streaming |
+| `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
 
 Each `ChatMessage` has this shape:
 
@@ -574,7 +575,7 @@ function CustomChat() {
           {msg.groups?.length > 0 && (
             <ResultsBlock
               groups={msg.groups}
-              currency='$'
+              currency="$"
               onProductClick={(product) => (window.location.href = product.url)}
             />
           )}
@@ -588,8 +589,8 @@ function CustomChat() {
 }
 ```
 
-<div className='step-heading'>
-  <span className='step-number'>8</span>
+<div className="step-heading">
+  <span className="step-number">8</span>
   <h2>Standalone Components</h2>
 </div>
 
@@ -601,14 +602,14 @@ function CustomChat() {
 import { ResultsBlock } from '@constructor-io/constructorio-ui-asa';
 
 <ResultsBlock
-  groups={message.groups} // ResultGroup[] from useAsaResults
-  aspectRatio='3:4'
-  currency='$'
+  groups={message.groups}          // ResultGroup[] from useAsaResults
+  aspectRatio="3:4"
+  currency="$"
   showTitle
   onProductClick={(product) => (window.location.href = product.url)}
-  onAddToCart={(product) => addToCart(product)} // omit to hide the button
+  onAddToCart={(product) => addToCart(product)}   // omit to hide the button
   onViewMore={(group) => navigateToCategory(group)} // omit to hide the link
-/>;
+/>
 ```
 
 Key props: `groups` (required), `aspectRatio`, `minCardWidth`, `gap`, `showTitle`, `currency`, `normalizeItem`, `viewMoreText`/`addToCartText`/`saleBadgeText`, `onProductClick`, `onAddToCart`, `onViewMore`, `componentOverrides`.
@@ -618,20 +619,20 @@ Key props: `groups` (required), `aspectRatio`, `minCardWidth`, `gap`, `showTitle
 ```jsx
 import { Button } from '@constructor-io/constructorio-ui-asa';
 
-<Button theme='dark' size='lg' label='Shopping assistant' onClick={() => setIsOpen(true)} />;
+<Button theme="dark" size="lg" label="Shopping assistant" onClick={() => setIsOpen(true)} />
 ```
 
-| Prop      | Type                | Default                | Description                                                |
-| --------- | ------------------- | ---------------------- | ---------------------------------------------------------- |
-| `theme`   | `'dark' \| 'light'` | `'dark'`               | `dark` for light backgrounds, `light` for dark backgrounds |
-| `size`    | `'sm' \| 'lg'`      | `'sm'`                 | Button size                                                |
-| `label`   | `string`            | `'Shopping assistant'` | Button text                                                |
-| `onClick` | `() => void`        | —                      | Click handler                                              |
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `theme` | `'dark' \| 'light'` | `'dark'` | `dark` for light backgrounds, `light` for dark backgrounds |
+| `size` | `'sm' \| 'lg'` | `'sm'` | Button size |
+| `label` | `string` | `'Shopping assistant'` | Button text |
+| `onClick` | `() => void` | — | Click handler |
 
 > Both `onAddToCart` and `onViewMore` are optional on `Chat` **and** `ResultsBlock`. If you don't pass a handler, the corresponding button/link is not rendered — so the Add-to-cart button and View-more link only appear when you opt in.
 
-<div className='step-heading'>
-  <span className='step-number'>9</span>
+<div className="step-heading">
+  <span className="step-number">9</span>
   <h2>CSS Customization</h2>
 </div>
 
@@ -659,8 +660,8 @@ All components use BEM-style class names prefixed with `cio-asa-` for easy style
 }
 ```
 
-<div className='step-heading'>
-  <span className='step-number'>10</span>
+<div className="step-heading">
+  <span className="step-number">10</span>
   <h2>Mapping Product Data</h2>
 </div>
 
@@ -686,11 +687,11 @@ The library ships a **default mapping** (`normalizeItemToProduct`) that reads Co
 ```jsx
 <Chat
   normalizeItem={(item) => ({
-    id: item.data.custom_id, // your field name
-    name: item.value, // your field name
-    url: item.data.pdp_url, // your field name
-    imageUrl: item.data.thumbnail, // your field name
-    price: item.data.list_price, // your field name
+    id: item.data.custom_id,        // your field name
+    name: item.value,               // your field name
+    url: item.data.pdp_url,         // your field name
+    imageUrl: item.data.thumbnail,  // your field name
+    price: item.data.list_price,    // your field name
     salePrice: item.data.promo_price, // your field name
   })}
 />
@@ -706,18 +707,18 @@ import { normalizeItemToProduct } from '@constructor-io/constructorio-ui-asa';
     ...normalizeItemToProduct(item, options),
     imageUrl: item.data.thumbnail, // override just the image field
   })}
-/>;
+/>
 ```
 
-<div className='step-heading'>
-  <span className='step-number'>11</span>
+<div className="step-heading">
+  <span className="step-number">11</span>
   <h2>Error Handling</h2>
 </div>
 
 If the agent returns a server error, or the response stream fails, the in-progress assistant message is marked with `status: 'error'`. The chat renders it as a normal assistant bubble carrying an error message, so failures stay inline in the conversation — there is no separate error UI to wire up.
 
 - If the agent had already streamed partial text before failing, that text is kept.
-- Otherwise the bubble shows the `CioAsa.error.message` string, which you can localize via `translations` (default: _"I can't assist you with that request."_).
+- Otherwise the bubble shows the `CioAsa.error.message` string, which you can localize via `translations` (default: *"I can't assist you with that request."*).
 - The bubble also gets the `cio-asa-ai-message__bubble--error` class, so you can style the error state distinctly.
 
 ```jsx

@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react';
-import { ResultGroup, ResultGroupMeta, ChatMessage } from '../types';
+import { ResultGroup, ResultGroupMeta, ChatMessage, SearchResultEventRequest } from '../types';
 
 export type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
 
@@ -11,10 +11,10 @@ export type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
  */
 const INTERNAL_REQUEST_FIELDS = ['features', 'feature_variants'];
 
-function omitInternalRequestFields(request: Record<string, unknown>) {
+function omitInternalRequestFields(request: Record<string, unknown>): SearchResultEventRequest {
   return Object.fromEntries(
     Object.entries(request).filter(([key]) => !INTERNAL_REQUEST_FIELDS.includes(key)),
-  );
+  ) as SearchResultEventRequest;
 }
 
 function updateMessageById(
