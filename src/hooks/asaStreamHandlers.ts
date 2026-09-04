@@ -35,18 +35,13 @@ export function handleSearchResult(
     display_name: data?.response?.search_request?.display_name ?? data?.title ?? '',
     value: data?.response?.search_request?.search_term ?? data?.title ?? '',
   };
-  // The echoed CIO request and its search metadata arrive on the `search_result` event, not
-  // on the preceding `group` event, so they are merged in regardless of how the group
-  // resolved. Consumers read these off the group in `onViewMore` to build an accurate
-  // destination URL (e.g. `search_request.search_term` as the query, plus
-  // `request.pre_filter_expression` for scoping).
+  // The echoed CIO request arrives on the `search_result` event, not on the preceding `group`
+  // event, so it is merged in regardless of how the group resolved. Consumers branch on
+  // `data.request.term` in `onViewMore` to build the destination URL.
   const resolvedGroup: ResultGroupMeta = {
     ...baseGroup,
-    ...(data?.request && { request: omitInternalRequestFields(data.request) }),
-    ...(data?.response?.search_request && { search_request: data.response.search_request }),
-    ...(data?.response?.facets && { facets: data.response.facets }),
-    ...(data?.response?.alternative_search_requests && {
-      alternative_search_requests: data.response.alternative_search_requests,
+    ...(data?.request && {
+      data: { ...baseGroup.data, request: omitInternalRequestFields(data.request) },
     }),
   };
   const results = data?.response?.results ?? (data?.results ? data.results : [data]);

@@ -69,11 +69,7 @@ describe('asaStreamHandlers (SSR / node environment)', () => {
     );
 
     const [, assistant] = applyUpdate(setMessages, messages);
-    expect(assistant.groups[0].group).toEqual({
-      display_name: 'Boots',
-      value: 'boots',
-      search_request: { display_name: 'Boots', search_term: 'boots' },
-    });
+    expect(assistant.groups[0].group).toEqual({ display_name: 'Boots', value: 'boots' });
   });
 
   it('marks the message as errored on a server error', () => {

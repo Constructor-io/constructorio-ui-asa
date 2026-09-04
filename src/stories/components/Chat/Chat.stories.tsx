@@ -80,8 +80,7 @@ const meta: Meta<typeof Chat> = {
     onViewMore: {
       description:
         'Called when "View more" link is clicked. If not provided, the link is hidden. ' +
-        "The `group` argument carries the pod's search metadata — `search_request`, the " +
-        'echoed CIO `request`, and `facets` — for building a destination URL.',
+        'The `group` argument carries the echoed CIO request under `data.request` for building a destination URL.',
       table: { category: 'Callbacks' },
     },
     componentOverrides: {

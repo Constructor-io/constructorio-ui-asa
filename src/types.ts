@@ -109,8 +109,8 @@ export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'err
  * This request is the only place a consumer can tell them apart:
  * - `term` non-empty -> keyword pod; route to a search page.
  * - `term` empty with `browse_filter_name`/`browse_filter_value` -> category pod; route to
- *   a category page. Do **not** use the pod's `search_term` as a query here (see
- *   `SearchRequestMeta.search_term`).
+ *   a category page. Do **not** use the pod's `value` as a query here: for category pods the
+ *   backend sets it to the heading rather than a search term.
  *
  * Carry `filters`, `filter_match_types` and the sort over to the destination too, otherwise
  * the page shows a different result set than the pod that was clicked.
@@ -136,30 +136,11 @@ export interface SearchResultEventRequest {
   [key: string]: unknown;
 }
 
-/**
- * Search request metadata from `response.search_request` in a `search_result` SSE event.
- * Absent on recommendation pods, where the backend sends no `search_request` at all.
- */
-export interface SearchRequestMeta {
-  display_name?: string;
-  /**
-   * The pod's search term. For **category pods the backend sets this to `display_name`**, so
-   * it is a heading rather than a query — using it as a search term fires a literal search
-   * for the pod's own title. Branch on `SearchResultEventRequest.term` instead.
-   */
-  search_term?: string;
-  params?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
 export interface ResultGroupMeta {
   display_name: string;
   value?: string;
-  data?: { display_name?: string; [key: string]: unknown };
-  request?: SearchResultEventRequest;
-  search_request?: SearchRequestMeta;
-  facets?: Record<string, unknown>[];
-  alternative_search_requests?: SearchRequestMeta[];
+  /** Backend metadata for this pod. */
+  data?: { display_name?: string; request?: SearchResultEventRequest; [key: string]: unknown };
 }
 
 export interface ResultGroup {

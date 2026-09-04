@@ -177,7 +177,6 @@ describe('useAsaResults', () => {
         search_term: 'Organic Whole Milk',
         params: {},
       };
-      const facets = [{ type: 'range', name: 'price', display_name: 'Price' }];
       const events: StreamEvent[] = [
         { type: 'start', data: { thread_id: 'thread-1' } },
         {
@@ -188,8 +187,6 @@ describe('useAsaResults', () => {
             request,
             response: {
               search_request: searchRequest,
-              alternative_search_requests: [],
-              facets,
               results: [{ value: 'Milk' }],
             },
           },
@@ -203,9 +200,8 @@ describe('useAsaResults', () => {
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
       const { group } = result.current.messages[1].groups![0];
-      expect(group.request).toEqual(request);
-      expect(group.search_request).toEqual(searchRequest);
-      expect(group.facets).toEqual(facets);
+      expect(group.data?.request).toEqual(request);
+      expect(group).not.toHaveProperty('search_request');
       // Labels still derive from the search_request when no `group` event preceded the pod.
       expect(group.display_name).toBe('Organic Whole Milk');
       expect(group.value).toBe('Organic Whole Milk');

@@ -60,11 +60,7 @@ describe('asaStreamHandlers', () => {
 
       handleSearchResult(data, null, ASSISTANT_ID, setMessages);
       const msg = applyUpdater(setMessages);
-      expect(msg.groups![0].group).toEqual({
-        display_name: 'Recipes',
-        value: 'picnic',
-        search_request: { display_name: 'Recipes', search_term: 'picnic' },
-      });
+      expect(msg.groups![0].group).toEqual({ display_name: 'Recipes', value: 'picnic' });
     });
 
     it('falls back to wrapping the raw data when no results array is present', () => {
@@ -126,7 +122,7 @@ describe('asaStreamHandlers', () => {
       expect(msg.groups![0]).not.toHaveProperty('intentResultId');
     });
 
-    it('attaches the echoed request and search metadata onto the group', () => {
+    it('attaches the echoed request onto the group', () => {
       const setMessages = jest.fn();
       const request = {
         num_results_per_page: 20,
@@ -143,14 +139,13 @@ describe('asaStreamHandlers', () => {
         search_term: 'Organic Whole Milk',
         params: {},
       };
-      const facets = [{ type: 'range', name: 'price', display_name: 'Price' }];
       const data = {
         title: 'Organic Whole Milk',
         request,
         response: {
           search_request: searchRequest,
           alternative_search_requests: [],
-          facets,
+          facets: [{ type: 'range', name: 'price', display_name: 'Price' }],
           results: [{ value: 'a' }],
         },
       };
@@ -160,10 +155,7 @@ describe('asaStreamHandlers', () => {
       expect(msg.groups![0].group).toEqual({
         display_name: 'Organic Whole Milk',
         value: 'Organic Whole Milk',
-        request,
-        search_request: searchRequest,
-        facets,
-        alternative_search_requests: [],
+        data: { request },
       });
     });
 
@@ -180,7 +172,7 @@ describe('asaStreamHandlers', () => {
       expect(msg.groups![0].group).toEqual({
         display_name: 'Shoes',
         value: 'shoes',
-        request,
+        data: { request },
       });
     });
 
@@ -229,19 +221,16 @@ describe('asaStreamHandlers', () => {
 
       handleSearchResult(data, null, ASSISTANT_ID, setMessages);
       const { group } = applyUpdater(setMessages).groups![0];
-      expect(group.request).toEqual(request);
-      expect(group.request?.term).toBe('');
-      expect(group.request?.browse_filter_name).toBe('group_id');
-      expect(group.request?.browse_filter_value).toBe('cat100260235');
+      expect(group.data?.request).toEqual(request);
+      expect(group.data?.request?.term).toBe('');
+      expect(group.data?.request?.browse_filter_name).toBe('group_id');
+      expect(group.data?.request?.browse_filter_value).toBe('cat100260235');
       // Pods in one response can share a category and differ only by these filters, so they
       // must survive or every "view more" for the category resolves to the same page.
-      expect(group.request?.filters).toEqual(request.filters);
-      expect(group.request?.filter_match_types).toEqual(request.filter_match_types);
-      expect(group.search_request?.params).toEqual({
-        filters: { group_id: ['cat100260235'], features: ['blackout'] },
-      });
-      // search_term is the heading, not a usable query.
-      expect(group.search_request?.search_term).toBe(group.display_name);
+      expect(group.data?.request?.filters).toEqual(request.filters);
+      expect(group.data?.request?.filter_match_types).toEqual(request.filter_match_types);
+      // value is the heading, not a usable query.
+      expect(group.value).toBe(group.display_name);
     });
 
     it('attaches the request for a recommendation pod that has no search_request', () => {
@@ -255,8 +244,7 @@ describe('asaStreamHandlers', () => {
 
       handleSearchResult(data, null, ASSISTANT_ID, setMessages);
       const { group } = applyUpdater(setMessages).groups![0];
-      expect(group.request).toEqual(request);
-      expect(group).not.toHaveProperty('search_request');
+      expect(group.data?.request).toEqual(request);
       // Labels still fall back to the event title rather than throwing on the null.
       expect(group.display_name).toBe('Recommended for you');
     });
@@ -276,19 +264,19 @@ describe('asaStreamHandlers', () => {
 
       handleSearchResult(data, null, ASSISTANT_ID, setMessages);
       const { group } = applyUpdater(setMessages).groups![0];
-      expect(group.request).toEqual({
+      expect(group.data?.request).toEqual({
         term: 'running shoes',
         sort_by: 'relevance',
         // Unrecognized fields still pass through, so the backend can add without a release.
         some_future_backend_field: 'kept',
       });
-      expect(group.request).not.toHaveProperty('features');
-      expect(group.request).not.toHaveProperty('feature_variants');
+      expect(group.data?.request).not.toHaveProperty('features');
+      expect(group.data?.request).not.toHaveProperty('feature_variants');
       // The SSE payload itself is left untouched.
       expect(data.request.features).toEqual({ query_items: true, personalization: true });
     });
 
-    it('omits the request metadata fields when the event does not carry them', () => {
+    it('omits request when the event does not carry it', () => {
       const setMessages = jest.fn();
       handleSearchResult(
         { response: { results: [{ value: 'a' }] } },
@@ -297,10 +285,7 @@ describe('asaStreamHandlers', () => {
         setMessages,
       );
       const { group } = applyUpdater(setMessages).groups![0];
-      expect(group).not.toHaveProperty('request');
-      expect(group).not.toHaveProperty('search_request');
-      expect(group).not.toHaveProperty('facets');
-      expect(group).not.toHaveProperty('alternative_search_requests');
+      expect(group).not.toHaveProperty('data');
     });
   });
 

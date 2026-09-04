@@ -59,51 +59,51 @@ const mockGroupsMultiple = [
 ];
 
 // Mirrors what live `search_result` SSE events put on the group: the echoed CIO request, which
-// `onViewMore` consumers branch on to build a destination URL. Two pod types are shown because
-// they need different destinations and are otherwise indistinguishable — a keyword pod (`term`
-// populated) routes to a search page, a category pod (`term` empty, browsing on
-// `browse_filter_name`/`browse_filter_value`) routes to a category page.
+// `onViewMore` consumers branch on (`data.request`) to build a destination URL. Two pod types
+// are shown because they need different destinations and are otherwise indistinguishable — a
+// keyword pod (`term` populated) routes to a search page, a category pod (`term` empty, browsing
+// on `browse_filter_name`/`browse_filter_value`) routes to a category page.
 const mockGroupsPodTypes = [
   {
     ...mockGroups[0],
     group: {
       display_name: 'Running Shoes',
       value: 'running shoes',
-      search_request: { display_name: 'Running Shoes', search_term: 'running shoes', params: {} },
-      request: {
-        term: 'running shoes',
-        filters: { activity: ['running'] },
-        filter_match_types: { activity: 'any' },
-        sort_by: 'relevance',
-        sort_order: 'descending',
-        page: 1,
-        num_results_per_page: 4,
-        section: 'Products',
+      data: {
+        request: {
+          term: 'running shoes',
+          filters: { activity: ['running'] },
+          filter_match_types: { activity: 'any' },
+          sort_by: 'relevance',
+          sort_order: 'descending',
+          page: 1,
+          num_results_per_page: 4,
+          section: 'Products',
+        },
       },
-      facets: [{ type: 'range', name: 'price', display_name: 'Price', min: 85, max: 190 }],
     },
   },
   {
     ...mockGroupsMultiple[1],
     group: {
-      // For category pods the backend sets search_term to display_name — using it as a
+      // For category pods the backend sets value to display_name — using it as a
       // query would fire a literal search for this heading.
       display_name: 'Trail Running',
       value: 'Trail Running',
-      search_request: { display_name: 'Trail Running', search_term: 'Trail Running', params: {} },
-      request: {
-        term: '',
-        browse_filter_name: 'group_id',
-        browse_filter_value: 'cat100260235',
-        filters: { terrain: ['trail'] },
-        filter_match_types: { terrain: 'any' },
-        sort_by: 'relevance',
-        sort_order: 'descending',
-        page: 1,
-        num_results_per_page: 4,
-        section: 'Products',
+      data: {
+        request: {
+          term: '',
+          browse_filter_name: 'group_id',
+          browse_filter_value: 'cat100260235',
+          filters: { terrain: ['trail'] },
+          filter_match_types: { terrain: 'any' },
+          sort_by: 'relevance',
+          sort_order: 'descending',
+          page: 1,
+          num_results_per_page: 4,
+          section: 'Products',
+        },
       },
-      facets: [{ type: 'range', name: 'price', display_name: 'Price', min: 100, max: 210 }],
     },
   },
 ];
@@ -275,11 +275,11 @@ export const ViewMoreUrlBuilding: Story = {
       description: {
         story:
           'Keyword and category pods both arrive as `search_result` events and need different ' +
-          'destinations, so `onViewMore` consumers branch on the echoed `request`. The first ' +
-          'pod here is a keyword pod (`request.term` populated) and routes to a search page; ' +
-          'the second is a category pod (`request.term` empty, browsing on ' +
+          'destinations, so `onViewMore` consumers branch on the echoed `data.request`. The first ' +
+          'pod here is a keyword pod (`data.request.term` populated) and routes to a search page; ' +
+          'the second is a category pod (`data.request.term` empty, browsing on ' +
           "`browse_filter_value`) and routes to a category page. Note the category pod's " +
-          '`search_term` equals its `display_name` — using it as a query would search for the ' +
+          '`value` equals its `display_name` — using it as a query would search for the ' +
           'heading itself. Click "View more products" on each to compare the URLs.',
       },
     },
@@ -290,7 +290,7 @@ export const ViewMoreUrlBuilding: Story = {
     currency: '$',
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onViewMore: (group) => {
-      const req = group.request;
+      const req = group.data?.request;
       if (!req) return;
 
       const params = new URLSearchParams();
