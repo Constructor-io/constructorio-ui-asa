@@ -100,10 +100,47 @@ export interface ChatMessage {
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 
+/**
+ * Echoed CIO search API request from a `search_result` SSE event — the parameters the
+ * backend used to fetch this pod's results.
+ *
+ * Several pod types (keyword search, category browse, recommendations, bestsellers) all
+ * arrive as `search_result` events, and nothing at the event level distinguishes them.
+ * This request is the only place a consumer can tell them apart:
+ * - `term` non-empty -> keyword pod; route to a search page.
+ * - `term` empty with `browse_filter_name`/`browse_filter_value` -> category pod; route to
+ *   a category page. Do **not** use the pod's `value` as a query here: for category pods the
+ *   backend sets it to the heading rather than a search term.
+ *
+ * Carry `filters`, `filter_match_types` and the sort over to the destination too, otherwise
+ * the page shows a different result set than the pod that was clicked.
+ */
+export interface SearchResultEventRequest {
+  num_results_per_page?: number;
+  ids?: string[];
+  term?: string;
+  page?: number;
+  fmt_options?: Record<string, unknown>;
+  sort_by?: string;
+  sort_order?: string;
+  section?: string;
+  /** Facet name a category pod browses on (e.g. `'group_id'`). Absent on keyword pods. */
+  browse_filter_name?: string;
+  /** Facet value a category pod browses on (e.g. `'cat100260235'`). Absent on keyword pods. */
+  browse_filter_value?: string;
+  /** Filters the agent applied to build this pod, e.g. `{ event: ['wedding'] }`. */
+  filters?: Record<string, unknown>;
+  /** Match type per filter, e.g. `{ event: 'any' }`. */
+  filter_match_types?: Record<string, unknown>;
+  pre_filter_expression?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface ResultGroupMeta {
   display_name: string;
   value?: string;
-  data?: { display_name?: string; [key: string]: unknown };
+  /** Backend metadata for this pod. */
+  data?: { display_name?: string; request?: SearchResultEventRequest; [key: string]: unknown };
 }
 
 export interface ResultGroup {

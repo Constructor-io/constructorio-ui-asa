@@ -1,7 +1,21 @@
 import { Dispatch, SetStateAction } from 'react';
-import { ResultGroup, ResultGroupMeta, ChatMessage } from '../types';
+import { ResultGroup, ResultGroupMeta, ChatMessage, SearchResultEventRequest } from '../types';
 
 export type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
+
+/**
+ * Internal A/B configuration echoed back on the request. Stripped before the request reaches
+ * consumers: it is unstable (the backend omits it on some pods within a single response) and
+ * nothing a consumer should branch on. Everything else passes through untouched, so new
+ * backend fields reach consumers without a library change.
+ */
+const INTERNAL_REQUEST_FIELDS = ['features', 'feature_variants'];
+
+function omitInternalRequestFields(request: Record<string, unknown>): SearchResultEventRequest {
+  return Object.fromEntries(
+    Object.entries(request).filter(([key]) => !INTERNAL_REQUEST_FIELDS.includes(key)),
+  ) as SearchResultEventRequest;
+}
 
 function updateMessageById(
   setMessages: MessageUpdater,
@@ -17,9 +31,18 @@ export function handleSearchResult(
   assistantId: string,
   setMessages: MessageUpdater,
 ): ResultGroupMeta | null {
-  const resolvedGroup: ResultGroupMeta = pendingGroup ?? {
+  const baseGroup: ResultGroupMeta = pendingGroup ?? {
     display_name: data?.response?.search_request?.display_name ?? data?.title ?? '',
     value: data?.response?.search_request?.search_term ?? data?.title ?? '',
+  };
+  // The echoed CIO request arrives on the `search_result` event, not on the preceding `group`
+  // event, so it is merged in regardless of how the group resolved. Consumers branch on
+  // `data.request.term` in `onViewMore` to build the destination URL.
+  const resolvedGroup: ResultGroupMeta = {
+    ...baseGroup,
+    ...(data?.request && {
+      data: { ...baseGroup.data, request: omitInternalRequestFields(data.request) },
+    }),
   };
   const results = data?.response?.results ?? (data?.results ? data.results : [data]);
   // `result_id` is unique per search_result event; `intent_result_id` is shared across

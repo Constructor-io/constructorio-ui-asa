@@ -58,6 +58,56 @@ const mockGroupsMultiple = [
   },
 ];
 
+// Mirrors what live `search_result` SSE events put on the group: the echoed CIO request, which
+// `onViewMore` consumers branch on (`data.request`) to build a destination URL. Two pod types
+// are shown because they need different destinations and are otherwise indistinguishable — a
+// keyword pod (`term` populated) routes to a search page, a category pod (`term` empty, browsing
+// on `browse_filter_name`/`browse_filter_value`) routes to a category page.
+const mockGroupsPodTypes = [
+  {
+    ...mockGroups[0],
+    group: {
+      display_name: 'Running Shoes',
+      value: 'running shoes',
+      data: {
+        request: {
+          term: 'running shoes',
+          filters: { activity: ['running'] },
+          filter_match_types: { activity: 'any' },
+          sort_by: 'relevance',
+          sort_order: 'descending',
+          page: 1,
+          num_results_per_page: 4,
+          section: 'Products',
+        },
+      },
+    },
+  },
+  {
+    ...mockGroupsMultiple[1],
+    group: {
+      // For category pods the backend sets value to display_name — using it as a
+      // query would fire a literal search for this heading.
+      display_name: 'Trail Running',
+      value: 'Trail Running',
+      data: {
+        request: {
+          term: '',
+          browse_filter_name: 'group_id',
+          browse_filter_value: 'cat100260235',
+          filters: { terrain: ['trail'] },
+          filter_match_types: { terrain: 'any' },
+          sort_by: 'relevance',
+          sort_order: 'descending',
+          page: 1,
+          num_results_per_page: 4,
+          section: 'Products',
+        },
+      },
+    },
+  },
+];
+
 const meta: Meta<typeof ResultsBlock> = {
   title: 'Components/ResultsBlock',
   component: ResultsBlock,
@@ -215,5 +265,47 @@ export const HiddenTitle: Story = {
     onProductClick: (product) => alert(`Product clicked: ${product.name}`),
     onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
     onViewMore: (group) => alert(`View more: ${group.display_name}`),
+  },
+};
+
+export const ViewMoreUrlBuilding: Story = {
+  name: 'onViewMore = Building a destination URL',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Keyword and category pods both arrive as `search_result` events and need different ' +
+          'destinations, so `onViewMore` consumers branch on the echoed `data.request`. The first ' +
+          'pod here is a keyword pod (`data.request.term` populated) and routes to a search page; ' +
+          'the second is a category pod (`data.request.term` empty, browsing on ' +
+          "`browse_filter_value`) and routes to a category page. Note the category pod's " +
+          '`value` equals its `display_name` — using it as a query would search for the ' +
+          'heading itself. Click "View more products" on each to compare the URLs.',
+      },
+    },
+  },
+  args: {
+    groups: mockGroupsPodTypes,
+    aspectRatio: '1:1',
+    currency: '$',
+    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
+    onViewMore: (group) => {
+      const req = group.data?.request;
+      if (!req) return;
+
+      const params = new URLSearchParams();
+      Object.entries(req.filters ?? {}).forEach(([name, values]) => {
+        [values].flat().forEach((v) => params.append(`filter.${name}`, String(v)));
+      });
+      if (req.sort_by) params.set('sortBy', String(req.sort_by));
+      if (req.sort_order) params.set('sortOrder', String(req.sort_order));
+
+      // Keyword pod -> search page. Category pod (`term` is '') -> category page.
+      const url = req.term
+        ? `/search?q=${encodeURIComponent(String(req.term))}&${params}`
+        : `/category/${encodeURIComponent(String(req.browse_filter_value))}?${params}`;
+
+      alert(`${req.term ? 'Keyword' : 'Category'} pod\n\nWould navigate to:\n${url}`);
+    },
   },
 };

@@ -1,14 +1,31 @@
 import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 
+// Shapes mirror the live `agent.cnstrc.com/v1/intent` SSE payloads.
 export type StreamEvent =
-  | { type: 'start'; data: { thread_id?: string; intent_result_id?: string } }
+  | {
+      type: 'start';
+      data: {
+        thread_id?: string;
+        intent_result_id?: string;
+        request?: { intent?: string; query_params?: Record<string, unknown> };
+      };
+    }
   | { type: 'group'; data: { display_name: string; value: string } }
   | {
       type: 'search_result';
       data: {
         result_id?: string;
         intent_result_id?: string;
-        response: { results: unknown[]; search_request?: Record<string, unknown> };
+        thread_id?: string;
+        title?: string;
+        response: {
+          results: unknown[];
+          search_request?: Record<string, unknown>;
+          alternative_search_requests?: Record<string, unknown>[];
+          facets?: Record<string, unknown>[];
+        };
+        /** Echoed CIO search request the backend used to fetch this pod's results. */
+        request?: Record<string, unknown>;
       };
     }
   | { type: 'message'; data: { text: string } }
