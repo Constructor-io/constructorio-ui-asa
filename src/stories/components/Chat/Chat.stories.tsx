@@ -78,7 +78,9 @@ const meta: Meta<typeof Chat> = {
       table: { category: 'Callbacks' },
     },
     onViewMore: {
-      description: 'Called when "View more" link is clicked. If not provided, the link is hidden.',
+      description:
+        'Called when "View more" link is clicked. If not provided, the link is hidden. ' +
+        'The `group` argument carries the echoed CIO request under `data.request` for building a destination URL.',
       table: { category: 'Callbacks' },
     },
     componentOverrides: {
