@@ -100,6 +100,63 @@ describe('Chat', () => {
     );
   });
 
+  describe('follow-up refinements', () => {
+    const refinementEvents: StreamEvent[] = [
+      { type: 'message', data: { text: 'Here are some picks' } },
+      {
+        type: 'follow_up_refinement',
+        data: {
+          question: 'Who are you shopping for?',
+          options: ["Women's styles", "Men's styles"],
+        },
+      },
+    ];
+
+    it('renders the refinement chips after the stream ends', async () => {
+      renderChat({}, refinementEvents);
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+
+      expect(await screen.findByRole('button', { name: "Men's styles" })).toBeEnabled();
+      expect(screen.getByText('Who are you shopping for?')).toBeInTheDocument();
+    });
+
+    it('sends the clicked option as a follow-up in the same thread', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'start', data: { thread_id: 'thread-1' } }, ...refinementEvents],
+      });
+      render(
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+          <Chat />
+        </CioAsaProvider>,
+      );
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+      const chip = await screen.findByRole('button', { name: "Men's styles" });
+      await waitFor(() => expect(chip).toBeEnabled());
+
+      await userEvent.click(chip);
+
+      expect(
+        await screen.findByText("Men's styles", { selector: '.cio-asa-user-message *' }),
+      ).toBeInTheDocument();
+      expect(getAgentResultsStream).toHaveBeenLastCalledWith(
+        "Men's styles",
+        expect.objectContaining({ threadId: 'thread-1' }),
+      );
+      await waitFor(() => {
+        const chips = screen.getAllByRole('button', { name: "Men's styles" });
+        expect(chips[0]).toBeDisabled();
+        expect(chips[1]).toBeEnabled();
+      });
+    });
+
+    it('has no accessibility violations with refinement chips', async () => {
+      const { container } = renderChat({}, refinementEvents);
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+      await screen.findByRole('button', { name: "Men's styles" });
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
   it('has no accessibility violations on the welcome screen', async () => {
     const { container } = renderChat({ onClose: jest.fn(), initialSuggestions: ['A'] });
     expect(await axe(container)).toHaveNoViolations();

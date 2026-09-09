@@ -58,6 +58,26 @@ describe('ChatMessageList (SSR)', () => {
     expect(() => renderServerSide(<ChatMessageList messages={[]} />)).not.toThrow();
   });
 
+  it('renders follow-up refinement chips into the server markup', () => {
+    const html = renderServerSide(
+      <ChatMessageList
+        messages={[
+          {
+            ...withResults[0],
+            refinement: { question: 'Who are you shopping for?', options: ['Women', 'Men'] },
+          },
+        ]}
+        onSend={jest.fn()}
+      />,
+    );
+
+    expect(html).toContain('Who are you shopping for?');
+    expect(html).toContain('aria-label="Refine your results"');
+    expect(html.indexOf('cio-asa-results-block')).toBeLessThan(
+      html.indexOf('cio-asa-follow-up-refinement'),
+    );
+  });
+
   it('passes translations down to the child messages', () => {
     const html = renderServerSide(
       <ChatMessageList

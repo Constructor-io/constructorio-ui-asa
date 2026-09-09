@@ -1,6 +1,7 @@
 import {
   handleSearchResult,
   handleMessage,
+  handleFollowUpRefinement,
   handleServerError,
   handleStreamEnd,
   handleStreamError,
@@ -31,6 +32,59 @@ function applyUpdater(
 }
 
 describe('asaStreamHandlers', () => {
+  describe('handleFollowUpRefinement', () => {
+    it('stores the question and options on the assistant message', () => {
+      const setMessages = jest.fn();
+      const data = {
+        intent_result_id: 'ir-1',
+        thread_id: 't-1',
+        question: 'Who are you shopping for?',
+        options: ["Women's styles", "Men's styles"],
+      };
+
+      handleFollowUpRefinement(data, ASSISTANT_ID, setMessages);
+
+      const msg = applyUpdater(setMessages);
+      expect(msg.status).toBe('streaming');
+      expect(msg.refinement).toEqual({
+        question: 'Who are you shopping for?',
+        options: ["Women's styles", "Men's styles"],
+      });
+    });
+
+    it('replaces an earlier refinement in the same turn (last wins)', () => {
+      const setMessages = jest.fn();
+      const existing: ChatMessage = {
+        ...baseMessage,
+        refinement: { question: 'Old?', options: ['a'] },
+      };
+
+      handleFollowUpRefinement({ question: 'New?', options: ['b'] }, ASSISTANT_ID, setMessages);
+
+      const msg = applyUpdater(setMessages, [existing]);
+      expect(msg.refinement).toEqual({ question: 'New?', options: ['b'] });
+    });
+
+    it('drops non-string and empty options', () => {
+      const setMessages = jest.fn();
+      handleFollowUpRefinement(
+        { question: 'Q?', options: ['ok', '', 3, null, '  '] },
+        ASSISTANT_ID,
+        setMessages,
+      );
+      expect(applyUpdater(setMessages).refinement?.options).toEqual(['ok']);
+    });
+
+    it('ignores events without a question or without any options', () => {
+      const setMessages = jest.fn();
+      handleFollowUpRefinement({ options: ['a'] }, ASSISTANT_ID, setMessages);
+      handleFollowUpRefinement({ question: 'Q?', options: [] }, ASSISTANT_ID, setMessages);
+      handleFollowUpRefinement({ question: 'Q?' }, ASSISTANT_ID, setMessages);
+      handleFollowUpRefinement(undefined, ASSISTANT_ID, setMessages);
+      expect(setMessages).not.toHaveBeenCalled();
+    });
+  });
+
   describe('handleSearchResult', () => {
     it('uses the pending group and appends normalized results, returning null', () => {
       const setMessages = jest.fn();
