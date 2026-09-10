@@ -26,7 +26,7 @@ describe('useAsaTracking', () => {
     }).not.toThrow();
   });
 
-  it('forwards trackSubmit with merged section and threadId', () => {
+  it('forwards trackSubmit with merged section, threadId and source', () => {
     const tracker = createMockTracker();
     const { result } = renderHook(() =>
       useAsaTracking({
@@ -36,16 +36,17 @@ describe('useAsaTracking', () => {
       }),
     );
 
-    result.current.trackSubmit('shoes');
+    result.current.trackSubmit('shoes', 'suggestion');
 
     expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({
       intent: 'shoes',
       section: 'Products',
       threadId: 't-1',
+      source: 'suggestion',
     });
   });
 
-  it('omits section and threadId when not provided', () => {
+  it('omits section, threadId and source when not provided', () => {
     const tracker = createMockTracker();
     const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
 

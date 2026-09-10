@@ -59,7 +59,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       const intent = text.trim();
       if (!intent || isStreamingRef.current) return;
 
-      trackingRef.current.trackSubmit(intent);
+      trackingRef.current.trackSubmit(intent, source);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
 
       const userMessage: ChatMessage = {

@@ -164,7 +164,11 @@ export interface UseAsaResultsOptions {
 
 // --- Behavioral tracking ---
 
-/** How an intent was submitted: typed into the input, or a suggestion chip clicked. */
+/**
+ * How an intent was submitted: typed input or a welcome-screen suggestion chip. Sent as
+ * `source` on the `assistant_submit` beacon, so the values match the ones the
+ * behavioral-actions API documents.
+ */
 export type AssistantSubmitSource = 'input' | 'suggestion';
 
 /** An item within a viewed/clicked search_result pod. */
@@ -180,7 +184,7 @@ export interface AssistantTrackedItem {
  * so consumers can mirror ASA analytics into their own systems. All are optional.
  */
 export interface AsaCallbacks {
-  /** User submitted an intent (typed) or clicked a suggestion. */
+  /** User submitted an intent (typed) or clicked a suggested question. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */
   onResultLoadStart?: (payload: { intent: string; intentResultId?: string }) => void;

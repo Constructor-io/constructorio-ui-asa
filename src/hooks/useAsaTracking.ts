@@ -1,16 +1,21 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
-import { AssistantTrackedItem } from '../types';
+import { AssistantSubmitSource, AssistantTrackedItem } from '../types';
 
 /**
- * The installed client (2.88.0) exposes the six `trackAssistant*` methods but its
- * published types don't yet include `threadId` (that lands with the client bump on
- * the `at-194` branch). We describe the parameter shapes we send here — including
- * `threadId` — and call through this narrowed view of the tracker so the extra field
- * compiles now and flows through once the client types catch up.
+ * The installed client (2.91.0) exposes the six `trackAssistant*` methods but its
+ * published types don't yet include `source` on submit (that lands with the next client
+ * release). We describe the parameter shapes we send here — including `source` — and call
+ * through this narrowed view of the tracker so the extra field compiles now and flows
+ * through once the client types catch up.
  */
 interface AssistantTracker {
-  trackAssistantSubmit(params: { intent: string; section?: string; threadId?: string }): unknown;
+  trackAssistantSubmit(params: {
+    intent: string;
+    section?: string;
+    threadId?: string;
+    source?: AssistantSubmitSource;
+  }): unknown;
   trackAssistantResultLoadStarted(params: {
     intent: string;
     section?: string;
@@ -100,7 +105,7 @@ export interface TrackSearchSubmitArgs {
 }
 
 export interface UseAsaTrackingReturn {
-  trackSubmit: (intent: string) => void;
+  trackSubmit: (intent: string, source?: AssistantSubmitSource) => void;
   trackResultLoadStarted: (args: TrackResultLoadStartedArgs) => void;
   trackResultLoadFinished: (args: TrackResultLoadFinishedArgs) => void;
   trackResultClick: (args: TrackResultClickArgs) => void;
@@ -138,8 +143,8 @@ export default function useAsaTracking({
   );
 
   const trackSubmit = useCallback(
-    (intent: string) => {
-      assistant?.trackAssistantSubmit({ intent, ...base });
+    (intent: string, source?: AssistantSubmitSource) => {
+      assistant?.trackAssistantSubmit({ intent, ...(source && { source }), ...base });
     },
     [assistant, base],
   );
