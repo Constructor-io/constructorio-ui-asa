@@ -110,7 +110,7 @@ This library declares the following as peer dependencies, so they must be presen
 
 | Package | Version |
 |---------|---------|
-| `@constructor-io/constructorio-client-javascript` | `^2.88.0` |
+| `@constructor-io/constructorio-client-javascript` | `^2.91.0` |
 | `@constructor-io/constructorio-ui-components` | `^1.6.0` |
 | `react` | `>=16.12.0` |
 | `react-dom` | `>=16.12.0` |
@@ -166,6 +166,8 @@ The provider accepts the following props:
 | `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
+| `callbacks` | `AsaCallbacks` | Hooks fired alongside the built-in behavioral tracking, one per event. See Behavioral Tracking. |
+| `section` | `string` | Index section sent with every tracking event. Defaults to `'Products'`. |
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. AI Shopping Assistant must be enabled for your account — contact your Constructor representative if agent requests return errors. If you already instantiate a `ConstructorIOClient` elsewhere in your app, pass it via `cioClient` instead of `apiKey`.
 
@@ -228,7 +230,7 @@ The `Chat` component accepts:
 |------|------|-------------|
 | `onClose` | `() => void` | Called when close button is clicked |
 | `className` | `string` | Additional CSS class for the root container |
-| `initialSuggestions` | `string[]` | Suggestion chips on the welcome screen |
+| `initialSuggestions` | `string[]` | Suggestion chips on the welcome screen. Clicks are tracked as `assistant_submit` with `source: 'suggestion'`. |
 | `termsText` | `ReactNode` | Legal text below the welcome input |
 | `onProductClick` | `(product) => void` | Product card click handler |
 | `onAddToCart` | `(product) => void` | Add to cart button handler (hidden if not provided) |
@@ -734,5 +736,74 @@ If the agent returns a server error, or the response stream fails, the in-progre
   background: #fdecec;
 }
 ```
+
+<div className="step-heading">
+  <span className="step-number">12</span>
+  <h2>Behavioral Tracking</h2>
+</div>
+
+Behavioral tracking is built in: mount the components (or call `useAsaResults`) with a provider that
+has a `cioClient`, and every event below is sent for you. There is nothing to instrument manually.
+Every event carries the provider's `section` (default `'Products'`) and the conversation's `threadId`.
+
+Each event has a matching entry in the provider's `callbacks` prop, fired right after the beacon
+with the same payload, so you can mirror ASA analytics into your own systems:
+
+| Event | Callback | Fired when |
+|-------|----------|------------|
+| `assistant_submit` | `onAssistantSubmit` | An intent is submitted — typed, or by clicking a suggested question |
+| `assistant_result_load_start` | `onResultLoadStart` | The response stream for that intent begins |
+| `assistant_result_load_finish` | `onResultLoadFinish` | The stream completes; carries the number of result pods |
+| `assistant_search_result_view` | `onResultView` | A result pod enters the viewport |
+| `assistant_search_result_click` | `onResultClick` | A product in a result pod is clicked |
+| `assistant_search_submit` | `onSearchSubmit` | The shopper opens a full search-results page from a pod (View More) |
+
+### Submit sources
+
+**A click on a suggested question is an intent submission, not a passive impression.**
+Every one of them sends `assistant_submit`, tagged with where it came from, so engagement reports
+count clicked questions alongside typed ones and can still tell them apart:
+
+| `source` | Entry point |
+|----------|-------------|
+| `input` | Shopper typed the intent and pressed Enter / clicked send |
+| `suggestion` | Shopper clicked a welcome-screen suggestion chip (`initialSuggestions`) |
+
+`onAssistantSubmit` receives the same `source`, so your own analytics get the same attribution:
+
+```jsx
+<CioAsaProvider
+  cioClient={cioClient}
+  callbacks={{
+    onAssistantSubmit: ({ intent, source }) => {
+      myAnalytics.track('asa_submit', { intent, source });
+    },
+  }}>
+  {children}
+</CioAsaProvider>
+```
+
+### Instrumenting ASA yourself
+
+If you render your own assistant UI (a custom web integration, or a native mobile app) instead of
+this library, you have to send the same events through the Constructor client — and the one most
+commonly missed is the submit that comes from a **click**, not from typing. Omitting it understates
+engagement, because a shopper who taps *"Help me find a gift"* never gets counted.
+
+Send `assistant_submit` on every entry point, with the matching `source`:
+
+```js
+// Typed intent
+cioClient.tracker.trackAssistantSubmit({ intent, source: 'input', threadId });
+
+// Suggested question chip
+cioClient.tracker.trackAssistantSubmit({ intent: suggestion, source: 'suggestion', threadId });
+```
+
+`source` needs a client version that forwards it on submit; older clients drop the field and the
+event is still recorded, just without attribution. On the API the field is optional and free-form —
+an unrecognized value is stored rather than rejected — but stick to the values above so
+reporting stays comparable across integrations. Pass the same `threadId` for every event in one
+conversation.
 
 </div>

@@ -305,14 +305,25 @@ describe('useAsaResults', () => {
   });
 
   describe('tracking', () => {
-    it('fires trackAssistantSubmit on send with the trimmed intent', () => {
+    it('fires trackAssistantSubmit on send with the trimmed intent and the `input` source', () => {
       const { client, tracker } = createMockCioClient({ events: [] });
       const { result } = renderUseAsaResults(client);
 
       act(() => result.current.sendMessage('  shoes  '));
 
       expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ intent: 'shoes' }),
+        expect.objectContaining({ intent: 'shoes', source: 'input' }),
+      );
+    });
+
+    it('fires trackAssistantSubmit with the `suggestion` source for suggestion chips', () => {
+      const { client, tracker } = createMockCioClient({ events: [] });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('shoes', 'suggestion'));
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'shoes', source: 'suggestion' }),
       );
     });
 
