@@ -80,6 +80,7 @@ describe('asaStreamHandlers', () => {
       handleFollowUpRefinement({ options: ['a'] }, ASSISTANT_ID, setMessages);
       handleFollowUpRefinement({ question: 'Q?', options: [] }, ASSISTANT_ID, setMessages);
       handleFollowUpRefinement({ question: 'Q?' }, ASSISTANT_ID, setMessages);
+      handleFollowUpRefinement({ question: '   ', options: ['a'] }, ASSISTANT_ID, setMessages);
       handleFollowUpRefinement(undefined, ASSISTANT_ID, setMessages);
       expect(setMessages).not.toHaveBeenCalled();
     });

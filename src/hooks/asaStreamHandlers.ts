@@ -74,11 +74,11 @@ export function handleFollowUpRefinement(
   assistantId: string,
   setMessages: MessageUpdater,
 ) {
-  const question = typeof data?.question === 'string' ? data.question : '';
+  const question = typeof data?.question === 'string' ? data.question.trim() : '';
   const options = Array.isArray(data?.options)
     ? data.options.filter((o: unknown): o is string => typeof o === 'string' && o.trim() !== '')
     : [];
-  if (!question || options.length === 0) return;
+  if (question === '' || options.length === 0) return;
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
     status: 'streaming',

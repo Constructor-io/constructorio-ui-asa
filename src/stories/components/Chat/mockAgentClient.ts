@@ -40,10 +40,15 @@ function scriptedTurn(intent: string): StreamEvent[] {
 
 function createEventStream(events: StreamEvent[], delayMs: number): ReadableStream<StreamEvent> {
   let index = 0;
+  let canceled = false;
   return new ReadableStream<StreamEvent>({
     pull(controller) {
       return new Promise((resolve) => {
         setTimeout(() => {
+          if (canceled) {
+            resolve();
+            return;
+          }
           if (index < events.length) {
             controller.enqueue(events[index]);
             index += 1;
@@ -53,6 +58,9 @@ function createEventStream(events: StreamEvent[], delayMs: number): ReadableStre
           resolve();
         }, delayMs);
       });
+    },
+    cancel() {
+      canceled = true;
     },
   });
 }
