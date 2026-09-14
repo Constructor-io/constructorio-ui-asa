@@ -58,13 +58,8 @@ function getAnnouncement(messages: ChatMessage[], translations?: Translations): 
     return `${youSaid}: ${userText}. ${typing}`;
   }
 
-  if (lastMessage.status === 'done') {
-    const { text, refinement } = lastMessage;
-    const refinementText = refinement
-      ? `${refinement.question} ${refinement.options.join(', ')}`
-      : '';
-    const spoken = [text, refinementText].filter(Boolean).join('. ');
-    if (spoken) return `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${spoken}`;
+  if (lastMessage.status === 'done' && lastMessage.text) {
+    return `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${lastMessage.text}`;
   }
 
   return '';
