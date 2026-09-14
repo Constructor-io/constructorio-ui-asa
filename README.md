@@ -36,7 +36,7 @@ This library declares the following as peer dependencies, so they must be presen
 
 | Package | Version |
 |---------|---------|
-| `@constructor-io/constructorio-client-javascript` | `^2.88.0` |
+| `@constructor-io/constructorio-client-javascript` | `^2.93.1` |
 | `@constructor-io/constructorio-ui-components` | `^1.6.0` |
 | `react` | `>=16.12.0` |
 | `react-dom` | `>=16.12.0` |
