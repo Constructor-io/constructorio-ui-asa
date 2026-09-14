@@ -120,6 +120,18 @@ describe('Chat', () => {
       expect(screen.getByText('Who are you shopping for?')).toBeInTheDocument();
     });
 
+    it('announces the refinement question and options when the reply has no text', async () => {
+      renderChat({}, refinementEvents.slice(1));
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+
+      await screen.findByRole('button', { name: "Men's styles" });
+      await waitFor(() =>
+        expect(screen.getByRole('status')).toHaveTextContent(
+          "Assistant said: Who are you shopping for? Women's styles, Men's styles",
+        ),
+      );
+    });
+
     it('sends the clicked option as a follow-up in the same thread', async () => {
       const { client, getAgentResultsStream } = createMockCioClient({
         events: [{ type: 'start', data: { thread_id: 'thread-1' } }, ...refinementEvents],

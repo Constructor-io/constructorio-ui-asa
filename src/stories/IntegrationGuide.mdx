@@ -569,7 +569,7 @@ The hook returns exactly:
 | Return value | Type | Description |
 |--------------|------|-------------|
 | `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
-| `sendMessage` | `(text: string) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. |
+| `sendMessage` | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement') => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. |
 | `isStreaming` | `boolean` | Whether a response is currently streaming |
 | `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
 
@@ -581,6 +581,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   groups?: ResultGroup[]; // present on assistant messages that return products
+  refinement?: { question: string; options: string[] }; // narrowing question from a follow_up_refinement event
   status: 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 }
 
