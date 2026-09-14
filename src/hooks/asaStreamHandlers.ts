@@ -69,6 +69,23 @@ export function handleMessage(data: any, assistantId: string, setMessages: Messa
   }));
 }
 
+export function handleFollowUpRefinement(
+  data: any,
+  assistantId: string,
+  setMessages: MessageUpdater,
+) {
+  const question = typeof data?.question === 'string' ? data.question.trim() : '';
+  const options = Array.isArray(data?.options)
+    ? data.options.filter((o: unknown): o is string => typeof o === 'string' && o.trim() !== '')
+    : [];
+  if (question === '' || options.length === 0) return;
+  updateMessageById(setMessages, assistantId, (msg) => ({
+    ...msg,
+    status: 'streaming',
+    refinement: { question, options },
+  }));
+}
+
 export function handleServerError(assistantId: string, setMessages: MessageUpdater) {
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,

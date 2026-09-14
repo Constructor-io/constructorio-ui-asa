@@ -96,6 +96,14 @@ export interface ChatMessage {
   intent?: string;
   intentResultId?: string;
   threadId?: string;
+  /** Narrowing question the agent asked at the end of this turn, from a `follow_up_refinement` event. */
+  refinement?: FollowUpRefinement;
+}
+
+/** A narrowing question with selectable options, emitted by the agent as a `follow_up_refinement` event. */
+export interface FollowUpRefinement {
+  question: string;
+  options: string[];
 }
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
@@ -164,8 +172,8 @@ export interface UseAsaResultsOptions {
 
 // --- Behavioral tracking ---
 
-/** How an intent was submitted: typed into the input, or a suggestion chip clicked. */
-export type AssistantSubmitSource = 'input' | 'suggestion';
+/** How an intent was submitted: typed input, a welcome-screen suggestion chip, or a refinement chip. */
+export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement';
 
 /** An item within a viewed/clicked search_result pod. */
 export interface AssistantTrackedItem {
@@ -180,7 +188,7 @@ export interface AssistantTrackedItem {
  * so consumers can mirror ASA analytics into their own systems. All are optional.
  */
 export interface AsaCallbacks {
-  /** User submitted an intent (typed) or clicked a suggestion. */
+  /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */
   onResultLoadStart?: (payload: { intent: string; intentResultId?: string }) => void;
@@ -240,6 +248,7 @@ export type Translations = {
   'CioAsa.results.viewMore'?: string;
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
+  'CioAsa.refinement.ariaLabel'?: string;
   'CioAsa.error.message'?: string;
 };
 
@@ -287,6 +296,15 @@ export interface AiMessageTextRenderProps {
   text: string;
 }
 
+export interface FollowUpRefinementRenderProps {
+  question: string;
+  options: string[];
+  /** Sends the option as a follow-up message. No-op while `isDisabled`. */
+  onOptionClick: (option: string) => void;
+  /** True for earlier refinements and while a response is streaming. */
+  isDisabled: boolean;
+}
+
 export interface ResultsGroupTitleRenderProps {
   label: string;
 }
@@ -311,6 +329,7 @@ export interface ChatInputOverrides {
 export interface AiMessageOverrides {
   loader?: ComponentOverrideProps<AiMessageLoaderRenderProps>;
   text?: ComponentOverrideProps<AiMessageTextRenderProps>;
+  followUpRefinement?: ComponentOverrideProps<FollowUpRefinementRenderProps>;
 }
 
 export interface ResultsBlockOverrides {

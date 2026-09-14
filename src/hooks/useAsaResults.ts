@@ -10,6 +10,7 @@ import {
 import {
   handleSearchResult,
   handleMessage,
+  handleFollowUpRefinement,
   handleServerError,
   handleStreamEnd,
   handleStreamError,
@@ -172,6 +173,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
             } else if (type === 'message') {
               fireLoadStart();
               handleMessage(data, assistantMessage.id, setMessages);
+            } else if (type === 'follow_up_refinement') {
+              fireLoadStart();
+              handleFollowUpRefinement(data, assistantMessage.id, setMessages);
             } else if (type === 'server_error') {
               handleServerError(assistantMessage.id, setMessages);
               break;

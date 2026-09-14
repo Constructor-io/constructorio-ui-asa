@@ -38,6 +38,7 @@ export type {
   // Chat data model
   ChatMessage,
   ChatMessageStatus,
+  FollowUpRefinement,
   ResultGroup,
   ResultGroupMeta,
   SearchResultEventRequest,
@@ -64,6 +65,7 @@ export type {
   UserMessageRenderProps,
   AiMessageLoaderRenderProps,
   AiMessageTextRenderProps,
+  FollowUpRefinementRenderProps,
   ResultsGroupTitleRenderProps,
   ResultsViewMoreRenderProps,
 } from './types';
