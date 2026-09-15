@@ -32,6 +32,8 @@ export interface AsaContextValue {
   urlHelpers: UrlHelpers;
   callbacks?: AsaCallbacks;
   section?: string;
+  /** Resolved chat persistence adapter, or `undefined` when persistence is off. */
+  persistence?: ChatPersistence;
 }
 
 export interface RequestConfigs extends IAgentParameters {
@@ -53,8 +55,17 @@ export interface UrlHelpers {
 // `setCioClientOptions`, not a provider input. Configure the client with `apiKey`
 // (optionally after instantiating your own `cioClient`).
 export interface CioAsaProviderProps
-  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions' | 'cioClientOptions'> {
+  extends Omit<
+    Partial<AsaContextValue>,
+    'setCioClientOptions' | 'cioClientOptions' | 'persistence'
+  > {
   apiKey?: string;
+  /**
+   * Persist the conversation so it survives page loads. `true` uses the library's default
+   * strategy (currently `localStorage`, keyed by api key + domain, 7 day TTL); pass a custom
+   * `ChatPersistence` adapter to control storage yourself. Off when omitted.
+   */
+  persistence?: ChatPersistenceOption;
 }
 
 export interface UseCioClientProps {
@@ -163,11 +174,64 @@ export interface UseChatReturn {
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
   isStreaming: boolean;
   clearHistory: () => void;
+  /** True while a persisted conversation is being loaded. Always `false` when persistence is off. */
+  isHydrating: boolean;
 }
 
 export interface UseAsaResultsOptions {
-  /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
+  /**
+   * Seed the thread id to resume a prior conversation. Read once on mount. With persistence
+   * enabled, the matching stored transcript is restored too when one exists.
+   */
   initialThreadId?: string;
+}
+
+// --- Persistence ---
+
+/** A stored conversation. `threadId` is the server thread id, or a `local-` id for non-conversational domains. */
+export interface PersistedChat {
+  version: 1;
+  threadId: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ThreadSummary {
+  threadId: string;
+  /** First user message, truncated. */
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * Storage adapter for conversations. The built-in `createLocalStoragePersistence` implements it
+ * against `localStorage`; a server-backed adapter can implement the same contract.
+ */
+export interface ChatPersistence {
+  /** Most recently updated first. */
+  listThreads(): Promise<ThreadSummary[]>;
+  getThread(threadId: string): Promise<PersistedChat | null>;
+  saveThread(chat: PersistedChat): Promise<void>;
+  deleteThread(threadId: string): Promise<void>;
+}
+
+export type ChatPersistenceOption = ChatPersistence | boolean;
+
+export interface LocalStoragePersistenceOptions {
+  /** Storage key prefix. Default `'cio-asa:chat'`. */
+  key?: string;
+  /** Appended to the key to isolate conversations, e.g. per api key + domain. */
+  namespace?: string;
+  /** Threads idle longer than this are dropped on read. Default 7 days, matching server retention. */
+  ttlMs?: number;
+  /** Most recent user/assistant turns kept per thread. Default 20. */
+  maxTurns?: number;
+  /** Most recent threads kept. Default 5. */
+  maxThreads?: number;
+  /** Storage to use instead of `window.localStorage` (e.g. `sessionStorage`). */
+  storage?: Storage;
 }
 
 // --- Behavioral tracking ---

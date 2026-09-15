@@ -16,6 +16,7 @@ export type { UseAsaTrackingProps, UseAsaTrackingReturn } from './hooks/useAsaTr
 // Utils
 export { normalizeItemToProduct } from './utils/productNormalizer';
 export type { Product, NormalizeOptions } from './utils/productNormalizer';
+export { createLocalStoragePersistence } from './utils/chatPersistence';
 
 // Re-exported client value from the JS client (used to construct/type a cioClient)
 export { ConstructorIOClient } from './types';
@@ -44,6 +45,12 @@ export type {
   SearchResultEventRequest,
   UseAsaResultsOptions,
   UseChatReturn,
+  // Persistence
+  ChatPersistence,
+  ChatPersistenceOption,
+  PersistedChat,
+  ThreadSummary,
+  LocalStoragePersistenceOptions,
   // Behavioral tracking
   AsaCallbacks,
   AssistantSubmitSource,

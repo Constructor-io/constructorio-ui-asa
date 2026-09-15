@@ -84,13 +84,15 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     },
     ref,
   ) => {
-    const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
+    const { messages, sendMessage, isStreaming, clearHistory, isHydrating } = useAsaResults({
       initialThreadId,
     });
     const chatViewRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const isWelcome = messages.length === 0;
+    const showWelcome = !isHydrating && isWelcome;
+    const showChat = !isHydrating && !isWelcome;
     const isModal = typeof onClose === 'function';
     const announcement = getAnnouncement(messages, translations);
 
@@ -99,6 +101,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     }));
 
     useEffect(() => {
+      if (isHydrating) return;
       const root = isWelcome ? containerRef.current : chatViewRef.current;
       const input = root?.querySelector('input');
       if (input) {
@@ -110,7 +113,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
           input.focus();
         }
       }
-    }, [isWelcome]);
+    }, [isWelcome, isHydrating]);
 
     useFocusTrap(containerRef, { onEscape: onClose, trapFocus: isModal });
 
@@ -128,7 +131,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
           {announcement}
         </div>
         <div className='cio-asa-chat-body'>
-          {isWelcome ? (
+          {showWelcome && (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>
               <WelcomeScreen
                 suggestions={initialSuggestions}
@@ -139,7 +142,8 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 componentOverrides={componentOverrides?.welcomeScreen}
               />
             </div>
-          ) : (
+          )}
+          {showChat && (
             <div className='cio-asa-chat-view cio-asa-chat-view--chat' ref={chatViewRef}>
               <ChatHeader
                 onClose={onClose}
