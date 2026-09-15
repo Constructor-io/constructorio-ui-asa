@@ -11,7 +11,11 @@ export type { ButtonProps } from './components/Button/Button';
 export { default as useAsaResults } from './hooks/useAsaResults';
 export { default as useAsaTracking } from './hooks/useAsaTracking';
 export { default as useCioAsaContext } from './hooks/useCioAsaContext';
-export type { UseAsaTrackingProps, UseAsaTrackingReturn } from './hooks/useAsaTracking';
+export type {
+  UseAsaTrackingProps,
+  UseAsaTrackingReturn,
+  TrackAgentButtonClickArgs,
+} from './hooks/useAsaTracking';
 
 // Utils
 export { normalizeItemToProduct } from './utils/productNormalizer';
@@ -48,6 +52,8 @@ export type {
   AsaCallbacks,
   AssistantSubmitSource,
   AssistantTrackedItem,
+  AgentButtonClickPageType,
+  AgentButtonClickPlacement,
   // Customization via componentOverrides
   ChatComponentOverrides,
   WelcomeScreenOverrides,

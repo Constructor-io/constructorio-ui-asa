@@ -8,6 +8,7 @@ describe('useAsaTracking', () => {
     const { result } = renderHook(() => useAsaTracking({}));
     // Should not throw when called without a tracker.
     expect(() => {
+      result.current.trackAgentButtonClick({ mode: 'chat', domain: 'chatbot' });
       result.current.trackSubmit('shoes');
       result.current.trackResultLoadStarted({ intent: 'shoes' });
       result.current.trackResultLoadFinished({ intent: 'shoes', searchResultCount: 0 });
@@ -159,5 +160,54 @@ describe('useAsaTracking', () => {
       intentResultId: 'ir-1',
       threadId: 't-9',
     });
+  });
+
+  it('forwards trackAgentButtonClick with placement fields and section, without threadId', () => {
+    const tracker = createMockTracker();
+    const { result } = renderHook(() =>
+      useAsaTracking({
+        tracker: tracker as unknown as Tracker,
+        section: 'Products',
+        threadId: 't-1',
+      }),
+    );
+
+    result.current.trackAgentButtonClick({
+      mode: 'chat',
+      domain: 'chatbot',
+      positionOnPage: 'header',
+      pageType: 'pdp',
+      instanceId: 2,
+    });
+
+    expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({
+      mode: 'chat',
+      domain: 'chatbot',
+      positionOnPage: 'header',
+      pageType: 'pdp',
+      instanceId: 2,
+      section: 'Products',
+    });
+  });
+
+  it('omits placement fields from trackAgentButtonClick when not provided', () => {
+    const tracker = createMockTracker();
+    const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
+
+    result.current.trackAgentButtonClick({ mode: 'chat', domain: 'chatbot' });
+
+    expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({ mode: 'chat', domain: 'chatbot' });
+  });
+
+  it('does not throw when the tracker predates trackAgentButtonClick', () => {
+    const { trackAgentButtonClick, ...legacyTracker } = createMockTracker();
+    const { result } = renderHook(() =>
+      useAsaTracking({ tracker: legacyTracker as unknown as Tracker }),
+    );
+
+    expect(() =>
+      result.current.trackAgentButtonClick({ mode: 'chat', domain: 'chatbot' }),
+    ).not.toThrow();
+    expect(trackAgentButtonClick).not.toHaveBeenCalled();
   });
 });

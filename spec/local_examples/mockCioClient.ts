@@ -41,6 +41,7 @@ export type StreamEvent =
   | { type: 'server_error'; data?: Record<string, unknown> };
 
 export type MockTracker = {
+  trackAgentButtonClick: jest.Mock;
   trackAssistantSubmit: jest.Mock;
   trackAssistantResultLoadStarted: jest.Mock;
   trackAssistantResultLoadFinished: jest.Mock;
@@ -51,6 +52,7 @@ export type MockTracker = {
 
 export function createMockTracker(): MockTracker {
   return {
+    trackAgentButtonClick: jest.fn(),
     trackAssistantSubmit: jest.fn(),
     trackAssistantResultLoadStarted: jest.fn(),
     trackAssistantResultLoadFinished: jest.fn(),
