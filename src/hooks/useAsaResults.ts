@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
 import {
   AssistantSubmitSource,
+  ChatPersistence,
   ResultGroupMeta,
   ChatMessage,
+  PersistedChat,
   UseAsaResultsOptions,
   UseChatReturn,
 } from '../types';
@@ -16,6 +18,21 @@ import {
   handleStreamError,
 } from './asaStreamHandlers';
 import useAsaTracking from './useAsaTracking';
+import {
+  PERSISTED_CHAT_VERSION,
+  createLocalThreadId,
+  isLocalThreadId,
+  normalizeHydratedMessages,
+} from '../utils/chatPersistence';
+
+async function loadPersistedChat(
+  store: ChatPersistence,
+  initialThreadId?: string,
+): Promise<PersistedChat | null> {
+  if (initialThreadId) return store.getThread(initialThreadId);
+  const [latest] = await store.listThreads();
+  return latest ? store.getThread(latest.threadId) : null;
+}
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -30,13 +47,21 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   if (!contextValue) {
     throw new Error('useAsaResults must be used within a CioAsaProvider.');
   }
-  const { cioClient, staticRequestConfigs, callbacks, section } = contextValue;
+  const { cioClient, staticRequestConfigs, callbacks, section, persistence } = contextValue;
   const { domain } = staticRequestConfigs || {};
   if (!cioClient || !domain) {
     throw new Error(
       'useAsaResults requires a configured cioClient and domain. Check your CioAsaProvider props.',
     );
   }
+
+  const [isHydrating, setIsHydrating] = useState(Boolean(persistence));
+  const persistenceRef = useRef(persistence);
+  persistenceRef.current = persistence;
+  const storageThreadIdRef = useRef<string | null>(null);
+  const createdAtRef = useRef<number | null>(null);
+  const dirtyRef = useRef(false);
+  const interactedRef = useRef(false);
 
   const tracking = useAsaTracking({
     tracker: cioClient.tracker,
@@ -55,10 +80,61 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     return `msg-${idCounterRef.current}-${Date.now()}`;
   }, []);
 
+  useEffect(() => {
+    const store = persistenceRef.current;
+    if (!store) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const chat = await loadPersistedChat(store, options?.initialThreadId);
+        if (cancelled || !chat || interactedRef.current) return;
+        storageThreadIdRef.current = chat.threadId;
+        createdAtRef.current = chat.createdAt;
+        if (!isLocalThreadId(chat.threadId)) threadIdRef.current = chat.threadId;
+        idCounterRef.current = chat.messages.length;
+        setMessages(normalizeHydratedMessages(chat.messages));
+      } catch {
+        /* storage unavailable: start empty */
+      } finally {
+        if (!cancelled) setIsHydrating(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const store = persistenceRef.current;
+    if (!store || isStreaming || !dirtyRef.current) return;
+    dirtyRef.current = false;
+    if (messages.length === 0) return;
+
+    const previousId = storageThreadIdRef.current;
+    const threadId = threadIdRef.current ?? previousId ?? createLocalThreadId();
+    storageThreadIdRef.current = threadId;
+    if (previousId && previousId !== threadId) {
+      store.deleteThread(previousId).catch(() => {});
+    }
+    const now = Date.now();
+    createdAtRef.current = createdAtRef.current ?? now;
+    store
+      .saveThread({
+        version: PERSISTED_CHAT_VERSION,
+        threadId,
+        messages,
+        createdAt: createdAtRef.current,
+        updatedAt: now,
+      })
+      .catch(() => {});
+  }, [messages, isStreaming]);
+
   const sendMessage = useCallback(
     (text: string, source: AssistantSubmitSource = 'input') => {
       const intent = text.trim();
       if (!intent || isStreamingRef.current) return;
+      interactedRef.current = true;
 
       trackingRef.current.trackSubmit(intent);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
@@ -187,6 +263,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
           if (readerRef.current === reader) {
             reader.cancel();
             readerRef.current = null;
+            dirtyRef.current = true;
             setIsStreaming(false);
             isStreamingRef.current = false;
           }
@@ -214,10 +291,16 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       readerRef.current = null;
     }
     threadIdRef.current = null;
+    const storedId = storageThreadIdRef.current;
+    storageThreadIdRef.current = null;
+    createdAtRef.current = null;
+    dirtyRef.current = false;
+    interactedRef.current = true;
+    if (storedId) persistenceRef.current?.deleteThread(storedId).catch(() => {});
     setMessages([]);
     setIsStreaming(false);
     isStreamingRef.current = false;
   }, []);
 
-  return { messages, sendMessage, isStreaming, clearHistory };
+  return { messages, sendMessage, isStreaming, clearHistory, isHydrating };
 }

@@ -166,6 +166,7 @@ The provider accepts the following props:
 | `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
+| `persistence` | `boolean \| ChatPersistence` | Keep the conversation across page loads. `true` uses the built-in strategy; pass an adapter to control storage. Off when omitted. See Persistent chat under step 7. |
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. AI Shopping Assistant must be enabled for your account — contact your Constructor representative if agent requests return errors. If you already instantiate a `ConstructorIOClient` elsewhere in your app, pass it via `cioClient` instead of `apiKey`.
 
@@ -538,31 +539,57 @@ function CustomChat() {
 }
 ```
 
-**Resuming a conversation from browser storage.** Pass `initialThreadId` to seed the hook's thread id at mount. Combine it with your own persistence of `messages` (e.g. `localStorage`) to survive page reloads on the same server-side thread:
+### Persistent chat
+
+Enable `persistence` on the provider and the conversation survives page loads, including full navigations between product pages. Both `Chat` and `useAsaResults` pick it up; no other change is needed. `true` selects the library's default strategy, currently `localStorage`; future releases may move it to a server-backed store without changes on your side.
 
 ```jsx
-import { useEffect } from 'react';
-import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
+<CioAsaProvider apiKey="YOUR_API_KEY" persistence>
+  <Chat />
+</CioAsaProvider>
+```
 
-function CustomChat() {
-  const savedThreadId = typeof window !== 'undefined'
-    ? window.localStorage.getItem('cio-asa-thread-id') ?? undefined
-    : undefined;
+What the current default does:
 
-  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
-    initialThreadId: savedThreadId,
-  });
+- Stores the transcript and the server thread id in `localStorage`, keyed by api key and domain, so one shopper's conversation follows them across pages of the same site.
+- Saves once per completed turn (never per streamed chunk) and restores on mount. `isHydrating` is `true` from the hook while that happens; `Chat` renders neither the welcome screen nor the transcript until it is done.
+- Expires threads after 7 days of inactivity. This matches how long the agent keeps its own memory of a thread; after that the shopper starts fresh.
+- Keeps the last 20 turns per thread and the 5 most recent threads. If the browser's storage quota is hit, it drops other threads first and then the oldest turns of the current one.
+- Settles turns interrupted by a reload: a partially streamed answer becomes `done`, an empty one becomes `error`.
+- `clearHistory()` deletes the stored thread as well as the on-screen one.
 
-  useEffect(() => {
-    const latest = messages.findLast?.((m) => m.threadId)?.threadId;
-    if (latest) window.localStorage.setItem('cio-asa-thread-id', latest);
-  }, [messages]);
+Storage stays on the shopper's device. A different browser or device starts a new conversation; the agent's own memory is also scoped per browser, so nothing is lost that the server could have restored.
 
-  // ...
+Tune the defaults, or point the adapter at `sessionStorage` for per-tab persistence, with `createLocalStoragePersistence`:
+
+```jsx
+import { CioAsaProvider, Chat, createLocalStoragePersistence } from '@constructor-io/constructorio-ui-asa';
+
+const persistence = createLocalStoragePersistence({
+  namespace: 'YOUR_API_KEY:chatbot',
+  ttlMs: 24 * 60 * 60 * 1000,
+  maxTurns: 10,
+});
+
+<CioAsaProvider apiKey="YOUR_API_KEY" persistence={persistence}>
+  <Chat />
+</CioAsaProvider>
+```
+
+Any object implementing `ChatPersistence` can be passed instead, for example one backed by your own API:
+
+```ts
+interface ChatPersistence {
+  listThreads(): Promise<ThreadSummary[]>;          // most recent first
+  getThread(threadId: string): Promise<PersistedChat | null>;
+  saveThread(chat: PersistedChat): Promise<void>;
+  deleteThread(threadId: string): Promise<void>;
 }
 ```
 
-`Chat` accepts the same prop — pass `initialThreadId` to resume without touching the hook directly.
+`PersistedChat` is `{ version: 1, threadId, messages: ChatMessage[], createdAt, updatedAt }`. `threadId` is the agent's thread id for conversational domains, or a client-generated `local-…` id when the domain has no server-side memory; local ids are never sent to the agent.
+
+**Resuming a specific thread.** `initialThreadId` (on `Chat` or the hook) still seeds the thread id at mount. With persistence enabled it also restores that thread's stored transcript instead of the most recent one, and falls back to seeding the id alone when nothing is stored for it.
 
 The hook returns exactly:
 
@@ -571,7 +598,8 @@ The hook returns exactly:
 | `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
 | `sendMessage` | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement') => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. |
 | `isStreaming` | `boolean` | Whether a response is currently streaming |
-| `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
+| `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread, and delete the stored thread when persistence is on |
+| `isHydrating` | `boolean` | Whether a stored conversation is still being loaded. Always `false` when persistence is off |
 
 Each `ChatMessage` has this shape:
 
