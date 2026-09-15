@@ -40,6 +40,24 @@ const meta = {
       description: 'Button label text.',
       table: { category: 'Appearance' },
     },
+    positionOnPage: {
+      control: 'text',
+      description:
+        'Stable label for where the CTA sits (e.g. `header`, `search_bar`). Sent with the `ai_agent_button_click` event.',
+      table: { category: 'Tracking' },
+    },
+    pageType: {
+      control: 'select',
+      options: ['home', 'plp', 'pdp', 'collection', 'email_campaign', 'cart'],
+      description:
+        'Page surface the CTA is rendered on. Sent with the `ai_agent_button_click` event.',
+      table: { category: 'Tracking' },
+    },
+    instanceId: {
+      control: 'number',
+      description: '1-based index when several CTAs share the same position on one page.',
+      table: { category: 'Tracking' },
+    },
   },
 } satisfies Meta<typeof Button>;
 

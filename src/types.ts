@@ -182,12 +182,35 @@ export interface AssistantTrackedItem {
   variationId?: string;
 }
 
+/** Page surface an agent CTA was clicked on. */
+export type AgentButtonClickPageType =
+  | 'home'
+  | 'plp'
+  | 'pdp'
+  | 'collection'
+  | 'email_campaign'
+  | 'cart';
+
+/** Where an agent CTA sits on the page. All fields are optional. */
+export interface AgentButtonClickPlacement {
+  /** Stable label describing where the CTA is placed, e.g. `'header'` or `'search_bar'`. */
+  positionOnPage?: string;
+  /** Page surface where the CTA was clicked. */
+  pageType?: AgentButtonClickPageType;
+  /** 1-based index distinguishing CTA instances with the same mode and position during one page view. */
+  instanceId?: number;
+}
+
 /**
  * Optional consumer callbacks fired alongside the built-in behavioral tracking.
  * Each fires immediately after its corresponding `trackAssistant*` beacon is sent,
  * so consumers can mirror ASA analytics into their own systems. All are optional.
  */
 export interface AsaCallbacks {
+  /** A CTA that opens the assistant (the built-in `Button`) was clicked. */
+  onAgentButtonClick?: (
+    payload: { mode: string; domain: string } & AgentButtonClickPlacement,
+  ) => void;
   /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */

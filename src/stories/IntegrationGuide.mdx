@@ -660,6 +660,46 @@ import { Button } from '@constructor-io/constructorio-ui-asa';
 | `size` | `'sm' \| 'lg'` | `'sm'` | Button size |
 | `label` | `string` | `'Shopping assistant'` | Button text |
 | `onClick` | `() => void` | — | Click handler |
+| `positionOnPage` | `string` | — | Stable label for where the CTA sits, e.g. `'header'`, `'search_bar'`, `'pdp_above_fold'` |
+| `pageType` | `'home' \| 'plp' \| 'pdp' \| 'collection' \| 'email_campaign' \| 'cart'` | — | Page surface the CTA is rendered on |
+| `instanceId` | `number` | — | 1-based index when several CTAs share the same position on one page |
+
+#### Tracking CTA clicks
+
+When rendered inside a `CioAsaProvider`, `Button` sends one `ai_agent_button_click` behavioral event per
+click with `mode: 'chat'` and the provider's `domain` (`staticRequestConfigs.domain`, default `'chatbot'`).
+Pass `positionOnPage`, `pageType` and `instanceId` to tell placements apart in analytics. The optional
+`callbacks.onAgentButtonClick` fires with the same payload right after the beacon is sent.
+
+```jsx
+<Button positionOnPage="header" pageType="pdp" onClick={() => setIsOpen(true)} />
+```
+
+If you render your own CTA instead of `Button`, send the event yourself through `useAsaTracking`:
+
+```jsx
+import { useAsaTracking, useCioAsaContext } from '@constructor-io/constructorio-ui-asa';
+
+function CustomLauncher({ onOpen }) {
+  const context = useCioAsaContext();
+  const { trackAgentButtonClick } = useAsaTracking({
+    tracker: context?.cioClient?.tracker ?? undefined,
+    section: context?.section,
+  });
+
+  return (
+    <button
+      onClick={() => {
+        trackAgentButtonClick({ mode: 'chat', domain: 'chatbot', positionOnPage: 'plp_sidebar', pageType: 'plp' });
+        onOpen();
+      }}>
+      Ask the assistant
+    </button>
+  );
+}
+```
+
+Send exactly one event per intentional click on a CTA whose primary action is to open or start the assistant.
 
 > Both `onAddToCart` and `onViewMore` are optional on `Chat` **and** `ResultsBlock`. If you don't pass a handler, the corresponding button/link is not rendered — so the Add-to-cart button and View-more link only appear when you opt in.
 

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
-import { AssistantTrackedItem } from '../types';
+import { AgentButtonClickPlacement, AssistantTrackedItem } from '../types';
 
 /**
  * The installed client (2.88.0) exposes the six `trackAssistant*` methods but its
@@ -8,8 +8,19 @@ import { AssistantTrackedItem } from '../types';
  * the `at-194` branch). We describe the parameter shapes we send here — including
  * `threadId` — and call through this narrowed view of the tracker so the extra field
  * compiles now and flows through once the client types catch up.
+ *
+ * `trackAgentButtonClick` is likewise ahead of the installed client and is optional
+ * here so older clients simply skip the beacon.
  */
 interface AssistantTracker {
+  trackAgentButtonClick?(params: {
+    mode: string;
+    domain: string;
+    positionOnPage?: string;
+    pageType?: string;
+    instanceId?: number;
+    section?: string;
+  }): unknown;
   trackAssistantSubmit(params: { intent: string; section?: string; threadId?: string }): unknown;
   trackAssistantResultLoadStarted(params: {
     intent: string;
@@ -99,7 +110,13 @@ export interface TrackSearchSubmitArgs {
   groupId?: string;
 }
 
+export interface TrackAgentButtonClickArgs extends AgentButtonClickPlacement {
+  mode: string;
+  domain: string;
+}
+
 export interface UseAsaTrackingReturn {
+  trackAgentButtonClick: (args: TrackAgentButtonClickArgs) => void;
   trackSubmit: (intent: string) => void;
   trackResultLoadStarted: (args: TrackResultLoadStartedArgs) => void;
   trackResultLoadFinished: (args: TrackResultLoadFinishedArgs) => void;
@@ -109,6 +126,7 @@ export interface UseAsaTrackingReturn {
 }
 
 const NOOP_TRACKING: UseAsaTrackingReturn = {
+  trackAgentButtonClick: () => {},
   trackSubmit: () => {},
   trackResultLoadStarted: () => {},
   trackResultLoadFinished: () => {},
@@ -135,6 +153,20 @@ export default function useAsaTracking({
       ...(threadId && { threadId }),
     }),
     [section, threadId],
+  );
+
+  const trackAgentButtonClick = useCallback(
+    ({ mode, domain, positionOnPage, pageType, instanceId }: TrackAgentButtonClickArgs) => {
+      assistant?.trackAgentButtonClick?.({
+        mode,
+        domain,
+        ...(positionOnPage && { positionOnPage }),
+        ...(pageType && { pageType }),
+        ...(instanceId && { instanceId }),
+        ...(section && { section }),
+      });
+    },
+    [assistant, section],
   );
 
   const trackSubmit = useCallback(
@@ -228,6 +260,7 @@ export default function useAsaTracking({
   return useMemo(() => {
     if (!assistant) return NOOP_TRACKING;
     return {
+      trackAgentButtonClick,
       trackSubmit,
       trackResultLoadStarted,
       trackResultLoadFinished,
@@ -237,6 +270,7 @@ export default function useAsaTracking({
     };
   }, [
     assistant,
+    trackAgentButtonClick,
     trackSubmit,
     trackResultLoadStarted,
     trackResultLoadFinished,
