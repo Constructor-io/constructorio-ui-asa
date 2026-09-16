@@ -429,30 +429,30 @@ describe('useAsaResults', () => {
       });
 
       it('keeps a reply whose only content is a follow-up refinement', async () => {
-      const { stream } = createHangingStream([
-        {
-          type: 'follow_up_refinement',
-          data: { question: 'Who are you shopping for?', options: ['Women', 'Men'] },
-        },
-      ] as StreamEvent[]);
-      const { client } = createMockCioClient({ stream });
-      const { result } = renderUseAsaResults(client);
+        const { stream } = createHangingStream([
+          {
+            type: 'follow_up_refinement',
+            data: { question: 'Who are you shopping for?', options: ['Women', 'Men'] },
+          },
+        ] as StreamEvent[]);
+        const { client } = createMockCioClient({ stream });
+        const { result } = renderUseAsaResults(client);
 
-      act(() => result.current.sendMessage('shoes'));
-      await waitFor(() => expect(result.current.messages[1].refinement).toBeDefined());
+        act(() => result.current.sendMessage('shoes'));
+        await waitFor(() => expect(result.current.messages[1].refinement).toBeDefined());
 
-      act(() => result.current.abort());
+        act(() => result.current.abort());
 
-      // The narrowing question is content — dropping it would lose the agent's follow-up.
-      expect(result.current.messages).toHaveLength(2);
-      expect(result.current.messages[1]).toMatchObject({ status: 'done', text: '' });
-      expect(result.current.messages[1].refinement).toEqual({
-        question: 'Who are you shopping for?',
-        options: ['Women', 'Men'],
+        // The narrowing question is content — dropping it would lose the agent's follow-up.
+        expect(result.current.messages).toHaveLength(2);
+        expect(result.current.messages[1]).toMatchObject({ status: 'done', text: '' });
+        expect(result.current.messages[1].refinement).toEqual({
+          question: 'Who are you shopping for?',
+          options: ['Women', 'Men'],
+        });
       });
-    });
 
-    it('does not report the load as finished, because it never was', async () => {
+      it('does not report the load as finished, because it never was', async () => {
         const { result, tracker } = await renderMidStream();
 
         act(() => result.current.abort());
