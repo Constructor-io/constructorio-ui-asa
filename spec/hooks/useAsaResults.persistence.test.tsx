@@ -799,4 +799,114 @@ describe('useAsaResults persistence', () => {
       expect(unsubscribe).toHaveBeenCalled();
     });
   });
+
+  describe('adapter changes', () => {
+    function renderSwitchable(
+      client: ConstructorIOClient,
+      initial: ChatPersistence | boolean | undefined,
+    ) {
+      let current = initial;
+      const hook = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            persistence={current}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+      return {
+        ...hook,
+        switchTo(next: ChatPersistence | boolean | undefined) {
+          current = next;
+          hook.rerender();
+        },
+      };
+    }
+
+    it('re-hydrates from a new adapter and leaves the old conversation behind', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store: storeA } = createMemoryPersistence(
+        [persisted('a', [userMsg('u1', 'from A'), aiMsg('a1', 'answer A')])],
+        true,
+      );
+      const { store: storeB } = createMemoryPersistence(
+        [persisted('b', [userMsg('u2', 'from B'), aiMsg('a2', 'answer B')])],
+        true,
+      );
+      const { result, switchTo } = renderSwitchable(client, storeA);
+      await waitFor(() => expect(result.current.messages[0]?.text).toBe('from A'));
+
+      switchTo(storeB);
+
+      await waitFor(() => expect(result.current.messages[0]?.text).toBe('from B'));
+      expect(result.current.activeThreadId).toBe('b');
+      expect(result.current.threads.map((t) => t.threadId)).toEqual(['b']);
+      expect(storeB.saveThread).not.toHaveBeenCalled();
+      expect(storeB.subscribe).toHaveBeenCalled();
+    });
+
+    it('saves new turns into the new adapter only', async () => {
+      const { client } = createMockCioClient({
+        events: [startEvent('thread-new'), { type: 'message', data: { text: 'Hi' } }],
+      });
+      const { store: storeA } = createMemoryPersistence([
+        persisted('a', [userMsg('u1', 'from A'), aiMsg('a1', 'answer A')]),
+      ]);
+      const { store: storeB } = createMemoryPersistence();
+      const { result, switchTo } = renderSwitchable(client, storeA);
+      await waitFor(() => expect(result.current.activeThreadId).toBe('a'));
+
+      switchTo(storeB);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      expect(result.current.messages).toEqual([]);
+
+      act(() => result.current.sendMessage('hello'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(storeB.saveThread).toHaveBeenCalled());
+
+      expect(storeA.saveThread).not.toHaveBeenCalled();
+      expect(storeB.saveThread.mock.calls[0][0].messages[0].text).toBe('hello');
+    });
+
+    it('clears the restored conversation when persistence is turned off', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([
+        persisted('a', [userMsg('u1', 'from A'), aiMsg('a1', 'answer A')]),
+      ]);
+      const { result, switchTo } = renderSwitchable(client, store);
+      await waitFor(() => expect(result.current.activeThreadId).toBe('a'));
+
+      switchTo(undefined);
+
+      await waitFor(() => expect(result.current.messages).toEqual([]));
+      expect(result.current.isHydrating).toBe(false);
+      expect(result.current.threads).toEqual([]);
+      expect(result.current.activeThreadId).toBeNull();
+    });
+  });
+
+  it('scopes the built-in storage key by user id when the client has one', async () => {
+    window.localStorage.clear();
+    const { client } = createMockCioClient({
+      events: [startEvent('thread-u'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    (client as unknown as { options: Record<string, unknown> }).options = {
+      apiKey: 'key_test',
+      userId: 'user-42',
+    };
+    const { result } = renderWithPersistence(client, true);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-42')).toContain(
+        'thread-u',
+      ),
+    );
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toBeNull();
+    window.localStorage.clear();
+  });
 });

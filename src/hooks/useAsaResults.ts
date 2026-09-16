@@ -155,8 +155,44 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
   useEffect(() => {
     mountedRef.current = true;
-    const store = persistenceRef.current;
-    if (!store) return undefined;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const adapterInitializedRef = useRef(false);
+  useEffect(() => {
+    const store = persistence;
+    if (adapterInitializedRef.current) {
+      // The adapter changed (e.g. a different user logged in): drop the conversation that
+      // belongs to the previous store instead of saving it into the new one.
+      clearInFlightTimer();
+      killSwitchRef.current = true;
+      readerRef.current?.cancel();
+      readerRef.current = null;
+      threadIdRef.current = null;
+      storageThreadIdRef.current = null;
+      createdAtRef.current = null;
+      dirtyRef.current = false;
+      interactedRef.current = false;
+      loadRequestRef.current += 1;
+      refreshRequestRef.current += 1;
+      lastSyncedAtRef.current = 0;
+      lastSavedCountRef.current = 0;
+      setForeign(false);
+      setActiveThreadId(null);
+      setThreads([]);
+      setMessages([]);
+      setIsStreaming(false);
+      isStreamingRef.current = false;
+    }
+    adapterInitializedRef.current = true;
+
+    if (!store) {
+      setIsHydrating(false);
+      return undefined;
+    }
+    setIsHydrating(true);
     let cancelled = false;
     (async () => {
       try {
@@ -183,11 +219,10 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     })();
     return () => {
       cancelled = true;
-      mountedRef.current = false;
       clearInFlightTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [persistence]);
 
   const persistNow = useCallback((): Promise<void> | undefined => {
     const store = persistenceRef.current;
@@ -228,13 +263,13 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   }, [messages, isStreaming, persistNow, refreshThreads]);
 
   useEffect(() => {
-    if (!persistenceRef.current || typeof window === 'undefined') return undefined;
+    if (!persistence || typeof window === 'undefined') return undefined;
     const onPageHide = () => {
       if (isStreamingRef.current) persistNow();
     };
     window.addEventListener('pagehide', onPageHide);
     return () => window.removeEventListener('pagehide', onPageHide);
-  }, [persistNow]);
+  }, [persistence, persistNow]);
 
   const sendMessage = useCallback(
     (text: string, source: AssistantSubmitSource = 'input') => {
@@ -486,12 +521,11 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   }, [refreshThreads, resetConversation, applyChat, findRekeyedThread]);
 
   useEffect(() => {
-    const store = persistenceRef.current;
-    if (!store?.subscribe) return undefined;
-    return store.subscribe(() => {
+    if (!persistence?.subscribe) return undefined;
+    return persistence.subscribe(() => {
       syncFromStorage();
     });
-  }, [syncFromStorage]);
+  }, [persistence, syncFromStorage]);
 
   return {
     messages,
