@@ -29,6 +29,15 @@ export type StreamEvent =
       };
     }
   | { type: 'message'; data: { text: string } }
+  | {
+      type: 'follow_up_refinement';
+      data: {
+        intent_result_id?: string;
+        thread_id?: string;
+        question: string;
+        options: string[];
+      };
+    }
   | { type: 'server_error'; data?: Record<string, unknown> };
 
 export type MockTracker = {

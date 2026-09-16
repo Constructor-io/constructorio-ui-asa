@@ -19,6 +19,7 @@ const defaultTranslations: Translations = {
   'CioAsa.results.viewMore': 'View more products',
   'CioAsa.results.addToCart': 'Add to cart',
   'CioAsa.results.saleBadge': 'Sale',
+  'CioAsa.refinement.ariaLabel': 'Refine your results',
   'CioAsa.error.message': "I can't assist you with that request.",
 };
 

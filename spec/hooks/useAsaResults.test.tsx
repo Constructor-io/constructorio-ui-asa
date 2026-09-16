@@ -161,6 +161,52 @@ describe('useAsaResults', () => {
       expect(assistant.groups![0].searchResults).toEqual([{ value: 'Sneaker' }]);
     });
 
+    it('attaches a follow_up_refinement event to the assistant message', async () => {
+      const events: StreamEvent[] = [
+        { type: 'start', data: { thread_id: 'thread-1', intent_result_id: 'ir-1' } },
+        { type: 'search_result', data: { response: { results: [{ value: 'Sneaker' }] } } },
+        {
+          type: 'follow_up_refinement',
+          data: {
+            intent_result_id: 'ir-1',
+            thread_id: 'thread-1',
+            question: 'Who are you shopping for?',
+            options: ["Women's styles", "Men's styles"],
+          },
+        },
+      ];
+      const { client } = createMockCioClient({ events });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('shoes'));
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      const assistant = result.current.messages[1];
+      expect(assistant.status).toBe('done');
+      expect(assistant.refinement).toEqual({
+        question: 'Who are you shopping for?',
+        options: ["Women's styles", "Men's styles"],
+      });
+    });
+
+    it('keeps only the last follow_up_refinement of a turn', async () => {
+      const events: StreamEvent[] = [
+        { type: 'follow_up_refinement', data: { question: 'First?', options: ['a'] } },
+        { type: 'follow_up_refinement', data: { question: 'Second?', options: ['b'] } },
+      ];
+      const { client } = createMockCioClient({ events });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('shoes'));
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(result.current.messages[1].refinement).toEqual({
+        question: 'Second?',
+        options: ['b'],
+      });
+    });
+
     it('surfaces the echoed search request on the group for URL building', async () => {
       const request = {
         num_results_per_page: 20,
@@ -382,7 +428,31 @@ describe('useAsaResults', () => {
         expect(result.current.messages[1].groups).toHaveLength(1);
       });
 
-      it('does not report the load as finished, because it never was', async () => {
+      it('keeps a reply whose only content is a follow-up refinement', async () => {
+      const { stream } = createHangingStream([
+        {
+          type: 'follow_up_refinement',
+          data: { question: 'Who are you shopping for?', options: ['Women', 'Men'] },
+        },
+      ] as StreamEvent[]);
+      const { client } = createMockCioClient({ stream });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('shoes'));
+      await waitFor(() => expect(result.current.messages[1].refinement).toBeDefined());
+
+      act(() => result.current.abort());
+
+      // The narrowing question is content — dropping it would lose the agent's follow-up.
+      expect(result.current.messages).toHaveLength(2);
+      expect(result.current.messages[1]).toMatchObject({ status: 'done', text: '' });
+      expect(result.current.messages[1].refinement).toEqual({
+        question: 'Who are you shopping for?',
+        options: ['Women', 'Men'],
+      });
+    });
+
+    it('does not report the load as finished, because it never was', async () => {
         const { result, tracker } = await renderMidStream();
 
         act(() => result.current.abort());
@@ -490,6 +560,28 @@ describe('useAsaResults', () => {
       act(() => result.current.sendMessage('shoes', 'suggestion'));
 
       expect(onAssistantSubmit).toHaveBeenCalledWith({ intent: 'shoes', source: 'suggestion' });
+    });
+
+    it('reports refinement chip clicks with the `refinement` source', () => {
+      const { client } = createMockCioClient({ events: [] });
+      const onAssistantSubmit = jest.fn();
+      const { result } = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            callbacks={{ onAssistantSubmit }}>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+
+      act(() => result.current.sendMessage("Men's styles", 'refinement'));
+
+      expect(onAssistantSubmit).toHaveBeenCalledWith({
+        intent: "Men's styles",
+        source: 'refinement',
+      });
     });
   });
 

@@ -10,6 +10,7 @@ import {
 import {
   handleSearchResult,
   handleMessage,
+  handleFollowUpRefinement,
   handleServerError,
   handleStreamEnd,
   handleStreamError,
@@ -192,6 +193,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
             } else if (type === 'message') {
               fireLoadStart();
               handleMessage(data, assistantMessage.id, setMessages);
+            } else if (type === 'follow_up_refinement') {
+              fireLoadStart();
+              handleFollowUpRefinement(data, assistantMessage.id, setMessages);
             } else if (type === 'server_error') {
               handleServerError(assistantMessage.id, setMessages);
               break;
@@ -223,7 +227,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
    *
    * A reply that had streamed nothing yet is dropped rather than settled — it would
    * otherwise render as a blank bubble, and a cancelled turn would read as a glitch.
-   * The user's own message always stays.
+   * "Nothing" means no text, no product groups and no follow-up refinement; any one of
+   * them is content worth keeping. The user's own message always stays.
    *
    * No beacon is sent: there is no "aborted" ASA event, and reporting the load as
    * finished would be false. An aborted turn therefore leaves an
@@ -241,7 +246,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       setMessages((prev) =>
         prev.flatMap((msg) => {
           if (msg.id !== abortedId) return [msg];
-          if (!msg.text && !msg.groups?.length) return [];
+          if (!msg.text && !msg.groups?.length && !msg.refinement) return [];
           return [{ ...msg, status: 'done' as const }];
         }),
       );

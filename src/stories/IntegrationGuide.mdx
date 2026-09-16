@@ -110,7 +110,7 @@ This library declares the following as peer dependencies, so they must be presen
 
 | Package | Version |
 |---------|---------|
-| `@constructor-io/constructorio-client-javascript` | `^2.88.0` |
+| `@constructor-io/constructorio-client-javascript` | `^2.93.1` |
 | `@constructor-io/constructorio-ui-components` | `^1.6.0` |
 | `react` | `>=16.12.0` |
 | `react-dom` | `>=16.12.0` |
@@ -238,6 +238,23 @@ The `Chat` component accepts:
 | `normalizeItem` | `(item, options?) => Product` | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
 | `translations` | `Translations` | Override UI strings (see Translations section) |
 | `componentOverrides` | `ChatComponentOverrides` | Override any sub-component (see Component Overrides section) |
+
+### Follow-up refinements
+
+The agent can end a turn with a `follow_up_refinement` event: a narrowing question plus a short list of
+options (for example *"Who are you shopping for?"* with *Women's styles / Men's styles / Kids and baby*).
+`Chat` renders it below the products of that turn as chips styled like the welcome-screen suggestions.
+
+- Clicking a chip sends the option text as an ordinary follow-up message in the same thread.
+- Only the most recent refinement is interactive, and never while a response is streaming. Earlier
+  refinements stay visible but disabled, so the thread reads back as a history of what was offered.
+- If the agent sends several `follow_up_refinement` events in one turn, the last one wins.
+- Refinement clicks reach `onAssistantSubmit` with `source: 'refinement'` (welcome-screen chips use
+  `'suggestion'`, typed input uses `'input'`).
+
+Customize the rendering via the `aiMessage.followUpRefinement` override slot and the label via the
+`CioAsa.refinement.ariaLabel` translation key. When using `useAsaResults` directly, the payload is
+available as `message.refinement` (`{ question, options }`) on the assistant message.
 
 > **You control visibility and positioning.** `Chat` is a **content component**: it fills its container (`width: 100%; height: 100%`) and does not render a launcher button or manage its own open/closed state. Providing `onClose` only wires up the ✕ button — you decide whether `Chat` is mounted, and you own the layout, positioning, and overlay. A typical floating-panel pattern:
 >
@@ -410,6 +427,7 @@ Available translation keys:
 | `CioAsa.results.viewMore` | View more products |
 | `CioAsa.results.addToCart` | Add to cart |
 | `CioAsa.results.saleBadge` | Sale |
+| `CioAsa.refinement.ariaLabel` | Refine your results |
 | `CioAsa.error.message` | I can't assist you with that request. |
 
 <div className="step-heading">
@@ -434,6 +452,18 @@ The `componentOverrides` prop lets you replace any sub-component with your own c
       loader: { reactNode: <MyCustomLoader /> },
       text: {
         reactNode: ({ text }) => <MyCustomBubble>{text}</MyCustomBubble>,
+      },
+      followUpRefinement: {
+        reactNode: ({ question, options, onOptionClick, isDisabled }) => (
+          <div>
+            <p>{question}</p>
+            {options.map((option) => (
+              <button key={option} type="button" disabled={isDisabled} onClick={() => onOptionClick(option)}>
+                {option}
+              </button>
+            ))}
+          </div>
+        ),
       },
     },
     welcomeScreen: {
@@ -471,6 +501,7 @@ Available override slots:
 | `userMessage` | `{ text }` |
 | `aiMessage.loader` | `{ translations? }` |
 | `aiMessage.text` | `{ text }` |
+| `aiMessage.followUpRefinement` | `{ question, options, onOptionClick, isDisabled }` — `isDisabled` is true for earlier refinements and while streaming |
 | `welcomeScreen.title` | `{ text }` |
 | `welcomeScreen.input` | `{ value, onChange, onSubmit, placeholder, isDisabled }` |
 | `welcomeScreen.suggestedQuestions` | `{ suggestions, onSuggestionClick }` |
@@ -539,7 +570,7 @@ The hook returns exactly:
 | Return value | Type | Description |
 |--------------|------|-------------|
 | `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
-| `sendMessage` | `(text: string) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. |
+| `sendMessage` | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement') => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. |
 | `isStreaming` | `boolean` | Whether a response is currently streaming |
 | `abort` | `() => void` | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle. |
 | `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
@@ -583,6 +614,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   groups?: ResultGroup[]; // present on assistant messages that return products
+  refinement?: { question: string; options: string[] }; // narrowing question from a follow_up_refinement event
   status: 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 }
 
@@ -690,6 +722,10 @@ All components use BEM-style class names prefixed with `cio-asa-` for easy style
 
 .cio-asa-welcome-screen__title {
   /* Welcome screen heading */
+}
+
+.cio-asa-follow-up-refinement__chip {
+  /* Follow-up refinement option chip (`:disabled` for inert ones) */
 }
 ```
 

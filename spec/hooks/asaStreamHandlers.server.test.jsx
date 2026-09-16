@@ -1,6 +1,7 @@
 import {
   handleSearchResult,
   handleMessage,
+  handleFollowUpRefinement,
   handleServerError,
   handleStreamEnd,
   handleStreamError,
@@ -32,6 +33,20 @@ describe('asaStreamHandlers (SSR / node environment)', () => {
     const [, assistant] = applyUpdate(setMessages, messages);
     expect(assistant.text).toBe('Here ');
     expect(assistant.status).toBe('streaming');
+  });
+
+  it('attaches a follow-up refinement to the assistant message without a DOM', () => {
+    handleFollowUpRefinement(
+      { question: 'Who are you shopping for?', options: ['Women', 'Men'] },
+      assistantId,
+      setMessages,
+    );
+
+    const [, assistant] = applyUpdate(setMessages, messages);
+    expect(assistant.refinement).toEqual({
+      question: 'Who are you shopping for?',
+      options: ['Women', 'Men'],
+    });
   });
 
   it('leaves other messages untouched', () => {

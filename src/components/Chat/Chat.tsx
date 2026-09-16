@@ -175,6 +175,8 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 userMessageOverrides={componentOverrides?.userMessage}
                 resultsBlockOverrides={componentOverrides?.resultsBlock}
                 translations={translations}
+                onSend={sendMessage}
+                isStreaming={isStreaming}
               />
               <ChatInput
                 onSubmit={sendMessage}
