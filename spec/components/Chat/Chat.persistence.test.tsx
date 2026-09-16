@@ -128,4 +128,17 @@ describe('Chat persistence', () => {
     await act(() => ref.current!.switchThread('t1'));
     expect(await screen.findByText('restored question')).toBeInTheDocument();
   });
+
+  it('does not fire onThreadsChange when persistence is off', async () => {
+    const onThreadsChange = jest.fn();
+    const { client } = createMockCioClient({ events: [] });
+    render(
+      <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+        <Chat onThreadsChange={onThreadsChange} />
+      </CioAsaProvider>,
+    );
+
+    await screen.findByRole('heading', { name: 'Shopping Assistant' });
+    expect(onThreadsChange).not.toHaveBeenCalled();
+  });
 });

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
+import { useCioAsaContext } from '../../hooks/useCioAsaContext';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import {
   ChatComponentOverrides,
@@ -124,12 +125,13 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       switchThread,
     ]);
 
+    const hasPersistence = Boolean(useCioAsaContext()?.persistence);
     const onThreadsChangeRef = useRef(onThreadsChange);
     onThreadsChangeRef.current = onThreadsChange;
     useEffect(() => {
-      if (isHydrating) return;
+      if (!hasPersistence || isHydrating) return;
       onThreadsChangeRef.current?.(threads, activeThreadId);
-    }, [threads, activeThreadId, isHydrating]);
+    }, [threads, activeThreadId, isHydrating, hasPersistence]);
 
     useEffect(() => {
       if (isHydrating) return;
