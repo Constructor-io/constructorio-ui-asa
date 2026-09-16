@@ -11,6 +11,13 @@ import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 
 export interface ChatHandle {
+  /**
+   * Cancel the in-flight response, keeping the conversation. The partial reply is kept
+   * and the thread is preserved, so the next message continues where it left off.
+   * No-op when nothing is streaming.
+   */
+  abort: () => void;
+  /** Cancel any active response, then reset the conversation and the thread. */
   clearHistory: () => void;
 }
 
@@ -84,7 +91,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     },
     ref,
   ) => {
-    const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
+    const { messages, sendMessage, isStreaming, abort, clearHistory } = useAsaResults({
       initialThreadId,
     });
     const chatViewRef = useRef<HTMLDivElement>(null);
@@ -95,6 +102,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const announcement = getAnnouncement(messages, translations);
 
     useImperativeHandle(ref, () => ({
+      abort,
       clearHistory,
     }));
 
