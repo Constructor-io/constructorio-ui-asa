@@ -47,7 +47,7 @@ A custom adapter must be a stable instance: create it once at module level or wi
 |--------|-----------|
 | Storage key | \`cio-asa:chat:v1:<apiKey>:<domain>\`, plus the client's \`userId\` when one is configured, so one shopper's chats follow them across pages of the same site and a login change on a shared browser starts a separate history |
 | What is stored | Messages, product results as received, and the agent's \`thread_id\`; the next message continues the same server-side conversation |
-| When it saves | When the answer stream starts, when it completes (or fails), and on \`pagehide\` while streaming. Never per streamed chunk |
+| When it saves | When the answer stream starts, when it completes (or fails), and as a settled snapshot on \`pagehide\`, on unmount, and on \`newThread\` / \`switchThread\` while an answer is still in flight. Never per streamed chunk |
 | On load | The most recent thread is restored before anything renders, so there is no welcome-screen flash. \`isHydrating\` is \`true\` meanwhile |
 | Retention | Threads idle for 7 days expire, matching how long the agent remembers a thread. Expired entries are dropped on read and removed on the next write |
 | Interrupted answers | Leaving the page mid-answer saves the turn as settled: a partial answer is shown as complete, an empty one as an error. Each record carries the id of the tab that wrote it, so a reload of that tab settles its own interrupted answer at once even when \`pagehide\` did not fire. Only a different tab treats a fresh in-flight record as still streaming, for up to 60 seconds |
@@ -56,6 +56,8 @@ A custom adapter must be a stable instance: create it once at module level or wi
 </Markdown>
 
 Storage stays on the device. Another browser or device starts fresh, and so does the agent's own memory, which is scoped per browser as well.
+
+Two tabs on the same thread merge their turns instead of overwriting each other: writes go through a Web Lock where the browser has one, the merge is redone if another tab committed in between, and an older snapshot can add turns but never regresses a message a newer one already settled.
 
 ## Several conversations
 

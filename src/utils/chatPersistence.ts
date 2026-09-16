@@ -115,11 +115,20 @@ function resolveStorage(storage?: Storage): Storage | null {
   }
 }
 
-export function mergeMessages(stored: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+/**
+ * Union of both message lists in stored order. A message present in both keeps the incoming
+ * version unless `preferStored` is set, which is how an older snapshot is merged without
+ * regressing turns already settled by a newer one.
+ */
+export function mergeMessages(
+  stored: ChatMessage[],
+  incoming: ChatMessage[],
+  preferStored = false,
+): ChatMessage[] {
   const incomingById = new Map(incoming.map((m) => [m.id, m]));
   const storedIds = new Set(stored.map((m) => m.id));
   return [
-    ...stored.map((m) => incomingById.get(m.id) ?? m),
+    ...stored.map((m) => (preferStored ? m : incomingById.get(m.id) ?? m)),
     ...incoming.filter((m) => !storedIds.has(m.id)),
   ];
 }
@@ -189,13 +198,18 @@ export function createLocalStoragePersistence(
   } = options;
   const storageKey = [key, `v${PERSISTED_CHAT_VERSION}`, namespace].filter(Boolean).join(':');
 
-  const read = (): StoredThreads => {
-    const empty: StoredThreads = { version: PERSISTED_CHAT_VERSION, threads: {}, deleted: {} };
-    const storage = resolveStorage(storageOption);
-    if (!storage) return empty;
+  const readRaw = (storage: Storage): string | null => {
     try {
-      const raw = storage.getItem(storageKey);
-      if (!raw) return empty;
+      return storage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+  };
+
+  const parse = (raw: string | null): StoredThreads => {
+    const empty: StoredThreads = { version: PERSISTED_CHAT_VERSION, threads: {}, deleted: {} };
+    if (!raw) return empty;
+    try {
       const parsed = JSON.parse(raw) as Partial<StoredThreads>;
       if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return empty;
       const cutoff = Date.now() - ttlMs;
@@ -215,6 +229,11 @@ export function createLocalStoragePersistence(
     }
   };
 
+  const read = (): StoredThreads => {
+    const storage = resolveStorage(storageOption);
+    return parse(storage ? readRaw(storage) : null);
+  };
+
   const sortedThreads = (data: StoredThreads): PersistedChat[] =>
     Object.values(data.threads).sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -227,26 +246,29 @@ export function createLocalStoragePersistence(
     }
   };
 
-  const write = (data: StoredThreads, priorityThreadId?: string) => {
-    const storage = resolveStorage(storageOption);
-    if (!storage) return;
-    if (Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0) {
-      try {
-        storage.removeItem(storageKey);
-      } catch {
-        /* ignore */
-      }
+  const remove = (storage: Storage) => {
+    try {
+      storage.removeItem(storageKey);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const isEmpty = (data: StoredThreads) =>
+    Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0;
+
+  // Full write first; when storage is full, keep the priority thread alone and trim it turn by
+  // turn; when even one turn does not fit, keep the other threads rather than wiping the key.
+  const write = (storage: Storage, data: StoredThreads, priorityThreadId?: string) => {
+    if (isEmpty(data)) {
+      remove(storage);
       return;
     }
     if (tryWrite(storage, data)) return;
 
     const priority = priorityThreadId ? data.threads[priorityThreadId] : sortedThreads(data)[0];
     if (!priority) {
-      try {
-        storage.removeItem(storageKey);
-      } catch {
-        /* ignore */
-      }
+      remove(storage);
       return;
     }
     let chat = priority;
@@ -259,10 +281,29 @@ export function createLocalStoragePersistence(
       if (tryWrite(storage, single)) return;
       chat = { ...chat, messages: trimToTurns(chat.messages.slice(2), maxTurns) };
     }
-    try {
-      storage.removeItem(storageKey);
-    } catch {
-      /* ignore */
+    const { [priority.threadId]: dropped, ...rest } = data.threads;
+    const others: StoredThreads = { ...data, threads: rest };
+    if (isEmpty(others) || !tryWrite(storage, others)) remove(storage);
+  };
+
+  // Optimistic read-merge-write: if the key changed between our read and the write (another
+  // tab committed meanwhile), redo the merge on the fresh value. Together with the Web Lock
+  // this keeps concurrent turns from different tabs from overwriting each other.
+  const MAX_COMMIT_ATTEMPTS = 3;
+  const transact = (
+    mutate: (data: StoredThreads) => StoredThreads | null,
+    priorityThreadId?: string,
+  ) => {
+    const storage = resolveStorage(storageOption);
+    if (!storage) return;
+    for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt += 1) {
+      const raw = readRaw(storage);
+      const next = mutate(parse(raw));
+      if (!next) return;
+      if (readRaw(storage) === raw || attempt === MAX_COMMIT_ATTEMPTS - 1) {
+        write(storage, next, priorityThreadId);
+        return;
+      }
     }
   };
 
@@ -282,37 +323,49 @@ export function createLocalStoragePersistence(
     },
 
     saveThread(chat: PersistedChat): Promise<void> {
-      return withStorageLock(storageKey, () => {
-        const data = read();
-        const now = Date.now();
-        const createdAt = chat.createdAt ?? now;
-        const deletedAt = data.deleted?.[chat.threadId];
-        if (deletedAt !== undefined && deletedAt >= createdAt) return;
-        const stored = data.threads[chat.threadId];
-        const messages = stored ? mergeMessages(stored.messages, chat.messages) : chat.messages;
-        data.threads[chat.threadId] = {
-          ...chat,
-          version: PERSISTED_CHAT_VERSION,
-          messages: trimToTurns(messages, maxTurns),
-          createdAt,
-          updatedAt: Math.max(chat.updatedAt ?? now, stored?.updatedAt ?? 0),
-        };
-        if (Number.isFinite(maxThreads)) {
-          const kept = sortedThreads(data).slice(0, Math.max(1, maxThreads));
-          data.threads = Object.fromEntries(kept.map((t) => [t.threadId, t]));
-          if (!data.threads[chat.threadId]) return;
-        }
-        write(data, chat.threadId);
-      });
+      return withStorageLock(storageKey, () =>
+        transact((current) => {
+          const now = Date.now();
+          const createdAt = chat.createdAt ?? now;
+          const deletedAt = current.deleted?.[chat.threadId];
+          if (deletedAt !== undefined && deletedAt >= createdAt) return null;
+          const stored = current.threads[chat.threadId];
+          const incomingAt = chat.updatedAt ?? now;
+          // An older snapshot may add turns it knows about but must not regress ones a
+          // newer snapshot already settled.
+          const stale = Boolean(stored) && incomingAt < stored.updatedAt;
+          const messages = stored
+            ? mergeMessages(stored.messages, chat.messages, stale)
+            : chat.messages;
+          const merged: PersistedChat = {
+            ...(stale ? stored : chat),
+            version: PERSISTED_CHAT_VERSION,
+            threadId: chat.threadId,
+            messages: trimToTurns(messages, maxTurns),
+            createdAt,
+            updatedAt: Math.max(incomingAt, stored?.updatedAt ?? 0),
+          };
+          let next: StoredThreads = {
+            ...current,
+            threads: { ...current.threads, [chat.threadId]: merged },
+          };
+          if (Number.isFinite(maxThreads)) {
+            const kept = sortedThreads(next).slice(0, Math.max(1, maxThreads));
+            next = { ...next, threads: Object.fromEntries(kept.map((t) => [t.threadId, t])) };
+            if (!next.threads[chat.threadId]) return null;
+          }
+          return next;
+        }, chat.threadId),
+      );
     },
 
     deleteThread(threadId: string): Promise<void> {
-      return withStorageLock(storageKey, () => {
-        const data = read();
-        delete data.threads[threadId];
-        data.deleted = { ...data.deleted, [threadId]: Date.now() };
-        write(data);
-      });
+      return withStorageLock(storageKey, () =>
+        transact((current) => {
+          const { [threadId]: removed, ...threads } = current.threads;
+          return { ...current, threads, deleted: { ...current.deleted, [threadId]: Date.now() } };
+        }),
+      );
     },
 
     subscribe(listener: () => void): () => void {

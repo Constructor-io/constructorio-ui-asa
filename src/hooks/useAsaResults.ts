@@ -42,6 +42,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       : null,
   );
   const idCounterRef = useRef(0);
+  // Per-instance suffix so two tabs cannot mint the same message id in the same millisecond.
+  const idSuffixRef = useRef(Math.random().toString(36).slice(2, 8));
 
   const contextValue = useCioAsaContext();
   if (!contextValue) {
@@ -63,6 +65,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const persistenceRef = useRef(persistence);
   persistenceRef.current = persistence;
   const storageThreadIdRef = useRef<string | null>(null);
+  // Local id whose re-keyed replacement could not be verified yet; deleted on a later save.
+  const orphanIdRef = useRef<string | null>(null);
   const createdAtRef = useRef<number | null>(null);
   const dirtyRef = useRef(false);
   const interactedRef = useRef(false);
@@ -166,7 +170,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
   const nextMessageId = useCallback(() => {
     idCounterRef.current += 1;
-    return `msg-${idCounterRef.current}-${Date.now()}`;
+    return `msg-${idCounterRef.current}-${Date.now()}-${idSuffixRef.current}`;
   }, []);
 
   useEffect(() => {
@@ -189,6 +193,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       readerRef.current = null;
       threadIdRef.current = null;
       storageThreadIdRef.current = null;
+      orphanIdRef.current = null;
       createdAtRef.current = null;
       dirtyRef.current = false;
       interactedRef.current = false;
@@ -250,6 +255,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     const previousId = storageThreadIdRef.current;
     const threadId = threadIdRef.current ?? previousId ?? createLocalThreadId();
     storageThreadIdRef.current = threadId;
+    const staleId = (previousId !== threadId ? previousId : null) ?? orphanIdRef.current;
+    orphanIdRef.current = null;
     // Strictly increasing so a save issued in the same millisecond as the previous one still
     // reads as newer to other tabs.
     const now = Math.max(Date.now(), lastSyncedAtRef.current + 1);
@@ -267,13 +274,26 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     };
     // Writes are chained so an async adapter applies them in the order they were issued.
     // The adapter and snapshot are captured here, so a write still queued when the adapter
-    // changes lands in the store it was meant for. On a local-to-server rekey the new record
-    // is written first so a failing save cannot lose the only copy.
+    // changes lands in the store it was meant for. On a local-to-server rekey the old record
+    // is deleted only once the new one is confirmed to exist; otherwise it is kept and the
+    // deletion is retried with the next save.
     const run = async () => {
-      await store.saveThread(snapshot).catch(() => {});
-      if (previousId && previousId !== threadId) {
-        await store.deleteThread(previousId).catch(() => {});
+      const keepStale = () => {
+        if (staleId) orphanIdRef.current = orphanIdRef.current ?? staleId;
+      };
+      try {
+        await store.saveThread(snapshot);
+      } catch {
+        keepStale();
+        return;
       }
+      if (!staleId) return;
+      const persisted = await store.getThread(threadId).catch(() => null);
+      if (!persisted) {
+        keepStale();
+        return;
+      }
+      await store.deleteThread(staleId).catch(() => {});
     };
     saveChainRef.current = saveChainRef.current.then(run, run);
     return saveChainRef.current;
@@ -289,7 +309,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   useEffect(() => {
     if (!persistence || typeof window === 'undefined') return undefined;
     const onPageHide = () => {
-      if (isStreamingRef.current) persistNow({ settle: true });
+      if (isStreamingRef.current || dirtyRef.current) persistNow({ settle: true });
     };
     window.addEventListener('pagehide', onPageHide);
     return () => window.removeEventListener('pagehide', onPageHide);
@@ -300,6 +320,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       const intent = text.trim();
       if (!intent || isStreamingRef.current || foreignInFlightRef.current) return;
       interactedRef.current = true;
+      // A stored conversation still loading must not land on top of this new turn.
+      loadRequestRef.current += 1;
+      setIsHydrating(false);
 
       trackingRef.current.trackSubmit(intent);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
@@ -446,8 +469,10 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
         readerRef.current.cancel();
         readerRef.current = null;
       }
+      // Unmounting mid-answer (closing a modal, changing route) keeps the turn, settled.
+      if (isStreamingRef.current || dirtyRef.current) persistNow({ settle: true });
     },
-    [],
+    [persistNow],
   );
 
   const resetConversation = useCallback(() => {
@@ -460,6 +485,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     threadIdRef.current = null;
     const storedId = storageThreadIdRef.current;
     storageThreadIdRef.current = null;
+    orphanIdRef.current = null;
     createdAtRef.current = null;
     dirtyRef.current = false;
     interactedRef.current = true;

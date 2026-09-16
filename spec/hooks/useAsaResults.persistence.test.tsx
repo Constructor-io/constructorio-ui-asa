@@ -4,6 +4,7 @@ import type ConstructorIOClient from '@constructor-io/constructorio-client-javas
 import useAsaResults from '../../src/hooks/useAsaResults';
 import CioAsaProvider from '../../src/components/CioAsaProvider/CioAsaProvider';
 import {
+  createEventStream,
   createMockCioClient,
   createPendingStream,
   StreamEvent,
@@ -240,6 +241,55 @@ describe('useAsaResults persistence', () => {
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 
+  it('keeps the local record until the re-keyed save is confirmed, then removes it', async () => {
+    const { client, getAgentResultsStream } = createMockCioClient({
+      events: [startEvent('srv'), { type: 'message', data: { text: 'second' } }],
+    });
+    getAgentResultsStream.mockReturnValueOnce(
+      createEventStream([{ type: 'message', data: { text: 'first' } }]),
+    );
+    const { store, threads } = createMemoryPersistence();
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('one'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+    const localId = store.saveThread.mock.calls[0][0].threadId;
+    expect(localId).toMatch(/^local-/);
+
+    store.saveThread.mockRejectedValueOnce(new Error('offline'));
+    act(() => result.current.sendMessage('two'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(threads.has('srv')).toBe(true));
+
+    await waitFor(() => expect(store.deleteThread).toHaveBeenCalledWith(localId));
+    expect(store.deleteThread).toHaveBeenCalledTimes(1);
+    expect(threads.has(localId)).toBe(false);
+    expect(store.getThread).toHaveBeenCalledWith('srv');
+  });
+
+  it('keeps the local record when the re-keyed save silently did not land', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('srv'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store } = createMemoryPersistence([
+      persisted('local-old', [userMsg('u1', 'q'), aiMsg('a1', 'a')]),
+    ]);
+    store.saveThread.mockImplementation(async () => {});
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('next'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+
+    expect(store.getThread).toHaveBeenCalledWith('srv');
+    expect(store.deleteThread).not.toHaveBeenCalled();
+  });
+
   it('saves the question under the server thread id as soon as the stream starts', async () => {
     const { client } = createMockCioClient({
       stream: createStartedThenPendingStream('thread-new'),
@@ -302,6 +352,34 @@ describe('useAsaResults persistence', () => {
     });
     await act(async () => {});
     expect(store.saveThread).toHaveBeenCalledTimes(2);
+  });
+
+  it('saves a settled snapshot when unmounted mid-answer', async () => {
+    const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+    const { store, threads } = createMemoryPersistence();
+    const { result, unmount } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+
+    unmount();
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+    expect(threads.get('t')?.messages.map((m) => m.status)).toEqual(['done', 'error']);
+  });
+
+  it('mints message ids that differ between hook instances', async () => {
+    const { client } = createMockCioClient({ events: [] });
+    const a = renderWithPersistence(client, undefined);
+    const b = renderWithPersistence(client, undefined);
+
+    act(() => a.result.current.sendMessage('x'));
+    act(() => b.result.current.sendMessage('x'));
+    await waitFor(() => expect(a.result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(b.result.current.isStreaming).toBe(false));
+
+    expect(a.result.current.messages[0].id).toMatch(/^msg-1-\d+-[a-z0-9]+$/);
+    expect(a.result.current.messages[0].id).not.toBe(b.result.current.messages[0].id);
   });
 
   it('saves failed turns too, so an error is visible after reload', async () => {
@@ -541,6 +619,41 @@ describe('useAsaResults persistence', () => {
       expect(result.current.messages).toEqual([]);
       expect(result.current.activeThreadId).toBeNull();
       expect(result.current.isHydrating).toBe(false);
+    });
+
+    it('does not let a pending switchThread load land on a turn sent meanwhile', async () => {
+      const { client } = createMockCioClient({
+        events: [startEvent('fresh'), { type: 'message', data: { text: 'Hi' } }],
+      });
+      const other = persisted('other', [userMsg('u1', 'other q'), aiMsg('a1', 'other a')]);
+      const { store } = createMemoryPersistence([other]);
+      let release: () => void = () => {};
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      act(() => result.current.newThread());
+
+      store.getThread.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = () => resolve(other);
+          }),
+      );
+      let switching: Promise<void>;
+      act(() => {
+        switching = result.current.switchThread('other');
+      });
+      expect(result.current.isHydrating).toBe(true);
+
+      act(() => result.current.sendMessage('mine'));
+      expect(result.current.isHydrating).toBe(false);
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      await act(async () => {
+        release();
+        await switching;
+      });
+      expect(result.current.messages.map((m) => m.text)).toEqual(['mine', 'Hi']);
+      expect(result.current.activeThreadId).toBe('fresh');
     });
 
     it('newThread keeps the current conversation in storage and lists both afterwards', async () => {

@@ -16,6 +16,8 @@ class FakeStorage implements Storage {
 
   quotaBytes = Infinity;
 
+  beforeGetItem?: () => void;
+
   get length() {
     return this.map.size;
   }
@@ -25,7 +27,12 @@ class FakeStorage implements Storage {
   }
 
   getItem(key: string) {
+    this.beforeGetItem?.();
     return this.map.get(key) ?? null;
+  }
+
+  poke(key: string, value: string) {
+    this.map.set(key, value);
   }
 
   setItem(key: string, value: string) {
@@ -195,6 +202,52 @@ describe('createLocalStoragePersistence', () => {
     expect(saved?.messages[1]).toMatchObject({ status: 'done', text: 'partial done' });
   });
 
+  it('does not let an older snapshot regress a message settled by a newer one', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const [user, assistant] = turns(1);
+    const t = Date.now();
+    await store.saveThread(chat('t1', [user, { ...assistant, status: 'done', text: 'final' }], t));
+    const [lateUser, lateAssistant] = turns(1);
+    await store.saveThread(
+      chat(
+        't1',
+        [user, { ...assistant, status: 'loading', text: '' }, lateUser, lateAssistant],
+        t - 1000,
+      ),
+    );
+
+    const saved = await store.getThread('t1');
+    expect(saved?.messages.map((m) => m.id)).toEqual(
+      [user, assistant, lateUser, lateAssistant].map((m) => m.id),
+    );
+    expect(saved?.messages[1]).toMatchObject({ status: 'done', text: 'final' });
+    expect(saved?.updatedAt).toBe(t);
+    expect((await store.listThreads())[0].inFlight).toBe(false);
+  });
+
+  it('redoes the merge when another tab writes between read and commit', async () => {
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('a', turns(1)));
+
+    const fromOtherTab = chat('b', turns(1));
+    let reads = 0;
+    storage.beforeGetItem = () => {
+      reads += 1;
+      if (reads === 2) {
+        const current = JSON.parse(storage.getItem(key)!);
+        current.threads.b = fromOtherTab;
+        storage.poke(key, JSON.stringify(current));
+      }
+    };
+    await store.saveThread(chat('a', turns(2)));
+    storage.beforeGetItem = undefined;
+
+    const ids = (await store.listThreads()).map((t) => t.threadId).sort();
+    expect(ids).toEqual(['a', 'b']);
+    expect((await store.getThread('a'))?.messages).toHaveLength(6);
+  });
+
   it('namespaces the storage key', async () => {
     const store = createLocalStoragePersistence({ storage, namespace: 'key_1:chatbot' });
     await store.saveThread(chat('t1', turns(1)));
@@ -307,6 +360,19 @@ describe('createLocalStoragePersistence', () => {
     expect(saved?.messages.length).toBeGreaterThan(0);
     expect(saved?.messages.length).toBeLessThanOrEqual(6);
     expect(saved?.messages[0].role).toBe('user');
+  });
+
+  it('keeps the other threads when a new thread does not fit even trimmed', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const other = chat('other', turns(1), Date.now() - 1000);
+    await store.saveThread(other);
+    storage.quotaBytes = storage.getItem(`cio-asa:chat:v${PERSISTED_CHAT_VERSION}`)!.length + 40;
+
+    const huge = chat('huge', [msg('user', 'x'.repeat(500)), msg('assistant', 'y'.repeat(500))]);
+    await store.saveThread(huge);
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['other']);
+    expect(await store.getThread('huge')).toBeNull();
   });
 
   it('gives up silently when even a single turn does not fit', async () => {
