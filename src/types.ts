@@ -154,6 +154,12 @@ export interface UseChatReturn {
   messages: ChatMessage[];
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
   isStreaming: boolean;
+  /**
+   * Cancel the in-flight request, keeping the conversation. The partial reply is settled
+   * as `done` and the thread id is kept, so the next message continues the same
+   * conversation. No-op when nothing is streaming. Use `clearHistory` to reset instead.
+   */
+  abort: () => void;
   clearHistory: () => void;
 }
 
