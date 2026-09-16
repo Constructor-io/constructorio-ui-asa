@@ -54,7 +54,11 @@ Replace the chat header. Receives `{ title, onClose? }`.
 
 ## Custom Chat Input
 
-Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled }`.
+Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }`.
+
+> **Cancelling.** The default input swaps its send button for a stop button while `isStreaming`
+> is true. An override replaces that button, so wire `onAbort` yourself — otherwise users cannot
+> cancel a reply from the packaged UI at all.
 
 <Canvas of={OverridesStories.CustomInput} />
 
@@ -62,7 +66,7 @@ Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, i
 <Chat
   componentOverrides={{
     input: {
-      reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
+      reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }) => (
         <div className="my-input">
           <input
             value={value}
@@ -71,7 +75,11 @@ Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, i
             placeholder={placeholder}
             disabled={isDisabled}
           />
-          <button onClick={onSubmit} disabled={isDisabled}>Send</button>
+          {isStreaming ? (
+            <button onClick={onAbort}>Stop</button>
+          ) : (
+            <button onClick={onSubmit} disabled={isDisabled}>Send</button>
+          )}
         </div>
       ),
     },

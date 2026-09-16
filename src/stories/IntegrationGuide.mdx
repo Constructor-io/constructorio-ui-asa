@@ -485,13 +485,13 @@ Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a stat
   <h2>Using the Hook Directly</h2>
 </div>
 
-For custom UI implementations, use the `useAsaResults` hook. Configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. The hook takes a single optional argument `{ initialThreadId }` to resume a conversation persisted outside the hook (e.g. reloaded from browser storage); `initialThreadId` is read once on mount. Call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`.
+For custom UI implementations, use the `useAsaResults` hook. Configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. The hook takes a single optional argument `{ initialThreadId }` to resume a conversation persisted outside the hook (e.g. reloaded from browser storage); `initialThreadId` is read once on mount. Call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`. Use `abort()` to cancel an in-flight response without losing the conversation.
 
 ```jsx
 import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
 
 function CustomChat() {
-  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults();
+  const { messages, sendMessage, isStreaming, abort, clearHistory } = useAsaResults();
 
   return (
     <div>
@@ -501,6 +501,7 @@ function CustomChat() {
         </div>
       ))}
       <button onClick={() => sendMessage('Show me running shoes')}>Send</button>
+      <button onClick={abort} disabled={!isStreaming}>Stop</button>
       <button onClick={clearHistory}>Reset</button>
     </div>
   );
@@ -540,7 +541,39 @@ The hook returns exactly:
 | `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
 | `sendMessage` | `(text: string) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. |
 | `isStreaming` | `boolean` | Whether a response is currently streaming |
+| `abort` | `() => void` | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle. |
 | `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
+
+**Cancelling a response.** `abort()` covers both a user-facing cancel button and a UI-side timeout. The partial reply is kept and settled, and the thread is preserved, so the next message continues the same conversation — use `clearHistory()` when you want to start over instead.
+
+```jsx
+const { sendMessage, isStreaming, abort } = useAsaResults();
+
+// A cancel button
+<button onClick={abort} disabled={!isStreaming}>Stop</button>
+
+// Or a UI-side timeout
+useEffect(() => {
+  if (!isStreaming) return undefined;
+  const timer = setTimeout(abort, 15000);
+  return () => clearTimeout(timer);
+}, [isStreaming, abort]);
+```
+
+No tracking beacon is sent for an aborted turn — there is no "aborted" ASA event, and reporting the load as finished would be false. An aborted turn therefore leaves an `assistant_result_load_started` with no matching `assistant_result_load_finished`.
+
+`Chat` cancels out of the box: while a reply streams, the input's send button becomes a stop button wired to `abort()`. Pass `showStopButton={false}` to opt out and keep the previous behavior (the send button stays, disabled).
+
+If you replace the input via `componentOverrides.input`, render your own stop button from the `isStreaming` and `onAbort` render props, or cancelling disappears from the UI. Those render props keep working even with `showStopButton={false}`, so opting out of the built-in control does not prevent you building your own.
+
+`Chat` also exposes both calls on its imperative handle, for a timeout or a cancel button of your own:
+
+```jsx
+const chatRef = useRef(null);
+
+<button onClick={() => chatRef.current?.abort()}>Stop</button>
+<Chat ref={chatRef} />
+```
 
 Each `ChatMessage` has this shape:
 

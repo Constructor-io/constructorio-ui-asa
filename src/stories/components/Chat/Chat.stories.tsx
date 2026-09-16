@@ -1,7 +1,7 @@
 /* eslint-disable react/no-danger */
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import Chat from '../../../components/Chat/Chat';
+import Chat, { ChatHandle } from '../../../components/Chat/Chat';
 import Button from '../../../components/Button/Button';
 import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
 import { DEMO_API_KEY } from '../../../constants';
@@ -23,7 +23,12 @@ const meta: Meta<typeof Chat> = {
           'Control the layout (sidebar, fullscreen, panel) by styling the parent wrapper or using the `className` prop.\n\n' +
           '**Content** — You can swap the sections for a customized version of the AI Chat dialog component.\n\n' +
           '**Results** — Product results are rendered using the <a href="./?path=/docs/components-resultsblock--variants" target="_top">ResultsBlock</a> component internally. ' +
-          'See its documentation for available layout and display options (`aspectRatio`, `minCardWidth`, `gap`, `showTitle`, etc.).',
+          'See its documentation for available layout and display options (`aspectRatio`, `minCardWidth`, `gap`, `showTitle`, etc.).\n\n' +
+          "**Cancelling** — while a reply streams, the input's send button becomes a stop button that " +
+          'calls `abort()`; pass `showStopButton={false}` to opt out. ' +
+          'Attach a `ref` to reach the same ' +
+          '`abort()` plus `clearHistory()` (cancel, then reset everything) programmatically — for a ' +
+          'UI-side timeout, say. See the "Cancelling a Response" story.',
       },
     },
   },
@@ -104,11 +109,23 @@ const meta: Meta<typeof Chat> = {
         defaultValue: { summary: 'undefined' },
       },
     },
+    showStopButton: {
+      description:
+        "Whether the input's send button becomes a stop button while a reply streams. " +
+        'Set to `false` to keep the send button in place (disabled) — cancelling is then only ' +
+        'reachable via `abort()` on the ref, or from your own `componentOverrides.input`.',
+      control: 'boolean',
+      table: {
+        category: 'Content',
+        type: { summary: 'boolean' },
+        defaultValue: { summary: 'true' },
+      },
+    },
     initialThreadId: {
       description:
         'Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. ' +
-        'Read once on mount; the thread id is then tracked internally across turns and reset when ' +
-        '`clearHistory()` is called on the chat handle.',
+        'Read once on mount; the thread id is then tracked internally across turns. `abort()` on the ' +
+        'chat handle keeps it; `clearHistory()` resets it.',
       control: 'text',
       table: {
         category: 'Content',
@@ -124,6 +141,7 @@ const meta: Meta<typeof Chat> = {
         '- `CioAsa.input.placeholder`\n' +
         '- `CioAsa.input.ariaLabel`\n' +
         '- `CioAsa.input.sendAriaLabel`\n' +
+        '- `CioAsa.input.stopAriaLabel`\n' +
         '- `CioAsa.welcome.title`\n' +
         '- `CioAsa.welcome.placeholder`\n' +
         '- `CioAsa.welcome.sendButton`\n' +
@@ -475,4 +493,75 @@ export const Inline: Story = {
       </button>
     </div>
   ),
+};
+
+/**
+ * Demonstrates the imperative handle: `abort()` cancels the in-flight response but keeps
+ * the conversation and the thread, where `clearHistory()` resets everything.
+ */
+function CancellableChatExample() {
+  const chatRef = React.useRef<ChatHandle>(null);
+  const [lastAction, setLastAction] = React.useState('—');
+
+  // A UI-side timeout is the same call on a timer.
+  const abortAfter = (ms: number) => {
+    setLastAction(`abort() scheduled in ${ms}ms`);
+    window.setTimeout(() => {
+      chatRef.current?.abort();
+      setLastAction(`abort() fired after ${ms}ms`);
+    }, ms);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 504 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          type='button'
+          onClick={() => {
+            chatRef.current?.abort();
+            setLastAction('abort()');
+          }}>
+          Stop response
+        </button>
+        <button type='button' onClick={() => abortAfter(2000)}>
+          Stop after 2s
+        </button>
+        <button
+          type='button'
+          onClick={() => {
+            chatRef.current?.clearHistory();
+            setLastAction('clearHistory()');
+          }}>
+          Reset conversation
+        </button>
+        <span style={{ fontSize: 12, color: '#6b7280' }}>last: {lastAction}</span>
+      </div>
+      <div style={{ height: 700 }}>
+        <Chat
+          ref={chatRef}
+          currency='$'
+          initialSuggestions={['Tell me everything about winter coats']}
+          onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
+        />
+      </div>
+    </div>
+  );
+}
+
+export const CancellingAResponse: Story = {
+  name: 'Cancelling a Response',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Attach a `ref` to reach the chat handle. Send a message, then press **Stop response** ' +
+          'while the reply is still streaming — `abort()` cancels the request, keeps the partial ' +
+          'reply, and preserves the thread, so a follow-up continues the same conversation. ' +
+          '**Stop after 2s** is the same call on a timer, for a UI-side timeout. ' +
+          '**Reset conversation** calls `clearHistory()` for contrast: it also cancels, but drops ' +
+          'every message and the thread. No tracking beacon is sent for an aborted turn.',
+      },
+    },
+  },
+  render: () => <CancellableChatExample />,
 };
