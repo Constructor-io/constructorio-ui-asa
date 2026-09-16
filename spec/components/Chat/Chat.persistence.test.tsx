@@ -117,6 +117,8 @@ describe('Chat persistence', () => {
         't1',
       ),
     );
+    // No notification is emitted for the empty pre-hydration state.
+    expect(onThreadsChange.mock.calls[0][1]).toBe('t1');
 
     act(() => ref.current!.newThread());
     expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();

@@ -38,6 +38,13 @@ export function getThreadTitle(messages: ChatMessage[]): string {
   return first.length > TITLE_MAX_LENGTH ? `${first.slice(0, TITLE_MAX_LENGTH - 1)}…` : first;
 }
 
+export function nextMessageCounter(messages: ChatMessage[]): number {
+  return messages.reduce((max, m) => {
+    const match = /^msg-(\d+)-/.exec(m.id);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, messages.length);
+}
+
 export function isInFlight(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1];
   return last?.status === 'loading' || last?.status === 'streaming';
@@ -46,7 +53,7 @@ export function isInFlight(messages: ChatMessage[]): boolean {
 export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.map((m) => {
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
-    const hasContent = Boolean(m.text) || Boolean(m.groups?.length);
+    const hasContent = Boolean(m.text) || Boolean(m.groups?.length) || Boolean(m.refinement);
     return { ...m, status: hasContent ? 'done' : 'error' };
   });
 }
@@ -76,6 +83,21 @@ export function mergeMessages(stored: ChatMessage[], incoming: ChatMessage[]): C
   ];
 }
 
+const MESSAGE_ROLES = new Set(['user', 'assistant']);
+const MESSAGE_STATUSES = new Set(['idle', 'loading', 'streaming', 'done', 'error']);
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== 'object') return false;
+  const m = value as Partial<ChatMessage>;
+  return (
+    typeof m.id === 'string' &&
+    MESSAGE_ROLES.has(m.role as string) &&
+    typeof m.text === 'string' &&
+    MESSAGE_STATUSES.has(m.status as string) &&
+    (m.groups === undefined || Array.isArray(m.groups))
+  );
+}
+
 function isPersistedChat(value: unknown): value is PersistedChat {
   if (!value || typeof value !== 'object') return false;
   const chat = value as Partial<PersistedChat>;
@@ -83,6 +105,8 @@ function isPersistedChat(value: unknown): value is PersistedChat {
     chat.version === PERSISTED_CHAT_VERSION &&
     typeof chat.threadId === 'string' &&
     Array.isArray(chat.messages) &&
+    chat.messages.every(isChatMessage) &&
+    typeof chat.createdAt === 'number' &&
     typeof chat.updatedAt === 'number'
   );
 }
@@ -205,7 +229,7 @@ export function createLocalStoragePersistence(
         version: PERSISTED_CHAT_VERSION,
         messages: trimToTurns(messages, maxTurns),
         createdAt,
-        updatedAt: chat.updatedAt ?? now,
+        updatedAt: Math.max(chat.updatedAt ?? now, stored?.updatedAt ?? 0),
       };
       if (Number.isFinite(maxThreads)) {
         const kept = sortedThreads(data).slice(0, Math.max(1, maxThreads));

@@ -248,13 +248,14 @@ describe('useAsaResults persistence', () => {
     act(() => {
       window.dispatchEvent(new Event('pagehide'));
     });
-    expect(store.saveThread).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
 
-    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    expect(result.current.isStreaming).toBe(true);
     act(() => result.current.clearHistory());
     act(() => {
       window.dispatchEvent(new Event('pagehide'));
     });
+    await act(async () => {});
     expect(store.saveThread).toHaveBeenCalledTimes(2);
   });
 
@@ -321,6 +322,37 @@ describe('useAsaResults persistence', () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
+  it('never sends a local initialThreadId to the agent when nothing is stored for it', async () => {
+    const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+    const { store } = createMemoryPersistence();
+    const { result } = renderWithPersistence(client, store, 'local-gone');
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    expect(getAgentResultsStream).toHaveBeenCalledWith('hello', { domain: 'chatbot' });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it('continues message ids after the highest restored one', async () => {
+    const { client } = createMockCioClient({ events: [{ type: 'message', data: { text: 'Hi' } }] });
+    const { store } = createMemoryPersistence([
+      persisted('t1', [
+        { ...userMsg('msg-41-1', 'q'), id: 'msg-41-1' },
+        { ...aiMsg('msg-42-1', 'a'), id: 'msg-42-1' },
+      ]),
+    ]);
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('next'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    const ids = result.current.messages.map((m) => m.id);
+    expect(new Set(ids).size).toBe(4);
+    expect(ids[2]).toMatch(/^msg-43-/);
+    expect(ids[3]).toMatch(/^msg-44-/);
+  });
+
   it('does not overwrite a conversation the user started before a slow load finished', async () => {
     const { client } = createMockCioClient({ events: [{ type: 'message', data: { text: 'Hi' } }] });
     const { store } = createMemoryPersistence([
@@ -342,6 +374,11 @@ describe('useAsaResults persistence', () => {
     await waitFor(() => expect(result.current.isHydrating).toBe(false));
 
     expect(result.current.messages.map((m) => m.text)).toEqual(['fresh', 'Hi']);
+    await waitFor(() =>
+      expect(result.current.threads.map((t) => t.threadId)).toContain(
+        result.current.activeThreadId,
+      ),
+    );
   });
 
   it('starts empty when the adapter rejects', async () => {
@@ -532,7 +569,7 @@ describe('useAsaResults persistence', () => {
       await act(async () => notify());
       await waitFor(() => expect(result.current.messages).toHaveLength(4));
       expect(result.current.messages[3].status).toBe('loading');
-      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.isStreaming).toBe(true);
 
       threads.set('active', {
         ...persisted('active', [...inFlight.slice(0, 3), aiMsg('a3', 'answer B')]),
@@ -541,6 +578,7 @@ describe('useAsaResults persistence', () => {
       await act(async () => notify());
       await waitFor(() => expect(result.current.messages[3].text).toBe('answer B'));
       expect(result.current.messages.every((m) => m.status === 'done')).toBe(true);
+      expect(result.current.isStreaming).toBe(false);
     });
 
     it('mirrors a failed turn from another tab', async () => {
@@ -612,13 +650,54 @@ describe('useAsaResults persistence', () => {
         await waitFor(() => expect(result.current.isHydrating).toBe(false));
         expect(result.current.messages[1].status).toBe('loading');
 
+        expect(result.current.isStreaming).toBe(true);
+        expect(store.saveThread).not.toHaveBeenCalled();
+
         act(() => {
           jest.advanceTimersByTime(61 * 1000);
         });
         expect(result.current.messages[1].status).toBe('error');
+        expect(result.current.isStreaming).toBe(false);
+
+        await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+        expect(store.saveThread.mock.calls[0][0].messages[1].status).toBe('error');
       } finally {
         jest.useRealTimers();
       }
+    });
+
+    it('refuses to send while the thread is streaming in another tab', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([
+        {
+          ...persisted('fresh', [userMsg('u1', 'q'), aiMsg('a1', '', 'loading')]),
+          updatedAt: Date.now(),
+        },
+      ]);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => result.current.sendMessage('mine'));
+
+      expect(getAgentResultsStream).not.toHaveBeenCalled();
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    it('writes a stale in-flight snapshot back as settled so the list stops reporting it', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([
+        {
+          ...persisted('stale', [userMsg('u1', 'q'), aiMsg('a1', '', 'loading')]),
+          updatedAt: Date.now() - 5 * 60 * 1000,
+        },
+      ]);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+      expect(store.saveThread.mock.calls[0][0].messages[1].status).toBe('error');
+      await waitFor(() => expect(result.current.threads[0].inFlight).toBe(false));
     });
 
     it('lists a chat created in another tab right away, flagged as in flight', async () => {

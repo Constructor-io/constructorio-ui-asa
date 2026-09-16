@@ -127,8 +127,9 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const onThreadsChangeRef = useRef(onThreadsChange);
     onThreadsChangeRef.current = onThreadsChange;
     useEffect(() => {
+      if (isHydrating) return;
       onThreadsChangeRef.current?.(threads, activeThreadId);
-    }, [threads, activeThreadId]);
+    }, [threads, activeThreadId, isHydrating]);
 
     useEffect(() => {
       if (isHydrating) return;

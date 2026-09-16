@@ -25,6 +25,7 @@ import {
   createLocalThreadId,
   isInFlight,
   isLocalThreadId,
+  nextMessageCounter,
   normalizeHydratedMessages,
 } from '../utils/chatPersistence';
 
@@ -34,7 +35,11 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const isStreamingRef = useRef(false);
   const killSwitchRef = useRef(false);
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
-  const threadIdRef = useRef<string | null>(options?.initialThreadId ?? null);
+  const threadIdRef = useRef<string | null>(
+    options?.initialThreadId && !isLocalThreadId(options.initialThreadId)
+      ? options.initialThreadId
+      : null,
+  );
   const idCounterRef = useRef(0);
 
   const contextValue = useCioAsaContext();
@@ -52,6 +57,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const [isHydrating, setIsHydrating] = useState(Boolean(persistence));
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [foreignInFlight, setForeignInFlight] = useState(false);
+  const foreignInFlightRef = useRef(false);
   const persistenceRef = useRef(persistence);
   persistenceRef.current = persistence;
   const storageThreadIdRef = useRef<string | null>(null);
@@ -65,6 +72,13 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
   const inFlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshRequestRef = useRef(0);
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  const setForeign = useCallback((value: boolean) => {
+    foreignInFlightRef.current = value;
+    setForeignInFlight(value);
+  }, []);
 
   const clearInFlightTimer = useCallback(() => {
     if (inFlightTimerRef.current) {
@@ -76,9 +90,11 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const refreshThreads = useCallback(async () => {
     const store = persistenceRef.current;
     if (!store) return;
+    refreshRequestRef.current += 1;
+    const request = refreshRequestRef.current;
     try {
       const list = await store.listThreads();
-      if (mountedRef.current) setThreads(list);
+      if (mountedRef.current && request === refreshRequestRef.current) setThreads(list);
     } catch {
       /* ignore */
     }
@@ -90,25 +106,34 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       storageThreadIdRef.current = chat.threadId;
       createdAtRef.current = chat.createdAt;
       threadIdRef.current = isLocalThreadId(chat.threadId) ? null : chat.threadId;
-      idCounterRef.current = chat.messages.length;
+      idCounterRef.current = nextMessageCounter(chat.messages);
       lastSyncedAtRef.current = chat.updatedAt;
       lastSavedCountRef.current = chat.messages.length;
       setActiveThreadId(chat.threadId);
 
+      const inFlight = isInFlight(chat.messages);
       const age = Date.now() - chat.updatedAt;
-      const stillStreamingElsewhere = isInFlight(chat.messages) && age < IN_FLIGHT_GRACE_MS;
+      const stillStreamingElsewhere = inFlight && age < IN_FLIGHT_GRACE_MS;
       if (!stillStreamingElsewhere) {
+        setForeign(false);
         setMessages(normalizeHydratedMessages(chat.messages));
+        // A stale in-flight snapshot is settled locally; write it back so the stored
+        // record (and `inFlight` in the thread list) stops reporting a stream forever.
+        if (inFlight) dirtyRef.current = true;
         return;
       }
+      setForeign(true);
       setMessages(chat.messages);
       inFlightTimerRef.current = setTimeout(() => {
         inFlightTimerRef.current = null;
         if (!mountedRef.current || storageThreadIdRef.current !== chat.threadId) return;
+        setForeign(false);
+        if (isStreamingRef.current) return;
+        dirtyRef.current = true;
         setMessages((prev) => normalizeHydratedMessages(prev));
       }, IN_FLIGHT_GRACE_MS - age);
     },
-    [clearInFlightTimer],
+    [clearInFlightTimer, setForeign],
   );
 
   const tracking = useAsaTracking({
@@ -137,10 +162,18 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       try {
         const list = await store.listThreads();
         if (cancelled) return;
+        if (interactedRef.current) {
+          refreshThreads();
+          return;
+        }
         setThreads(list);
         const targetId = options?.initialThreadId ?? list[0]?.threadId;
         const chat = targetId ? await store.getThread(targetId) : null;
-        if (cancelled || !chat || interactedRef.current) return;
+        if (cancelled || interactedRef.current) return;
+        if (!chat) {
+          if (targetId && isLocalThreadId(targetId)) threadIdRef.current = null;
+          return;
+        }
         applyChat(chat);
       } catch {
         /* storage unavailable: start empty */
@@ -164,23 +197,27 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     const previousId = storageThreadIdRef.current;
     const threadId = threadIdRef.current ?? previousId ?? createLocalThreadId();
     storageThreadIdRef.current = threadId;
-    if (previousId && previousId !== threadId) {
-      store.deleteThread(previousId).catch(() => {});
-    }
     const now = Date.now();
     createdAtRef.current = createdAtRef.current ?? now;
     lastSyncedAtRef.current = now;
     lastSavedCountRef.current = current.length;
     setActiveThreadId(threadId);
-    return store
-      .saveThread({
-        version: PERSISTED_CHAT_VERSION,
-        threadId,
-        messages: current,
-        createdAt: createdAtRef.current,
-        updatedAt: now,
-      })
-      .catch(() => {});
+    const snapshot: PersistedChat = {
+      version: PERSISTED_CHAT_VERSION,
+      threadId,
+      messages: current,
+      createdAt: createdAtRef.current,
+      updatedAt: now,
+    };
+    // Writes are chained so an async adapter applies them in the order they were issued.
+    const run = async () => {
+      if (previousId && previousId !== threadId) {
+        await store.deleteThread(previousId).catch(() => {});
+      }
+      await store.saveThread(snapshot).catch(() => {});
+    };
+    saveChainRef.current = saveChainRef.current.then(run, run);
+    return saveChainRef.current;
   }, []);
 
   useEffect(() => {
@@ -202,7 +239,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const sendMessage = useCallback(
     (text: string, source: AssistantSubmitSource = 'input') => {
       const intent = text.trim();
-      if (!intent || isStreamingRef.current) return;
+      if (!intent || isStreamingRef.current || foreignInFlightRef.current) return;
       interactedRef.current = true;
 
       trackingRef.current.trackSubmit(intent);
@@ -370,12 +407,13 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     loadRequestRef.current += 1;
     lastSyncedAtRef.current = 0;
     lastSavedCountRef.current = 0;
+    setForeign(false);
     setActiveThreadId(null);
     setMessages([]);
     setIsStreaming(false);
     isStreamingRef.current = false;
     return storedId;
-  }, [clearInFlightTimer]);
+  }, [clearInFlightTimer, setForeign]);
 
   const clearHistory = useCallback(() => {
     const storedId = resetConversation();
@@ -458,7 +496,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   return {
     messages,
     sendMessage,
-    isStreaming,
+    isStreaming: isStreaming || foreignInFlight,
     clearHistory,
     isHydrating,
     threads,

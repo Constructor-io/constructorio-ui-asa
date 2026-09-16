@@ -4,6 +4,7 @@ import {
   getThreadTitle,
   isLocalThreadId,
   isInFlight,
+  nextMessageCounter,
   normalizeHydratedMessages,
   PERSISTED_CHAT_VERSION,
 } from '../../src/utils/chatPersistence';
@@ -211,6 +212,36 @@ describe('createLocalStoragePersistence', () => {
     expect(await store.listThreads()).toEqual([]);
   });
 
+  it('drops records with malformed messages or a missing createdAt', async () => {
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const store = createLocalStoragePersistence({ storage });
+    const good = chat('good', turns(1));
+    const { createdAt, ...noCreatedAt } = chat('no-created', turns(1));
+    storage.setItem(
+      key,
+      JSON.stringify({
+        version: PERSISTED_CHAT_VERSION,
+        threads: {
+          good,
+          nulls: { ...chat('nulls', turns(1)), messages: [null] },
+          shape: { ...chat('shape', turns(1)), messages: [{ id: 'x', role: 'ghost', text: 1 }] },
+          'no-created': noCreatedAt,
+        },
+      }),
+    );
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['good']);
+  });
+
+  it('keeps the newest updatedAt when an older snapshot is merged in', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const newer = Date.now();
+    await store.saveThread(chat('t1', turns(2), newer));
+    await store.saveThread(chat('t1', turns(1), newer - 60_000));
+
+    expect((await store.getThread('t1'))?.updatedAt).toBe(newer);
+  });
+
   it('falls back to the current thread alone, then trims it, when storage is full', async () => {
     const store = createLocalStoragePersistence({ storage });
     await store.saveThread(chat('other', turns(3), Date.now() - 2000));
@@ -322,13 +353,29 @@ describe('persistence helpers', () => {
   });
 
   it('settles in-flight statuses on hydrate', () => {
-    const [streamingWithText, loadingEmpty, done] = normalizeHydratedMessages([
+    const [streamingWithText, loadingEmpty, done, refinementOnly] = normalizeHydratedMessages([
       msg('assistant', 'partial', 'streaming'),
       msg('assistant', '', 'loading'),
       msg('assistant', 'ok', 'done'),
+      {
+        ...msg('assistant', '', 'streaming'),
+        refinement: { question: 'Who is it for?', options: ['Men', 'Women'] },
+      },
     ]);
     expect(streamingWithText.status).toBe('done');
     expect(loadingEmpty.status).toBe('error');
     expect(done.status).toBe('done');
+    expect(refinementOnly.status).toBe('done');
+  });
+
+  it('continues message counters from the highest restored id', () => {
+    expect(nextMessageCounter([])).toBe(0);
+    expect(nextMessageCounter([msg('user', 'a'), msg('assistant', 'b')])).toBe(2);
+    expect(
+      nextMessageCounter([
+        { ...msg('user', 'a'), id: 'msg-41-1' },
+        { ...msg('assistant', 'b'), id: 'msg-42-1' },
+      ]),
+    ).toBe(42);
   });
 });

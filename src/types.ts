@@ -172,6 +172,7 @@ export interface ResultGroup {
 export interface UseChatReturn {
   messages: ChatMessage[];
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
+  /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
   clearHistory: () => void;
   /** True while a persisted conversation is being loaded. Always `false` when persistence is off. */
