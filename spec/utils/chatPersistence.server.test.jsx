@@ -10,5 +10,6 @@ describe('createLocalStoragePersistence (SSR)', () => {
       store.saveThread({ version: 1, threadId: 't1', messages: [], createdAt: 1, updatedAt: 1 }),
     ).resolves.toBeUndefined();
     await expect(store.deleteThread('t1')).resolves.toBeUndefined();
+    expect(() => store.subscribe(() => {})()).not.toThrow();
   });
 });

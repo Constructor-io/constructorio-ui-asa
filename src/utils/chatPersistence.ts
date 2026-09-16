@@ -9,8 +9,8 @@ import type {
 export const PERSISTED_CHAT_VERSION = 1;
 export const DEFAULT_PERSISTENCE_KEY = 'cio-asa:chat';
 export const DEFAULT_PERSISTENCE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const DEFAULT_PERSISTENCE_MAX_TURNS = 20;
-export const DEFAULT_PERSISTENCE_MAX_THREADS = 5;
+
+export const IN_FLIGHT_GRACE_MS = 60 * 1000;
 
 const LOCAL_THREAD_PREFIX = 'local-';
 const TITLE_MAX_LENGTH = 80;
@@ -18,6 +18,7 @@ const TITLE_MAX_LENGTH = 80;
 interface StoredThreads {
   version: typeof PERSISTED_CHAT_VERSION;
   threads: Record<string, PersistedChat>;
+  deleted?: Record<string, number>;
 }
 
 export function createLocalThreadId(): string {
@@ -37,6 +38,11 @@ export function getThreadTitle(messages: ChatMessage[]): string {
   return first.length > TITLE_MAX_LENGTH ? `${first.slice(0, TITLE_MAX_LENGTH - 1)}…` : first;
 }
 
+export function isInFlight(messages: ChatMessage[]): boolean {
+  const last = messages[messages.length - 1];
+  return last?.status === 'loading' || last?.status === 'streaming';
+}
+
 export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.map((m) => {
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
@@ -47,7 +53,7 @@ export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[
 
 function trimToTurns(messages: ChatMessage[], maxTurns: number): ChatMessage[] {
   if (maxTurns <= 0) return [];
-  let trimmed = messages.slice(-maxTurns * 2);
+  let trimmed = Number.isFinite(maxTurns) ? messages.slice(-maxTurns * 2) : messages;
   while (trimmed.length && trimmed[0].role !== 'user') trimmed = trimmed.slice(1);
   return trimmed;
 }
@@ -59,6 +65,15 @@ function resolveStorage(storage?: Storage): Storage | null {
   } catch {
     return null;
   }
+}
+
+export function mergeMessages(stored: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const incomingById = new Map(incoming.map((m) => [m.id, m]));
+  const storedIds = new Set(stored.map((m) => m.id));
+  return [
+    ...stored.map((m) => incomingById.get(m.id) ?? m),
+    ...incoming.filter((m) => !storedIds.has(m.id)),
+  ];
 }
 
 function isPersistedChat(value: unknown): value is PersistedChat {
@@ -79,14 +94,14 @@ export function createLocalStoragePersistence(
     key = DEFAULT_PERSISTENCE_KEY,
     namespace,
     ttlMs = DEFAULT_PERSISTENCE_TTL_MS,
-    maxTurns = DEFAULT_PERSISTENCE_MAX_TURNS,
-    maxThreads = DEFAULT_PERSISTENCE_MAX_THREADS,
+    maxTurns = Infinity,
+    maxThreads = Infinity,
     storage: storageOption,
   } = options;
   const storageKey = [key, `v${PERSISTED_CHAT_VERSION}`, namespace].filter(Boolean).join(':');
 
   const read = (): StoredThreads => {
-    const empty: StoredThreads = { version: PERSISTED_CHAT_VERSION, threads: {} };
+    const empty: StoredThreads = { version: PERSISTED_CHAT_VERSION, threads: {}, deleted: {} };
     const storage = resolveStorage(storageOption);
     if (!storage) return empty;
     try {
@@ -100,7 +115,12 @@ export function createLocalStoragePersistence(
           ([, chat]) => isPersistedChat(chat) && chat.updatedAt >= cutoff,
         ),
       );
-      return { version: PERSISTED_CHAT_VERSION, threads };
+      const deleted = Object.fromEntries(
+        Object.entries(parsed.deleted ?? {}).filter(
+          ([, at]) => typeof at === 'number' && at >= cutoff,
+        ),
+      );
+      return { version: PERSISTED_CHAT_VERSION, threads, deleted };
     } catch {
       return empty;
     }
@@ -121,7 +141,7 @@ export function createLocalStoragePersistence(
   const write = (data: StoredThreads, priorityThreadId?: string) => {
     const storage = resolveStorage(storageOption);
     if (!storage) return;
-    if (Object.keys(data.threads).length === 0) {
+    if (Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0) {
       try {
         storage.removeItem(storageKey);
       } catch {
@@ -132,12 +152,20 @@ export function createLocalStoragePersistence(
     if (tryWrite(storage, data)) return;
 
     const priority = priorityThreadId ? data.threads[priorityThreadId] : sortedThreads(data)[0];
-    if (!priority) return;
+    if (!priority) {
+      try {
+        storage.removeItem(storageKey);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
     let chat = priority;
     while (chat.messages.length > 0) {
       const single: StoredThreads = {
         version: PERSISTED_CHAT_VERSION,
         threads: { [chat.threadId]: chat },
+        deleted: data.deleted,
       };
       if (tryWrite(storage, single)) return;
       chat = { ...chat, messages: trimToTurns(chat.messages.slice(2), maxTurns) };
@@ -156,6 +184,7 @@ export function createLocalStoragePersistence(
         title: getThreadTitle(messages),
         createdAt,
         updatedAt,
+        inFlight: isInFlight(messages),
       }));
     },
 
@@ -166,24 +195,41 @@ export function createLocalStoragePersistence(
     async saveThread(chat: PersistedChat): Promise<void> {
       const data = read();
       const now = Date.now();
+      const createdAt = chat.createdAt ?? now;
+      const deletedAt = data.deleted?.[chat.threadId];
+      if (deletedAt !== undefined && deletedAt >= createdAt) return;
+      const stored = data.threads[chat.threadId];
+      const messages = stored ? mergeMessages(stored.messages, chat.messages) : chat.messages;
       data.threads[chat.threadId] = {
         ...chat,
         version: PERSISTED_CHAT_VERSION,
-        messages: trimToTurns(chat.messages, maxTurns),
-        createdAt: chat.createdAt ?? now,
+        messages: trimToTurns(messages, maxTurns),
+        createdAt,
         updatedAt: chat.updatedAt ?? now,
       };
-      const kept = sortedThreads(data).slice(0, Math.max(1, maxThreads));
-      data.threads = Object.fromEntries(kept.map((t) => [t.threadId, t]));
-      if (!data.threads[chat.threadId]) return;
+      if (Number.isFinite(maxThreads)) {
+        const kept = sortedThreads(data).slice(0, Math.max(1, maxThreads));
+        data.threads = Object.fromEntries(kept.map((t) => [t.threadId, t]));
+        if (!data.threads[chat.threadId]) return;
+      }
       write(data, chat.threadId);
     },
 
     async deleteThread(threadId: string): Promise<void> {
       const data = read();
-      if (!(threadId in data.threads)) return;
       delete data.threads[threadId];
+      data.deleted = { ...data.deleted, [threadId]: Date.now() };
       write(data);
+    },
+
+    subscribe(listener: () => void): () => void {
+      if (typeof window === 'undefined') return () => {};
+      const onStorage = (event: StorageEvent) => {
+        if (storageOption && event.storageArea !== storageOption) return;
+        if (event.key === null || event.key === storageKey) listener();
+      };
+      window.addEventListener('storage', onStorage);
+      return () => window.removeEventListener('storage', onStorage);
     },
   };
 }

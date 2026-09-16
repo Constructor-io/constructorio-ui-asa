@@ -69,7 +69,9 @@ describe('Chat persistence', () => {
     act(() => ref.current!.clearHistory());
 
     expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();
-    await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull());
+    await waitFor(() =>
+      expect(window.localStorage.getItem(STORAGE_KEY)).not.toContain('restored question'),
+    );
   });
 
   it('accepts a custom adapter', async () => {
@@ -95,5 +97,33 @@ describe('Chat persistence', () => {
 
     expect(await screen.findByText('from session')).toBeInTheDocument();
     storage.clear();
+  });
+
+  it('reports stored threads and switches between them through the handle', async () => {
+    seedStorage();
+    const ref = createRef<ChatHandle>();
+    const onThreadsChange = jest.fn();
+    const { client } = createMockCioClient({ events: [] });
+    (client as unknown as { options: { apiKey: string } }).options = { apiKey: 'key_test' };
+    render(
+      <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }} persistence>
+        <Chat ref={ref} onThreadsChange={onThreadsChange} />
+      </CioAsaProvider>,
+    );
+    await screen.findByText('restored question');
+    await waitFor(() =>
+      expect(onThreadsChange).toHaveBeenLastCalledWith(
+        [expect.objectContaining({ threadId: 't1', title: 'restored question' })],
+        't1',
+      ),
+    );
+
+    act(() => ref.current!.newThread());
+    expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();
+    await waitFor(() => expect(onThreadsChange).toHaveBeenLastCalledWith(expect.any(Array), null));
+    expect(window.localStorage.getItem(STORAGE_KEY)).toContain('restored question');
+
+    await act(() => ref.current!.switchThread('t1'));
+    expect(await screen.findByText('restored question')).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ import {
   createLocalThreadId,
   getThreadTitle,
   isLocalThreadId,
+  isInFlight,
   normalizeHydratedMessages,
   PERSISTED_CHAT_VERSION,
 } from '../../src/utils/chatPersistence';
@@ -74,8 +75,17 @@ describe('createLocalStoragePersistence', () => {
     expect(await store.getThread('t1')).toMatchObject({ threadId: 't1', version: 1 });
     expect((await store.getThread('t1'))?.messages.map((m) => m.text)).toEqual(['q1', 'a1']);
     expect(await store.listThreads()).toEqual([
-      expect.objectContaining({ threadId: 't1', title: 'q1' }),
+      expect.objectContaining({ threadId: 't1', title: 'q1', inFlight: false }),
     ]);
+  });
+
+  it('flags threads whose latest answer is still in flight', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('t1', [msg('user', 'q'), msg('assistant', '', 'loading')]));
+    expect((await store.listThreads())[0].inFlight).toBe(true);
+
+    await store.saveThread(chat('t2', [msg('user', 'q'), msg('assistant', '', 'error')]));
+    expect((await store.listThreads()).find((t) => t.threadId === 't2')?.inFlight).toBe(false);
   });
 
   it('returns null for an unknown thread', async () => {
@@ -118,13 +128,69 @@ describe('createLocalStoragePersistence', () => {
     expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['c', 'b']);
   });
 
-  it('deletes a thread and removes the key when nothing is left', async () => {
+  it('deletes a thread and leaves a tombstone so it cannot be resurrected', async () => {
     const store = createLocalStoragePersistence({ storage });
-    await store.saveThread(chat('t1', turns(1)));
+    const original = chat('t1', turns(1), Date.now() - 1000);
+    await store.saveThread(original);
     await store.deleteThread('t1');
 
     expect(await store.listThreads()).toEqual([]);
-    expect(storage.length).toBe(0);
+    expect(await store.getThread('t1')).toBeNull();
+
+    await store.saveThread({ ...original, messages: turns(2), updatedAt: Date.now() });
+    expect(await store.getThread('t1')).toBeNull();
+  });
+
+  it('allows a thread created after its tombstone', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('t1', turns(1), Date.now() - 1000));
+    await store.deleteThread('t1');
+
+    const recreated = chat('t1', turns(1), Date.now() + 10);
+    await store.saveThread(recreated);
+    expect(await store.getThread('t1')).not.toBeNull();
+  });
+
+  it('expires tombstones with the ttl', async () => {
+    const store = createLocalStoragePersistence({ storage, ttlMs: 1000 });
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    storage.setItem(
+      key,
+      JSON.stringify({
+        version: PERSISTED_CHAT_VERSION,
+        threads: {},
+        deleted: { t1: Date.now() - 5000 },
+      }),
+    );
+
+    await store.saveThread({ ...chat('t1', turns(1)), createdAt: Date.now() - 6000 });
+    expect(await store.getThread('t1')).not.toBeNull();
+  });
+
+  it('merges turns written by another tab instead of overwriting them', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const base = turns(1);
+    await store.saveThread(chat('t1', base));
+
+    const tabA = [...base, ...turns(1)];
+    const tabB = [...base, ...turns(1)];
+    await store.saveThread(chat('t1', tabA));
+    await store.saveThread(chat('t1', tabB));
+
+    const saved = await store.getThread('t1');
+    expect(saved?.messages.map((m) => m.id)).toEqual([...tabA, ...tabB.slice(2)].map((m) => m.id));
+  });
+
+  it('prefers the incoming version of a message that already exists', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const [user, assistant] = turns(1);
+    await store.saveThread(chat('t1', [user, { ...assistant, status: 'streaming', text: 'par' }]));
+    await store.saveThread(
+      chat('t1', [user, { ...assistant, status: 'done', text: 'partial done' }]),
+    );
+
+    const saved = await store.getThread('t1');
+    expect(saved?.messages[1]).toMatchObject({ status: 'done', text: 'partial done' });
   });
 
   it('namespaces the storage key', async () => {
@@ -191,6 +257,37 @@ describe('createLocalStoragePersistence', () => {
     expect(await store.getThread('t1')).toBeNull();
   });
 
+  it('notifies subscribers when another tab changes this key', () => {
+    const listener = jest.fn();
+    const store = createLocalStoragePersistence({ namespace: 'ns' });
+    const unsubscribe = store.subscribe!(listener);
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}:ns`;
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unrelated' }));
+    expect(listener).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new StorageEvent('storage', { key }));
+    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    unsubscribe();
+    window.dispatchEvent(new StorageEvent('storage', { key }));
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores storage events from a different storage area', () => {
+    const listener = jest.fn();
+    const store = createLocalStoragePersistence({ storage: window.sessionStorage });
+    const unsubscribe = store.subscribe!(listener);
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: window.localStorage }));
+    expect(listener).not.toHaveBeenCalled();
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: window.sessionStorage }));
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('uses window.localStorage by default', async () => {
     window.localStorage.clear();
     const store = createLocalStoragePersistence();
@@ -215,6 +312,13 @@ describe('persistence helpers', () => {
     expect(getThreadTitle([msg('assistant', 'hi'), msg('user', 'shoes')])).toBe('shoes');
     expect(getThreadTitle([msg('user', 'x'.repeat(100))])).toHaveLength(80);
     expect(getThreadTitle([])).toBe('');
+  });
+
+  it('detects a thread whose last answer is still in flight', () => {
+    expect(isInFlight([msg('user', 'q'), msg('assistant', '', 'loading')])).toBe(true);
+    expect(isInFlight([msg('user', 'q'), msg('assistant', 'par', 'streaming')])).toBe(true);
+    expect(isInFlight([msg('user', 'q'), msg('assistant', 'a')])).toBe(false);
+    expect(isInFlight([])).toBe(false);
   });
 
   it('settles in-flight statuses on hydrate', () => {

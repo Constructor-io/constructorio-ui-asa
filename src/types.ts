@@ -176,6 +176,14 @@ export interface UseChatReturn {
   clearHistory: () => void;
   /** True while a persisted conversation is being loaded. Always `false` when persistence is off. */
   isHydrating: boolean;
+  /** Stored conversations, most recent first. Empty when persistence is off. */
+  threads: ThreadSummary[];
+  /** Id of the stored conversation currently shown, or `null` for an unsaved one. */
+  activeThreadId: string | null;
+  /** Start an empty conversation, keeping the current one in storage. */
+  newThread: () => void;
+  /** Load a stored conversation and continue it. No-op when persistence is off. */
+  switchThread: (threadId: string) => Promise<void>;
 }
 
 export interface UseAsaResultsOptions {
@@ -203,6 +211,8 @@ export interface ThreadSummary {
   title: string;
   createdAt: number;
   updatedAt: number;
+  /** True while the latest answer is still streaming (possibly in another tab). */
+  inFlight: boolean;
 }
 
 /**
@@ -215,6 +225,11 @@ export interface ChatPersistence {
   getThread(threadId: string): Promise<PersistedChat | null>;
   saveThread(chat: PersistedChat): Promise<void>;
   deleteThread(threadId: string): Promise<void>;
+  /**
+   * Optional. Notify when stored threads change outside this hook instance (another tab, another
+   * device once server-backed). Returns an unsubscribe function.
+   */
+  subscribe?(listener: () => void): () => void;
 }
 
 export type ChatPersistenceOption = ChatPersistence | boolean;
@@ -226,9 +241,9 @@ export interface LocalStoragePersistenceOptions {
   namespace?: string;
   /** Threads idle longer than this are dropped on read. Default 7 days, matching server retention. */
   ttlMs?: number;
-  /** Most recent user/assistant turns kept per thread. Default 20. */
+  /** Cap on user/assistant turns kept per thread. Unlimited by default. */
   maxTurns?: number;
-  /** Most recent threads kept. Default 5. */
+  /** Cap on threads kept. Unlimited by default. */
   maxThreads?: number;
   /** Storage to use instead of `window.localStorage` (e.g. `sessionStorage`). */
   storage?: Storage;

@@ -1,7 +1,13 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
 import useFocusTrap from '../../hooks/useFocusTrap';
-import { ChatComponentOverrides, ChatMessage, ResultGroupMeta, Translations } from '../../types';
+import {
+  ChatComponentOverrides,
+  ChatMessage,
+  ResultGroupMeta,
+  ThreadSummary,
+  Translations,
+} from '../../types';
 import { Product, NormalizeOptions } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
@@ -11,7 +17,12 @@ import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 
 export interface ChatHandle {
+  /** Reset the conversation and delete it from storage when persistence is on. */
   clearHistory: () => void;
+  /** Start an empty conversation, keeping the current one in storage. */
+  newThread: () => void;
+  /** Load a stored conversation. No-op when persistence is off. */
+  switchThread: (threadId: string) => Promise<void>;
 }
 
 interface ChatProps {
@@ -44,6 +55,8 @@ interface ChatProps {
   translations?: Translations;
   /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
   initialThreadId?: string;
+  /** Fires with the stored conversations and the active one whenever either changes. Requires persistence. */
+  onThreadsChange?: (threads: ThreadSummary[], activeThreadId: string | null) => void;
 }
 
 // a11y: text for the screen-reader live region that voices the conversation
@@ -81,12 +94,21 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       componentOverrides,
       translations,
       initialThreadId,
+      onThreadsChange,
     },
     ref,
   ) => {
-    const { messages, sendMessage, isStreaming, clearHistory, isHydrating } = useAsaResults({
-      initialThreadId,
-    });
+    const {
+      messages,
+      sendMessage,
+      isStreaming,
+      clearHistory,
+      isHydrating,
+      threads,
+      activeThreadId,
+      newThread,
+      switchThread,
+    } = useAsaResults({ initialThreadId });
     const chatViewRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -96,9 +118,17 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const isModal = typeof onClose === 'function';
     const announcement = getAnnouncement(messages, translations);
 
-    useImperativeHandle(ref, () => ({
+    useImperativeHandle(ref, () => ({ clearHistory, newThread, switchThread }), [
       clearHistory,
-    }));
+      newThread,
+      switchThread,
+    ]);
+
+    const onThreadsChangeRef = useRef(onThreadsChange);
+    onThreadsChangeRef.current = onThreadsChange;
+    useEffect(() => {
+      onThreadsChangeRef.current?.(threads, activeThreadId);
+    }, [threads, activeThreadId]);
 
     useEffect(() => {
       if (isHydrating) return;
