@@ -232,6 +232,7 @@ export type Translations = {
   'CioAsa.input.placeholder'?: string;
   'CioAsa.input.ariaLabel'?: string;
   'CioAsa.input.sendAriaLabel'?: string;
+  'CioAsa.input.stopAriaLabel'?: string;
   'CioAsa.welcome.title'?: string;
   'CioAsa.welcome.placeholder'?: string;
   'CioAsa.welcome.sendButton'?: string;
@@ -262,6 +263,14 @@ export interface ChatInputRenderProps {
   onSubmit: () => void;
   placeholder: string;
   isDisabled: boolean;
+  /**
+   * Whether a reply is currently streaming. The default input swaps its send button for a
+   * stop button while this is true; an override should do the same, or cancelling is
+   * unreachable from the packaged UI.
+   */
+  isStreaming: boolean;
+  /** Cancel the in-flight reply. Keeps the conversation and the thread. */
+  onAbort: () => void;
 }
 
 export interface WelcomeScreenTitleRenderProps {

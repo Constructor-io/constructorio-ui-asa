@@ -23,7 +23,11 @@ function renderChat(
  * Renders Chat against a stream that yields `events` and then stays open, so a test
  * can act on the conversation mid-response the way a real SSE connection would be.
  */
-function renderChatMidStream(events: StreamEvent[], ref: React.Ref<ChatHandle>) {
+function renderChatMidStream(
+  events: StreamEvent[],
+  ref: React.Ref<ChatHandle>,
+  props: React.ComponentProps<typeof Chat> = {},
+) {
   let index = 0;
   const stream = {
     getReader: () => ({
@@ -43,7 +47,7 @@ function renderChatMidStream(events: StreamEvent[], ref: React.Ref<ChatHandle>) 
   const { client } = createMockCioClient({ stream });
   return render(
     <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
-      <Chat ref={ref} />
+      <Chat {...props} ref={ref} />
     </CioAsaProvider>,
   );
 }
@@ -163,6 +167,39 @@ describe('Chat', () => {
     await waitFor(() => expect(screen.getByRole('textbox')).not.toBeDisabled());
     expect(document.querySelector('.cio-asa-ai-message-group')).toBeNull();
     expect(screen.getByText('hello')).toBeInTheDocument();
+  });
+
+  it('cancels from the built-in stop button, with no ref required', async () => {
+    renderChatMidStream([{ type: 'message', data: { text: 'Partial ans' } }], null);
+
+    await userEvent.type(screen.getByRole('textbox'), 'hello{Enter}');
+    expect(await screen.findByText('Partial ans')).toBeInTheDocument();
+
+    // While streaming the send button is replaced, not merely disabled.
+    expect(screen.queryByRole('button', { name: 'Send message' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Stop response' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument(),
+    );
+    expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.getByText('Partial ans')).toBeInTheDocument();
+  });
+
+  it('hides the stop button when showStopButton is false, leaving the ref as the way out', async () => {
+    const ref = createRef<ChatHandle>();
+    renderChatMidStream([{ type: 'message', data: { text: 'Partial ans' } }], ref, {
+      showStopButton: false,
+    });
+
+    await userEvent.type(screen.getByRole('textbox'), 'hello{Enter}');
+    expect(await screen.findByText('Partial ans')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop response' })).not.toBeInTheDocument();
+
+    act(() => ref.current!.abort());
+
+    await waitFor(() => expect(screen.getByRole('textbox')).not.toBeDisabled());
+    expect(screen.getByText('Partial ans')).toBeInTheDocument();
   });
 
   it('has no accessibility violations on the welcome screen', async () => {

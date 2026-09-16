@@ -51,6 +51,12 @@ interface ChatProps {
   translations?: Translations;
   /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
   initialThreadId?: string;
+  /**
+   * Whether the input's send button becomes a stop button while a reply streams.
+   * Defaults to `true`. Set to `false` to keep the previous behavior (send stays,
+   * disabled) — cancelling is then only reachable via `abort()` on the ref.
+   */
+  showStopButton?: boolean;
 }
 
 // a11y: text for the screen-reader live region that voices the conversation
@@ -88,6 +94,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       componentOverrides,
       translations,
       initialThreadId,
+      showStopButton = true,
     },
     ref,
   ) => {
@@ -172,6 +179,9 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
               <ChatInput
                 onSubmit={sendMessage}
                 isDisabled={isStreaming}
+                isStreaming={isStreaming}
+                onAbort={abort}
+                showStopButton={showStopButton}
                 translations={translations}
                 componentOverrides={componentOverrides?.input}
               />
