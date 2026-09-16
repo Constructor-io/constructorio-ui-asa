@@ -1,6 +1,7 @@
 import {
   createLocalStoragePersistence,
   createLocalThreadId,
+  getTabId,
   getThreadTitle,
   isLocalThreadId,
   isInFlight,
@@ -233,6 +234,53 @@ describe('createLocalStoragePersistence', () => {
     expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['good']);
   });
 
+  it('drops records whose result groups or refinement are malformed', async () => {
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const store = createLocalStoragePersistence({ storage });
+    const good = { ...chat('good', turns(1)), owner: 'tab-1' };
+    good.messages[1].groups = [
+      { group: { display_name: 'Shoes', value: 'shoes' }, searchResults: [{ id: '1' }] },
+    ];
+    good.messages[1].refinement = { question: 'Which?', options: ['a', 'b'] };
+    const nullGroup = chat('null-group', turns(1));
+    (nullGroup.messages[1] as { groups: unknown }).groups = [null];
+    const noResults = chat('no-results', turns(1));
+    (noResults.messages[1] as { groups: unknown }).groups = [{ group: { display_name: 'x' } }];
+    const badRefinement = chat('bad-refinement', turns(1));
+    (badRefinement.messages[1] as { refinement: unknown }).refinement = {};
+    storage.setItem(
+      key,
+      JSON.stringify({
+        version: PERSISTED_CHAT_VERSION,
+        threads: {
+          good,
+          'null-group': nullGroup,
+          'no-results': noResults,
+          'bad-refinement': badRefinement,
+          'bad-owner': { ...chat('bad-owner', turns(1)), owner: 7 },
+        },
+      }),
+    );
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['good']);
+    expect(await store.getThread('good')).toEqual(good);
+  });
+
+  it('serializes writes through navigator.locks when the browser offers it', async () => {
+    const request = jest.fn((_name: string, cb: () => Promise<void>) => cb());
+    Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
+    try {
+      const store = createLocalStoragePersistence({ storage, namespace: 'lock' });
+      await store.saveThread(chat('t1', turns(1)));
+      await store.deleteThread('t1');
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(request.mock.calls[0][0]).toBe(`cio-asa:chat:v${PERSISTED_CHAT_VERSION}:lock`);
+      expect(await store.listThreads()).toEqual([]);
+    } finally {
+      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+    }
+  });
+
   it('keeps the newest updatedAt when an older snapshot is merged in', async () => {
     const store = createLocalStoragePersistence({ storage });
     const newer = Date.now();
@@ -306,6 +354,19 @@ describe('createLocalStoragePersistence', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
+  it('ignores sessionStorage events when using the default localStorage', () => {
+    const listener = jest.fn();
+    const store = createLocalStoragePersistence({ namespace: 'area' });
+    const unsubscribe = store.subscribe!(listener);
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}:area`;
+
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: window.sessionStorage }));
+    expect(listener).not.toHaveBeenCalled();
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: window.localStorage }));
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('ignores storage events from a different storage area', () => {
     const listener = jest.fn();
     const store = createLocalStoragePersistence({ storage: window.sessionStorage });
@@ -332,6 +393,13 @@ describe('createLocalStoragePersistence', () => {
 });
 
 describe('persistence helpers', () => {
+  it('keeps one tab id per tab, backed by sessionStorage', () => {
+    const id = getTabId();
+    expect(id).toEqual(expect.any(String));
+    expect(getTabId()).toBe(id);
+    expect(window.sessionStorage.getItem('cio-asa:tab')).toBe(id);
+  });
+
   it('creates local thread ids that are recognized as local', () => {
     const id = createLocalThreadId();
     expect(isLocalThreadId(id)).toBe(true);

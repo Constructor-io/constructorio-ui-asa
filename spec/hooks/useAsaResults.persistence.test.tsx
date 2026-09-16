@@ -151,6 +151,43 @@ describe('useAsaResults persistence', () => {
     expect(result.current.messages.map((m) => m.status)).toEqual(['done', 'done', 'done', 'error']);
   });
 
+  it('settles its own interrupted answer right away after a reload of the same tab', async () => {
+    const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+    const { store, threads } = createMemoryPersistence();
+    const first = renderWithPersistence(client, store);
+    await waitFor(() => expect(first.result.current.isHydrating).toBe(false));
+
+    act(() => first.result.current.sendMessage('hello'));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+    const saved = store.saveThread.mock.calls[0][0];
+    expect(saved.owner).toEqual(expect.any(String));
+    expect(saved.messages[1].status).toBe('loading');
+    first.unmount();
+
+    threads.set('t', { ...saved, updatedAt: Date.now() });
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    expect(result.current.messages.map((m) => m.status)).toEqual(['done', 'error']);
+    expect(result.current.isStreaming).toBe(false);
+  });
+
+  it('keeps treating a fresh in-flight record from another tab as streaming', async () => {
+    const { client } = createMockCioClient({ events: [] });
+    const { store } = createMemoryPersistence([
+      {
+        ...persisted('fresh', [userMsg('u1', 'q'), aiMsg('a1', '', 'loading')]),
+        updatedAt: Date.now(),
+        owner: 'some-other-tab',
+      },
+    ]);
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    expect(result.current.messages[1].status).toBe('loading');
+    expect(result.current.isStreaming).toBe(true);
+  });
+
   it('does not send a local thread id to the server', async () => {
     const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
     const { store } = createMemoryPersistence([
@@ -249,8 +286,16 @@ describe('useAsaResults persistence', () => {
       window.dispatchEvent(new Event('pagehide'));
     });
     await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+    expect(store.saveThread.mock.calls[1][0].messages.map((m) => m.status)).toEqual([
+      'done',
+      'error',
+    ]);
+    expect(store.saveThread.mock.calls[1][0].updatedAt).toBeGreaterThan(
+      store.saveThread.mock.calls[0][0].updatedAt,
+    );
 
     expect(result.current.isStreaming).toBe(true);
+    expect(result.current.messages[1].status).toBe('loading');
     act(() => result.current.clearHistory());
     act(() => {
       window.dispatchEvent(new Event('pagehide'));
@@ -289,6 +334,37 @@ describe('useAsaResults persistence', () => {
     act(() => result.current.sendMessage('new'));
     expect(getAgentResultsStream).toHaveBeenCalledWith('new', { domain: 'chatbot' });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it('clearHistory waits for a pending save so the deleted thread does not come back', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('t'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store, threads } = createMemoryPersistence();
+    let releaseSave: () => void = () => {};
+    store.saveThread.mockImplementationOnce(
+      (chat) =>
+        new Promise<void>((resolve) => {
+          releaseSave = () => {
+            threads.set(chat.threadId, chat);
+            resolve();
+          };
+        }),
+    );
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+
+    act(() => result.current.clearHistory());
+    expect(store.deleteThread).not.toHaveBeenCalled();
+
+    await act(async () => releaseSave());
+    await waitFor(() => expect(store.deleteThread).toHaveBeenCalledWith('t'));
+    expect(threads.has('t')).toBe(false);
+    await waitFor(() => expect(result.current.threads).toEqual([]));
   });
 
   it('restores the thread named by initialThreadId instead of the latest one', async () => {
@@ -493,11 +569,56 @@ describe('useAsaResults persistence', () => {
       );
     });
 
-    it('newThread and switchThread are safe without persistence', async () => {
-      const { client } = createMockCioClient({ events: [] });
-      const { result } = renderWithPersistence(client, undefined);
+    it('newThread mid-answer keeps the interrupted turn in storage as settled', async () => {
+      const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+      const { store } = createMemoryPersistence();
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
 
       act(() => result.current.newThread());
+      expect(result.current.messages).toEqual([]);
+      expect(result.current.isStreaming).toBe(false);
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+      const saved = store.saveThread.mock.calls[1][0];
+      expect(saved.threadId).toBe('t');
+      expect(saved.messages.map((m) => m.status)).toEqual(['done', 'error']);
+      await waitFor(() => expect(result.current.threads.map((t) => t.inFlight)).toEqual([false]));
+    });
+
+    it('switchThread mid-answer keeps the interrupted turn in storage as settled', async () => {
+      const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+      const { store } = createMemoryPersistence([
+        persisted('other', [userMsg('u1', 'other q'), aiMsg('a1', 'other a')]),
+      ]);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      act(() => result.current.newThread());
+
+      act(() => result.current.sendMessage('hello'));
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+
+      await act(() => result.current.switchThread('other'));
+      expect(result.current.messages[0].text).toBe('other q');
+      expect(result.current.isStreaming).toBe(false);
+      expect(store.saveThread).toHaveBeenCalledTimes(2);
+      const saved = store.saveThread.mock.calls[1][0];
+      expect(saved.threadId).toBe('t');
+      expect(saved.messages.map((m) => m.status)).toEqual(['done', 'error']);
+    });
+
+    it('newThread and switchThread are safe without persistence', async () => {
+      const { client } = createMockCioClient({
+        events: [startEvent('t'), { type: 'message', data: { text: 'Hi' } }],
+      });
+      const { result } = renderWithPersistence(client, undefined);
+      act(() => result.current.sendMessage('hello'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      act(() => result.current.newThread());
+      expect(result.current.messages).toHaveLength(2);
       await act(() => result.current.switchThread('anything'));
 
       expect(result.current.threads).toEqual([]);
@@ -870,6 +991,31 @@ describe('useAsaResults persistence', () => {
       expect(storeB.saveThread.mock.calls[0][0].messages[0].text).toBe('hello');
     });
 
+    it('does not let a slow save into the old adapter delay or leak into the new one', async () => {
+      const { client } = createMockCioClient({
+        events: [startEvent('thread-new'), { type: 'message', data: { text: 'Hi' } }],
+      });
+      const { store: storeA } = createMemoryPersistence();
+      storeA.saveThread.mockImplementation(() => new Promise<never>(() => {}));
+      const { store: storeB } = createMemoryPersistence();
+      const { result, switchTo } = renderSwitchable(client, storeA);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('into A'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(storeA.saveThread).toHaveBeenCalledTimes(1);
+
+      switchTo(storeB);
+      expect(result.current.messages).toEqual([]);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('into B'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(storeB.saveThread).toHaveBeenCalled());
+      expect(storeB.saveThread.mock.calls[0][0].messages[0].text).toBe('into B');
+      expect(storeA.saveThread).toHaveBeenCalledTimes(1);
+    });
+
     it('clears the restored conversation when persistence is turned off', async () => {
       const { client } = createMockCioClient({ events: [] });
       const { store } = createMemoryPersistence([
@@ -885,6 +1031,29 @@ describe('useAsaResults persistence', () => {
       expect(result.current.threads).toEqual([]);
       expect(result.current.activeThreadId).toBeNull();
     });
+  });
+
+  it('scopes the built-in storage key by a numeric user id of 0 too', async () => {
+    window.localStorage.clear();
+    const { client } = createMockCioClient({
+      events: [startEvent('thread-z'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    (client as unknown as { options: Record<string, unknown> }).options = {
+      apiKey: 'key_test',
+      userId: 0,
+    };
+    const { result } = renderWithPersistence(client, true);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:0')).toContain(
+        'thread-z',
+      ),
+    );
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toBeNull();
+    window.localStorage.clear();
   });
 
   it('scopes the built-in storage key by user id when the client has one', async () => {

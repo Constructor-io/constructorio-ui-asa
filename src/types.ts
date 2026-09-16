@@ -62,8 +62,10 @@ export interface CioAsaProviderProps
   apiKey?: string;
   /**
    * Persist the conversation so it survives page loads. `true` uses the library's default
-   * strategy (currently `localStorage`, keyed by api key + domain, 7 day TTL); pass a custom
-   * `ChatPersistence` adapter to control storage yourself. Off when omitted.
+   * strategy (currently `localStorage`, keyed by api key + domain + user id, 7 day TTL); pass a
+   * custom `ChatPersistence` adapter (e.g. `createLocalStoragePersistence({...})`) to control
+   * storage yourself. Off when omitted. Pass a stable instance (created once, or memoized): a
+   * new instance on every render is treated as a different store and restarts the chat.
    */
   persistence?: ChatPersistenceOption;
 }
@@ -204,6 +206,11 @@ export interface PersistedChat {
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  /**
+   * Id of the browser tab that last wrote the record. Lets a reloaded tab tell its own
+   * interrupted answer (settled at once) from one still streaming in another tab.
+   */
+  owner?: string;
 }
 
 export interface ThreadSummary {

@@ -1,8 +1,10 @@
 import type {
   ChatMessage,
   ChatPersistence,
+  FollowUpRefinement,
   LocalStoragePersistenceOptions,
   PersistedChat,
+  ResultGroup,
   ThreadSummary,
 } from '../types';
 
@@ -27,6 +29,26 @@ export function createLocalThreadId(): string {
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   return `${LOCAL_THREAD_PREFIX}${random}`;
+}
+
+const TAB_ID_KEY = 'cio-asa:tab';
+let tabId: string | undefined;
+
+/**
+ * Stable per-tab id. Kept in `sessionStorage` so it survives a reload of the same tab but
+ * differs between tabs; `undefined` outside a browser.
+ */
+export function getTabId(): string | undefined {
+  if (tabId) return tabId;
+  if (typeof window === 'undefined') return undefined;
+  const random = createLocalThreadId().slice(LOCAL_THREAD_PREFIX.length);
+  try {
+    tabId = window.sessionStorage.getItem(TAB_ID_KEY) ?? random;
+    window.sessionStorage.setItem(TAB_ID_KEY, tabId);
+  } catch {
+    tabId = random;
+  }
+  return tabId;
 }
 
 export function isLocalThreadId(threadId: string | null | undefined): boolean {
@@ -65,6 +87,25 @@ function trimToTurns(messages: ChatMessage[], maxTurns: number): ChatMessage[] {
   return trimmed;
 }
 
+// Serializes read-merge-write cycles across tabs where the Web Locks API exists;
+// elsewhere the cycle runs synchronously, which is the best localStorage offers.
+async function withStorageLock(name: string, fn: () => void): Promise<void> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  if (!locks?.request) {
+    fn();
+    return;
+  }
+  let ran = false;
+  try {
+    await locks.request(name, async () => {
+      ran = true;
+      fn();
+    });
+  } catch {
+    if (!ran) fn();
+  }
+}
+
 function resolveStorage(storage?: Storage): Storage | null {
   if (storage) return storage;
   try {
@@ -86,6 +127,28 @@ export function mergeMessages(stored: ChatMessage[], incoming: ChatMessage[]): C
 const MESSAGE_ROLES = new Set(['user', 'assistant']);
 const MESSAGE_STATUSES = new Set(['idle', 'loading', 'streaming', 'done', 'error']);
 
+function isResultGroup(value: unknown): value is ResultGroup {
+  if (!value || typeof value !== 'object') return false;
+  const g = value as Partial<ResultGroup>;
+  return (
+    Boolean(g.group) &&
+    typeof g.group === 'object' &&
+    typeof g.group.display_name === 'string' &&
+    Array.isArray(g.searchResults) &&
+    g.searchResults.every((r) => Boolean(r) && typeof r === 'object')
+  );
+}
+
+function isRefinement(value: unknown): value is FollowUpRefinement {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as Partial<FollowUpRefinement>;
+  return (
+    typeof r.question === 'string' &&
+    Array.isArray(r.options) &&
+    r.options.every((o) => typeof o === 'string')
+  );
+}
+
 function isChatMessage(value: unknown): value is ChatMessage {
   if (!value || typeof value !== 'object') return false;
   const m = value as Partial<ChatMessage>;
@@ -94,7 +157,8 @@ function isChatMessage(value: unknown): value is ChatMessage {
     MESSAGE_ROLES.has(m.role as string) &&
     typeof m.text === 'string' &&
     MESSAGE_STATUSES.has(m.status as string) &&
-    (m.groups === undefined || Array.isArray(m.groups))
+    (m.groups === undefined || (Array.isArray(m.groups) && m.groups.every(isResultGroup))) &&
+    (m.refinement === undefined || isRefinement(m.refinement))
   );
 }
 
@@ -107,7 +171,8 @@ function isPersistedChat(value: unknown): value is PersistedChat {
     Array.isArray(chat.messages) &&
     chat.messages.every(isChatMessage) &&
     typeof chat.createdAt === 'number' &&
-    typeof chat.updatedAt === 'number'
+    typeof chat.updatedAt === 'number' &&
+    (chat.owner === undefined || typeof chat.owner === 'string')
   );
 }
 
@@ -216,40 +281,45 @@ export function createLocalStoragePersistence(
       return read().threads[threadId] ?? null;
     },
 
-    async saveThread(chat: PersistedChat): Promise<void> {
-      const data = read();
-      const now = Date.now();
-      const createdAt = chat.createdAt ?? now;
-      const deletedAt = data.deleted?.[chat.threadId];
-      if (deletedAt !== undefined && deletedAt >= createdAt) return;
-      const stored = data.threads[chat.threadId];
-      const messages = stored ? mergeMessages(stored.messages, chat.messages) : chat.messages;
-      data.threads[chat.threadId] = {
-        ...chat,
-        version: PERSISTED_CHAT_VERSION,
-        messages: trimToTurns(messages, maxTurns),
-        createdAt,
-        updatedAt: Math.max(chat.updatedAt ?? now, stored?.updatedAt ?? 0),
-      };
-      if (Number.isFinite(maxThreads)) {
-        const kept = sortedThreads(data).slice(0, Math.max(1, maxThreads));
-        data.threads = Object.fromEntries(kept.map((t) => [t.threadId, t]));
-        if (!data.threads[chat.threadId]) return;
-      }
-      write(data, chat.threadId);
+    saveThread(chat: PersistedChat): Promise<void> {
+      return withStorageLock(storageKey, () => {
+        const data = read();
+        const now = Date.now();
+        const createdAt = chat.createdAt ?? now;
+        const deletedAt = data.deleted?.[chat.threadId];
+        if (deletedAt !== undefined && deletedAt >= createdAt) return;
+        const stored = data.threads[chat.threadId];
+        const messages = stored ? mergeMessages(stored.messages, chat.messages) : chat.messages;
+        data.threads[chat.threadId] = {
+          ...chat,
+          version: PERSISTED_CHAT_VERSION,
+          messages: trimToTurns(messages, maxTurns),
+          createdAt,
+          updatedAt: Math.max(chat.updatedAt ?? now, stored?.updatedAt ?? 0),
+        };
+        if (Number.isFinite(maxThreads)) {
+          const kept = sortedThreads(data).slice(0, Math.max(1, maxThreads));
+          data.threads = Object.fromEntries(kept.map((t) => [t.threadId, t]));
+          if (!data.threads[chat.threadId]) return;
+        }
+        write(data, chat.threadId);
+      });
     },
 
-    async deleteThread(threadId: string): Promise<void> {
-      const data = read();
-      delete data.threads[threadId];
-      data.deleted = { ...data.deleted, [threadId]: Date.now() };
-      write(data);
+    deleteThread(threadId: string): Promise<void> {
+      return withStorageLock(storageKey, () => {
+        const data = read();
+        delete data.threads[threadId];
+        data.deleted = { ...data.deleted, [threadId]: Date.now() };
+        write(data);
+      });
     },
 
     subscribe(listener: () => void): () => void {
       if (typeof window === 'undefined') return () => {};
       const onStorage = (event: StorageEvent) => {
-        if (storageOption && event.storageArea !== storageOption) return;
+        const area = resolveStorage(storageOption);
+        if (area && event.storageArea && event.storageArea !== area) return;
         if (event.key === null || event.key === storageKey) listener();
       };
       window.addEventListener('storage', onStorage);

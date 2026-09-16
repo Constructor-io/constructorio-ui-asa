@@ -21,7 +21,7 @@ Everything below is optional and only active when `persistence` is set on the pr
 {`
 | Where | Name | What it does |
 |-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistence\` | \`true\` enables persistent chat with the built-in \`localStorage\` strategy |
+| \`CioAsaProvider\` prop | \`persistence\` | \`true\` enables persistent chat with the built-in \`localStorage\` strategy. A \`ChatPersistence\` adapter is accepted instead: \`createLocalStoragePersistence({ storage, ttlMs, maxTurns, maxThreads, namespace })\` tunes the built-in one, or implement \`listThreads\` / \`getThread\` / \`saveThread\` / \`deleteThread\` (and optionally \`subscribe\`) for your own backend |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | Fires after the initial load and whenever the stored list or the active conversation changes, including changes made in another tab. Use it to render a history list outside \`Chat\` |
 | \`Chat\` prop | \`initialThreadId\` | Restores that thread's stored transcript instead of the most recent one; falls back to seeding the thread id alone when nothing is stored |
 | \`Chat\` ref | \`newThread()\` | Opens an empty conversation and keeps the current one in storage |
@@ -39,6 +39,8 @@ Everything below is optional and only active when `persistence` is set on the pr
 
 `true` selects the library's default strategy. Today that is `localStorage`; a future release can move it to a server-backed store without changes on your side.
 
+A custom adapter must be a stable instance: create it once at module level or with `useMemo`. A new instance on every render is treated as a switch to a different store and restarts the conversation.
+
 <Markdown>
 {`
 | Aspect | Behaviour |
@@ -48,7 +50,7 @@ Everything below is optional and only active when `persistence` is set on the pr
 | When it saves | When the answer stream starts, when it completes (or fails), and on \`pagehide\` while streaming. Never per streamed chunk |
 | On load | The most recent thread is restored before anything renders, so there is no welcome-screen flash. \`isHydrating\` is \`true\` meanwhile |
 | Retention | Threads idle for 7 days expire, matching how long the agent remembers a thread. Expired entries are dropped on read and removed on the next write |
-| Interrupted answers | A reload mid-answer keeps the question. A partial answer is shown as complete, an empty one as an error |
+| Interrupted answers | Leaving the page mid-answer saves the turn as settled: a partial answer is shown as complete, an empty one as an error. Each record carries the id of the tab that wrote it, so a reload of that tab settles its own interrupted answer at once even when \`pagehide\` did not fire. Only a different tab treats a fresh in-flight record as still streaming, for up to 60 seconds |
 | Non-conversational domains | The agent returns no \`thread_id\`; the transcript is still kept under a client-side \`local-\` id, which is never sent to the agent |
 `}
 </Markdown>

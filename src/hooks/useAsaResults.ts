@@ -23,6 +23,7 @@ import {
   IN_FLIGHT_GRACE_MS,
   PERSISTED_CHAT_VERSION,
   createLocalThreadId,
+  getTabId,
   isInFlight,
   isLocalThreadId,
   nextMessageCounter,
@@ -75,6 +76,19 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const refreshRequestRef = useRef(0);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
 
+  // Reset synchronously while rendering so the previous adapter's conversation is never
+  // painted under the new one (e.g. right after a login change).
+  const [renderedStore, setRenderedStore] = useState(persistence);
+  if (renderedStore !== persistence) {
+    setRenderedStore(persistence);
+    setMessages([]);
+    setThreads([]);
+    setActiveThreadId(null);
+    setForeignInFlight(false);
+    setIsStreaming(false);
+    setIsHydrating(Boolean(persistence));
+  }
+
   const setForeign = useCallback((value: boolean) => {
     foreignInFlightRef.current = value;
     setForeignInFlight(value);
@@ -113,7 +127,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
       const inFlight = isInFlight(chat.messages);
       const age = Date.now() - chat.updatedAt;
-      const stillStreamingElsewhere = inFlight && age < IN_FLIGHT_GRACE_MS;
+      // A record this tab wrote itself cannot still be streaming after a reload.
+      const ownRecord = chat.owner !== undefined && chat.owner === getTabId();
+      const stillStreamingElsewhere = inFlight && !ownRecord && age < IN_FLIGHT_GRACE_MS;
       if (!stillStreamingElsewhere) {
         setForeign(false);
         setMessages(normalizeHydratedMessages(chat.messages));
@@ -165,7 +181,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     const store = persistence;
     if (adapterInitializedRef.current) {
       // The adapter changed (e.g. a different user logged in): drop the conversation that
-      // belongs to the previous store instead of saving it into the new one.
+      // belongs to the previous store instead of saving it into the new one. The write chain
+      // restarts so a slow save into the old store cannot delay the new adapter.
       clearInFlightTimer();
       killSwitchRef.current = true;
       readerRef.current?.cancel();
@@ -175,16 +192,13 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       createdAtRef.current = null;
       dirtyRef.current = false;
       interactedRef.current = false;
+      foreignInFlightRef.current = false;
+      isStreamingRef.current = false;
       loadRequestRef.current += 1;
       refreshRequestRef.current += 1;
+      saveChainRef.current = Promise.resolve();
       lastSyncedAtRef.current = 0;
       lastSavedCountRef.current = 0;
-      setForeign(false);
-      setActiveThreadId(null);
-      setThreads([]);
-      setMessages([]);
-      setIsStreaming(false);
-      isStreamingRef.current = false;
     }
     adapterInitializedRef.current = true;
 
@@ -224,15 +238,21 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persistence]);
 
-  const persistNow = useCallback((): Promise<void> | undefined => {
+  const persistNow = useCallback((mode?: { settle?: boolean }): Promise<void> | undefined => {
     const store = persistenceRef.current;
-    const { current } = messagesRef;
-    if (!store || current.length === 0) return undefined;
+    if (!store || messagesRef.current.length === 0) return undefined;
+    // `settle` marks in-flight turns as finished, for snapshots taken when this tab's stream
+    // is about to die (page unload, switching away) so storage never reports them as streaming.
+    const current = mode?.settle
+      ? normalizeHydratedMessages(messagesRef.current)
+      : messagesRef.current;
 
     const previousId = storageThreadIdRef.current;
     const threadId = threadIdRef.current ?? previousId ?? createLocalThreadId();
     storageThreadIdRef.current = threadId;
-    const now = Date.now();
+    // Strictly increasing so a save issued in the same millisecond as the previous one still
+    // reads as newer to other tabs.
+    const now = Math.max(Date.now(), lastSyncedAtRef.current + 1);
     createdAtRef.current = createdAtRef.current ?? now;
     lastSyncedAtRef.current = now;
     lastSavedCountRef.current = current.length;
@@ -243,13 +263,17 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       messages: current,
       createdAt: createdAtRef.current,
       updatedAt: now,
+      owner: getTabId(),
     };
     // Writes are chained so an async adapter applies them in the order they were issued.
+    // The adapter and snapshot are captured here, so a write still queued when the adapter
+    // changes lands in the store it was meant for. On a local-to-server rekey the new record
+    // is written first so a failing save cannot lose the only copy.
     const run = async () => {
+      await store.saveThread(snapshot).catch(() => {});
       if (previousId && previousId !== threadId) {
         await store.deleteThread(previousId).catch(() => {});
       }
-      await store.saveThread(snapshot).catch(() => {});
     };
     saveChainRef.current = saveChainRef.current.then(run, run);
     return saveChainRef.current;
@@ -265,7 +289,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   useEffect(() => {
     if (!persistence || typeof window === 'undefined') return undefined;
     const onPageHide = () => {
-      if (isStreamingRef.current) persistNow();
+      if (isStreamingRef.current) persistNow({ settle: true });
     };
     window.addEventListener('pagehide', onPageHide);
     return () => window.removeEventListener('pagehide', onPageHide);
@@ -454,22 +478,31 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     const storedId = resetConversation();
     const store = persistenceRef.current;
     if (storedId && store) {
-      store
-        .deleteThread(storedId)
-        .catch(() => {})
-        .then(refreshThreads);
+      // Queued behind pending saves so one of them cannot recreate the deleted thread.
+      const run = () => store.deleteThread(storedId).catch(() => {});
+      saveChainRef.current = saveChainRef.current.then(run, run);
+      saveChainRef.current.then(refreshThreads);
     }
   }, [resetConversation, refreshThreads]);
 
-  const newThread = useCallback(() => {
+  // A turn interrupted by leaving the conversation (or one not yet written) is kept, settled.
+  const leaveConversation = useCallback(() => {
+    if (isStreamingRef.current || dirtyRef.current) {
+      persistNow({ settle: true })?.then(refreshThreads);
+    }
     resetConversation();
-  }, [resetConversation]);
+  }, [resetConversation, persistNow, refreshThreads]);
+
+  const newThread = useCallback(() => {
+    if (!persistenceRef.current) return;
+    leaveConversation();
+  }, [leaveConversation]);
 
   const switchThread = useCallback(
     async (threadId: string) => {
       const store = persistenceRef.current;
       if (!store || threadId === storageThreadIdRef.current) return;
-      resetConversation();
+      leaveConversation();
       const request = loadRequestRef.current;
       setIsHydrating(true);
       try {
@@ -482,7 +515,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
         if (mountedRef.current && request === loadRequestRef.current) setIsHydrating(false);
       }
     },
-    [resetConversation, applyChat],
+    [leaveConversation, applyChat],
   );
 
   const findRekeyedThread = useCallback(
