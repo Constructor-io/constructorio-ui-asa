@@ -355,6 +355,46 @@ describe('createLocalStoragePersistence', () => {
     expect(storage.length).toBe(0);
   });
 
+  it('keeps the other threads when a delete does not fit in storage', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('a', turns(1), Date.now() - 1000));
+    await store.saveThread(chat('b', turns(1)));
+    storage.quotaBytes = 10;
+
+    await expect(store.deleteThread('a')).resolves.toBeUndefined();
+
+    expect((await store.listThreads()).map((t) => t.threadId).sort()).toEqual(['a', 'b']);
+  });
+
+  it('drops tombstones before threads when a delete does not fit in storage', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('a', turns(1), Date.now() - 1000));
+    await store.saveThread(chat('b', turns(1)));
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const withoutA = JSON.stringify({
+      version: PERSISTED_CHAT_VERSION,
+      threads: { b: JSON.parse(storage.getItem(key)!).threads.b },
+      deleted: {},
+    });
+    storage.quotaBytes = withoutA.length;
+
+    await store.deleteThread('a');
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['b']);
+    expect(JSON.parse(storage.getItem(key)!).deleted).toEqual({});
+  });
+
+  it('removes the key when the last thread is deleted and the tombstone does not fit', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('a', turns(1)));
+    storage.quotaBytes = 10;
+
+    await store.deleteThread('a');
+
+    expect(storage.length).toBe(0);
+    expect(await store.listThreads()).toEqual([]);
+  });
+
   it('never throws when storage access itself fails', async () => {
     const broken = {
       getItem: () => {

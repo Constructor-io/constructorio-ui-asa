@@ -135,7 +135,9 @@ export function createLocalStoragePersistence(
   const isEmpty = (data: StoredThreads) =>
     Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0;
 
-  // Full write first; when storage is full, keep only the priority thread and trim it.
+  // Full write first. When storage is full, a save keeps only the thread being saved and trims
+  // it; a delete only shrank the record, so it retries without tombstones and otherwise leaves
+  // the stored value alone.
   const write = (storage: Storage, data: StoredThreads, priorityThreadId?: string) => {
     if (isEmpty(data)) {
       remove(storage);
@@ -143,9 +145,10 @@ export function createLocalStoragePersistence(
     }
     if (tryWrite(storage, data)) return;
 
-    const priority = priorityThreadId ? data.threads[priorityThreadId] : sortedThreads(data)[0];
+    const priority = priorityThreadId ? data.threads[priorityThreadId] : undefined;
     if (!priority) {
-      remove(storage);
+      if (Object.keys(data.threads).length === 0) remove(storage);
+      else tryWrite(storage, { ...data, deleted: {} });
       return;
     }
     let chat = priority;
@@ -160,7 +163,7 @@ export function createLocalStoragePersistence(
     }
     const { [priority.threadId]: dropped, ...rest } = data.threads;
     const others: StoredThreads = { ...data, threads: rest };
-    if (isEmpty(others) || !tryWrite(storage, others)) remove(storage);
+    if (!isEmpty(others)) tryWrite(storage, others);
   };
 
   // Redo the merge if another tab wrote between our read and this write.
