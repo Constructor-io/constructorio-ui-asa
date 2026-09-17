@@ -7,11 +7,7 @@ import {
   nextMessageCounter,
 } from '../utils/chatPersistence';
 
-/**
- * Mutable state of the conversation on screen that async work (the stream loop, storage reads
- * and writes, timers) must always see current. Kept in one object behind a single ref so a
- * reset is one call instead of a dozen ref assignments.
- */
+/** Conversation state that async work must always see current; one object so a reset is one call. */
 export interface ChatSession {
   /** Server thread id, sent with the next request. Never a `local-` id. */
   serverThreadId: string | null;
@@ -56,41 +52,33 @@ export function createChatSession(initialThreadId?: string): ChatSession {
 /** Forget the current conversation. Returns the id it was stored under, if any. */
 export function resetConversation(session: ChatSession): string | null {
   const storedId = session.storageThreadId;
-  Object.assign(session, {
-    serverThreadId: null,
-    storageThreadId: null,
-    orphanId: null,
-    createdAt: null,
-    lastSyncedAt: 0,
-    dirty: false,
-    loadRequest: session.loadRequest + 1,
-    isStreaming: false,
-    foreignInFlight: false,
-  });
+  session.serverThreadId = null;
+  session.storageThreadId = null;
+  session.orphanId = null;
+  session.createdAt = null;
+  session.lastSyncedAt = 0;
+  session.dirty = false;
+  session.loadRequest += 1;
+  session.isStreaming = false;
+  session.foreignInFlight = false;
   return storedId;
 }
 
 export function nextMessageId(session: ChatSession): string {
-  Object.assign(session, { idCounter: session.idCounter + 1 });
+  session.idCounter += 1;
   return `msg-${session.idCounter}-${Date.now()}-${session.idSuffix}`;
 }
 
 /** Makes a stored conversation the one this session continues. */
 export function adoptStoredChat(session: ChatSession, chat: PersistedChat): void {
-  Object.assign(session, {
-    storageThreadId: chat.threadId,
-    createdAt: chat.createdAt,
-    serverThreadId: isLocalThreadId(chat.threadId) ? null : chat.threadId,
-    idCounter: nextMessageCounter(chat.messages),
-    lastSyncedAt: chat.updatedAt,
-  });
+  session.storageThreadId = chat.threadId;
+  session.createdAt = chat.createdAt;
+  session.serverThreadId = isLocalThreadId(chat.threadId) ? null : chat.threadId;
+  session.idCounter = nextMessageCounter(chat.messages);
+  session.lastSyncedAt = chat.updatedAt;
 }
 
-/**
- * Builds the record to write for `messages` and moves the session onto its key. `staleId` is
- * a record left under a previous key (a `local-` id replaced by the server one, or an earlier
- * orphan) that should be deleted once this snapshot is confirmed stored.
- */
+/** Builds the record to write and moves the session onto its key; `staleId` is the record to retire once stored. */
 export function prepareSnapshot(
   session: ChatSession,
   messages: ChatMessage[],
@@ -99,16 +87,13 @@ export function prepareSnapshot(
   const previousId = session.storageThreadId;
   const threadId = session.serverThreadId ?? previousId ?? createLocalThreadId();
   const staleId = (previousId !== threadId ? previousId : null) ?? session.orphanId;
-  // Strictly increasing so a save issued in the same millisecond as the previous one still
-  // reads as newer to other tabs.
+  // Strictly increasing so other tabs read a same-millisecond save as newer.
   const updatedAt = Math.max(now, session.lastSyncedAt + 1);
   const createdAt = session.createdAt ?? updatedAt;
-  Object.assign(session, {
-    storageThreadId: threadId,
-    orphanId: null,
-    createdAt,
-    lastSyncedAt: updatedAt,
-  });
+  session.storageThreadId = threadId;
+  session.orphanId = null;
+  session.createdAt = createdAt;
+  session.lastSyncedAt = updatedAt;
   return {
     staleId,
     snapshot: {

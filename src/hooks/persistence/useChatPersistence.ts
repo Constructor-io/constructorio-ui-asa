@@ -26,11 +26,7 @@ interface Params {
   cancelStream: () => void;
 }
 
-/**
- * Keeps the conversation in `store` and in sync with it: restores it on mount, saves settled
- * turns, follows changes made by other tabs, and switches between stored threads. Everything
- * here is inert when `store` is undefined.
- */
+/** Restores, saves and syncs the conversation with `store`; inert when `store` is undefined. */
 export default function useChatPersistence(params: Params) {
   const {
     store,
@@ -69,8 +65,7 @@ export default function useChatPersistence(params: Params) {
     };
   }, []);
 
-  // Reset synchronously while rendering so the previous store's conversation is never
-  // painted under the new one (e.g. right after a login change).
+  // Reset during render so the previous store's conversation never paints under the new one.
   const [renderedStore, setRenderedStore] = useState(store);
   if (renderedStore !== store) {
     setRenderedStore(store);
@@ -91,16 +86,15 @@ export default function useChatPersistence(params: Params) {
       if (remainingMs === 0) {
         stopForeign();
         setMessages(normalizeHydratedMessages(chat.messages));
-        // A stale in-flight snapshot is settled locally; write it back so the stored record
-        // (and `inFlight` in the thread list) stops reporting a stream forever.
-        if (isInFlight(chat.messages)) Object.assign(session, { dirty: true });
+        // Write the settled snapshot back so the list stops reporting it in flight.
+        if (isInFlight(chat.messages)) session.dirty = true;
         return;
       }
       setMessages(chat.messages);
       watchForeign(remainingMs, () => {
         if (!mountedRef.current || session.storageThreadId !== chat.threadId) return;
         if (session.isStreaming) return;
-        Object.assign(session, { dirty: true });
+        session.dirty = true;
         setMessages((prev) => normalizeHydratedMessages(prev));
       });
     },
@@ -117,11 +111,9 @@ export default function useChatPersistence(params: Params) {
         : messagesRef.current;
       const { snapshot, staleId } = prepareSnapshot(session, toSave);
       setActiveThreadId(snapshot.threadId);
-      // `current` is captured so a write still queued when the store changes lands where it
-      // was meant to.
       return enqueueWrite(async () => {
         const orphan = await saveThreadAndRetireStale(current, snapshot, staleId);
-        if (orphan) Object.assign(session, { orphanId: session.orphanId ?? orphan });
+        if (orphan) session.orphanId = session.orphanId ?? orphan;
       });
     },
     [session, storeRef, messagesRef, enqueueWrite],
@@ -137,7 +129,7 @@ export default function useChatPersistence(params: Params) {
     stopForeign();
     cancelStream();
     const storedId = resetConversation(session);
-    Object.assign(session, { interacted: true });
+    session.interacted = true;
     setActiveThreadId(null);
     setMessages([]);
     setIsStreaming(false);
@@ -148,12 +140,11 @@ export default function useChatPersistence(params: Params) {
   const storeInitializedRef = useRef(false);
   useEffect(() => {
     if (storeInitializedRef.current) {
-      // A different user logged in: drop the previous store's conversation instead of saving it
-      // into the new one, and restart the write chain so a slow old save cannot delay us.
+      // The store changed (e.g. a login): start over instead of saving the old conversation into it.
       clearForeignTimer();
       cancelStream();
       resetConversation(session);
-      Object.assign(session, { interacted: false });
+      session.interacted = false;
       invalidateThreads();
       resetWrites();
     }
@@ -178,8 +169,7 @@ export default function useChatPersistence(params: Params) {
         const chat = targetId ? await store.getThread(targetId) : null;
         if (cancelled || session.interacted) return;
         if (!chat) {
-          if (targetId && isLocalThreadId(targetId))
-            Object.assign(session, { serverThreadId: null });
+          if (targetId && isLocalThreadId(targetId)) session.serverThreadId = null;
           return;
         }
         showStoredChat(chat);
@@ -200,7 +190,7 @@ export default function useChatPersistence(params: Params) {
   useEffect(() => {
     if (!storeRef.current || messages.length === 0) return;
     if (isStreaming || !session.dirty) return;
-    Object.assign(session, { dirty: false });
+    session.dirty = false;
     persistNow()?.then(refreshThreads);
   }, [messages, isStreaming, session, storeRef, persistNow, refreshThreads]);
 
@@ -253,7 +243,8 @@ export default function useChatPersistence(params: Params) {
 
   /** The user is sending a message: nothing still loading may land on top of it. */
   const beginTurn = useCallback(() => {
-    Object.assign(session, { interacted: true, loadRequest: session.loadRequest + 1 });
+    session.interacted = true;
+    session.loadRequest += 1;
     setIsHydrating(false);
   }, [session]);
 

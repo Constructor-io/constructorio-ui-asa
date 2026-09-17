@@ -32,8 +32,7 @@ export default function CioAsaProvider(
   const { domain } = staticRequestConfigs;
   const persistence = useMemo(() => {
     if (!persistenceEnabled) return undefined;
-    // Scoped per user when the client carries one, so a shared browser never shows
-    // the previous shopper's conversation after a login change.
+    // Per-user namespace so a shared browser never shows the previous shopper's chat.
     return createLocalStoragePersistence({
       namespace: [resolvedApiKey ?? 'default', domain ?? 'default', userId]
         .filter(Boolean)

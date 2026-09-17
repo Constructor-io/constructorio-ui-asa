@@ -81,8 +81,6 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       setIsStreaming(true);
       session.isStreaming = true;
 
-      // `intent` is passed as the first argument and `threadId` is managed per-stream, so both
-      // are stripped here. Everything else configured on the provider is forwarded as-is.
       const agentParams = { ...staticRequestConfigsRef.current };
       delete agentParams.intent;
       delete agentParams.threadId;

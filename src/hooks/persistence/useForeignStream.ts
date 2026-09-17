@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChatSession } from '../chatSession';
 
-/**
- * Tracks an answer streaming in another tab. While it is on, sending is blocked; a timer
- * settles it after the grace period in case that tab never finishes.
- */
+/** An answer streaming in another tab: blocks sending and settles after the grace period. */
 export default function useForeignStream(session: ChatSession) {
   const [foreignInFlight, setForeignInFlight] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setForeign = useCallback(
     (value: boolean) => {
-      Object.assign(session, { foreignInFlight: value });
+      session.foreignInFlight = value;
       setForeignInFlight(value);
     },
     [session],

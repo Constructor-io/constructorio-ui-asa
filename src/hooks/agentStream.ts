@@ -63,8 +63,6 @@ export function readAgentStream(
         }
 
         const { type, data } = res.value;
-        // `intent_result_id` is shared across the stream; capture it from the first event that
-        // carries it so load-start/finish can attribute correctly.
         if (!intentResultId && data?.intent_result_id) {
           intentResultId = data.intent_result_id;
           patchAssistant({ intentResultId });

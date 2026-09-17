@@ -1,9 +1,6 @@
 import { useCallback, useRef } from 'react';
 
-/**
- * Serializes storage writes so an async store applies them in the order they were issued and a
- * delete queued behind a save cannot be undone by it.
- */
+/** Runs storage writes one after another, in the order they were issued. */
 export default function useWriteQueue() {
   const chainRef = useRef<Promise<void>>(Promise.resolve());
 

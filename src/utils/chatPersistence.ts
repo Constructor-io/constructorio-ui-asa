@@ -8,11 +8,7 @@ import type {
   ThreadSummary,
 } from '../types';
 
-/**
- * Shape version written into every stored record. Bump it when the stored format changes in an
- * incompatible way: records with another version are ignored on read instead of crashing the
- * chat with data it cannot interpret.
- */
+/** Stored record format; records with another version are ignored on read. */
 export const PERSISTED_CHAT_VERSION = 1;
 /** Prefix of the `localStorage` key; the api key, domain and user id are appended to it. */
 export const DEFAULT_PERSISTENCE_KEY = 'cio-asa:chat';
@@ -43,10 +39,7 @@ export function createLocalThreadId(): string {
 const TAB_ID_KEY = 'cio-asa:tab';
 let tabId: string | undefined;
 
-/**
- * Stable per-tab id. Kept in `sessionStorage` so it survives a reload of the same tab but
- * differs between tabs; `undefined` outside a browser.
- */
+/** Per-tab id from `sessionStorage`: survives a reload, differs between tabs, `undefined` on the server. */
 export function getTabId(): string | undefined {
   if (tabId) return tabId;
   if (typeof window === 'undefined') return undefined;
@@ -71,10 +64,7 @@ export function getThreadTitle(messages: ChatMessage[]): string {
   return first.length > TITLE_MAX_LENGTH ? `${first.slice(0, TITLE_MAX_LENGTH - 1)}…` : first;
 }
 
-/**
- * Counter to continue message ids from after restoring `messages`, so new ids never collide
- * with restored ones. Falls back to the message count for ids in another format.
- */
+/** Counter to continue message ids from after a restore, so new ids never collide with restored ones. */
 export function nextMessageCounter(messages: ChatMessage[]): number {
   return messages.reduce((max, m) => {
     const match = /^msg-(\d+)-/.exec(m.id);
@@ -88,10 +78,7 @@ export function isInFlight(messages: ChatMessage[]): boolean {
   return last?.status === 'loading' || last?.status === 'streaming';
 }
 
-/**
- * Settles answers that were still streaming when they were stored: one with any content becomes
- * `done`, an empty one becomes `error`. Messages already settled are returned as they are.
- */
+/** Settles answers stored mid-stream: `done` when they have content, `error` otherwise. */
 export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.map((m) => {
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
@@ -108,8 +95,7 @@ function trimToTurns(messages: ChatMessage[], maxTurns: number): ChatMessage[] {
   return trimmed;
 }
 
-// Serializes read-merge-write cycles across tabs where the Web Locks API exists;
-// elsewhere the cycle runs synchronously, which is the best localStorage offers.
+// Web Locks where available; elsewhere the cycle runs synchronously.
 async function withStorageLock(name: string, fn: () => void): Promise<void> {
   const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
   if (!locks?.request) {
@@ -137,11 +123,7 @@ function resolveStorage(storage?: Storage): Storage | null {
   }
 }
 
-/**
- * Union of both message lists in stored order. A message present in both keeps the incoming
- * version unless `preferStored` is set, which is how an older snapshot is merged without
- * regressing turns already settled by a newer one.
- */
+/** Both lists in stored order; a shared message takes the incoming version unless `preferStored`. */
 export function mergeMessages(
   stored: ChatMessage[],
   incoming: ChatMessage[],
@@ -207,11 +189,7 @@ function isPersistedChat(value: unknown): value is PersistedChat {
   );
 }
 
-/**
- * Conversation store on top of `localStorage`. All threads of one namespace live under a single
- * key; reads drop expired threads, writes merge with what other tabs wrote in between, and a
- * full storage falls back to keeping only the thread being saved, trimmed.
- */
+/** Conversation store on top of `localStorage`; one key per namespace, merged across tabs. */
 export function createLocalStoragePersistence(
   options: LocalStoragePersistenceOptions = {},
 ): ChatPersistence {
@@ -284,8 +262,7 @@ export function createLocalStoragePersistence(
   const isEmpty = (data: StoredThreads) =>
     Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0;
 
-  // Full write first; when storage is full, keep the priority thread alone and trim it turn by
-  // turn; when even one turn does not fit, keep the other threads rather than wiping the key.
+  // Full write first; when storage is full, keep only the priority thread and trim it.
   const write = (storage: Storage, data: StoredThreads, priorityThreadId?: string) => {
     if (isEmpty(data)) {
       remove(storage);
@@ -313,9 +290,7 @@ export function createLocalStoragePersistence(
     if (isEmpty(others) || !tryWrite(storage, others)) remove(storage);
   };
 
-  // Optimistic read-merge-write: if the key changed between our read and the write (another
-  // tab committed meanwhile), redo the merge on the fresh value. Together with the Web Lock
-  // this keeps concurrent turns from different tabs from overwriting each other.
+  // Redo the merge if another tab wrote between our read and this write.
   const MAX_COMMIT_ATTEMPTS = 3;
   const transact = (
     mutate: (data: StoredThreads) => StoredThreads | null,
@@ -358,8 +333,7 @@ export function createLocalStoragePersistence(
           if (deletedAt !== undefined && deletedAt >= createdAt) return null;
           const stored = current.threads[chat.threadId];
           const incomingAt = chat.updatedAt ?? now;
-          // An older snapshot may add turns it knows about but must not regress ones a
-          // newer snapshot already settled.
+          // An older snapshot may add turns but must not regress ones already settled.
           const stale = Boolean(stored) && incomingAt < stored.updatedAt;
           const messages = stored
             ? mergeMessages(stored.messages, chat.messages, stale)
@@ -410,11 +384,7 @@ export function createLocalStoragePersistence(
 
 export default createLocalStoragePersistence;
 
-/**
- * Writes `snapshot` and, when the conversation moved from `staleId` to a new key, deletes the
- * old record once the new one is confirmed to exist. Returns the id that still has to be
- * deleted later, or `null` when nothing is left behind.
- */
+/** Saves `snapshot`, then deletes `staleId` once the new record is confirmed; returns the id still to delete. */
 export async function saveThreadAndRetireStale(
   store: ChatPersistence,
   snapshot: PersistedChat,
@@ -444,11 +414,7 @@ export async function findRekeyedThread(
   return loaded.find((c) => c?.messages[0]?.id === firstMessageId) ?? null;
 }
 
-/**
- * How much longer a stored answer should be shown as streaming in another tab, in ms, or `0`
- * when it should be settled: it is finished, older than the grace period, or was written by
- * this very tab (which cannot still be streaming after a reload).
- */
+/** Ms left to show a stored answer as streaming in another tab; `0` when it should be settled. */
 export function foreignStreamRemainingMs(chat: PersistedChat, now = Date.now()): number {
   if (!isInFlight(chat.messages)) return 0;
   if (chat.owner !== undefined && chat.owner === getTabId()) return 0;
