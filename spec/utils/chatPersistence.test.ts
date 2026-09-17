@@ -546,7 +546,7 @@ describe('mergeMessages', () => {
 describe('saveThreadAndRetireStale', () => {
   const mockStore = () => ({
     listThreads: jest.fn(async () => []),
-    getThread: jest.fn(async (id: string) => chat(id, [])),
+    getThread: jest.fn(async (id: string): Promise<PersistedChat | null> => chat(id, [])),
     saveThread: jest.fn(async () => {}),
     deleteThread: jest.fn(async () => {}),
   });

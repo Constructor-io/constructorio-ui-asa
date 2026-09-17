@@ -55,7 +55,7 @@ describe('readAgentStream', () => {
   it('accepts the legacy group event shape', async () => {
     const { assistant, setMessages, callbacks } = harness();
     const stream = createEventStream([
-      { type: 'group', data: { group: 'Shoes' } },
+      { type: 'group', data: { group: 'Shoes' } } as unknown as StreamEvent,
       { type: 'search_result', data: { response: { results: [] } } },
     ]);
 

@@ -94,7 +94,7 @@ function Wrapper({
     <CioAsaProvider
       cioClient={cioClient}
       staticRequestConfigs={{ domain: 'chatbot' }}
-      persistence={persistence}>
+      persistence={typeof persistence === 'boolean' ? persistence : undefined}>
       {children}
     </CioAsaProvider>
   );
@@ -1222,7 +1222,10 @@ describe('useAsaResults persistence', () => {
 
   it('starts a separate history on login and returns to the anonymous one on logout', async () => {
     window.localStorage.clear();
-    const events = [startEvent('thread-x'), { type: 'message', data: { text: 'Hi' } }];
+    const events: StreamEvent[] = [
+      startEvent('thread-x'),
+      { type: 'message', data: { text: 'Hi' } },
+    ];
     const clientFor = (userId?: string) => {
       const { client } = createMockCioClient({ events });
       (client as unknown as { options: object }).options = { apiKey: 'key_test', userId };

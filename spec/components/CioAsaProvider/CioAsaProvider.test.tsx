@@ -3,7 +3,7 @@ import { render, screen, renderHook } from '@testing-library/react';
 import CioAsaProvider from '../../../src/components/CioAsaProvider/CioAsaProvider';
 import { useCioAsaContext } from '../../../src/hooks/useCioAsaContext';
 import { DEMO_API_KEY } from '../../../src/constants';
-import { AsaContextValue } from '../../../src/types';
+import { AsaContextValue, RequestConfigs } from '../../../src/types';
 
 describe('CioAsaProvider', () => {
   it('renders children', () => {
@@ -88,7 +88,7 @@ describe('CioAsaProvider', () => {
     window.localStorage.clear();
     let received: AsaContextValue | undefined;
     render(
-      <CioAsaProvider apiKey='key_test' staticRequestConfigs={{}} persistence>
+      <CioAsaProvider apiKey='key_test' staticRequestConfigs={{} as RequestConfigs} persistence>
         {(ctx) => {
           received = ctx;
           return null;
