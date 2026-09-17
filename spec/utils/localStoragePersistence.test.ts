@@ -334,6 +334,67 @@ describe('createLocalStoragePersistence', () => {
     expect(saved?.messages[0].role).toBe('user');
   });
 
+  it('evicts the least recently updated thread before the one being saved', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const now = Date.now();
+    const oldest = chat('oldest', turns(1), now - 3000);
+    const newer = chat('newer', turns(1), now - 2000);
+    await store.saveThread(oldest);
+    await store.saveThread(newer);
+
+    const current = chat('current', turns(1), now - 1000);
+    storage.quotaBytes =
+      JSON.stringify({
+        version: PERSISTED_CHAT_VERSION,
+        threads: { newer, current },
+        deleted: {},
+      }).length + 20;
+    await store.saveThread(current);
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['current', 'newer']);
+  });
+
+  it('writes synchronously for an unloading page, retiring the re-keyed record', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('local-1', turns(1), Date.now() - 1000));
+
+    // A lock whose callback never runs, the way a lock request behaves on an unloading document.
+    const request = jest.fn(() => new Promise<void>(() => {}));
+    Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
+    try {
+      store.saveThreadSync!(chat('srv-1', turns(1), Date.now()), ['local-1']);
+      // Written before control ever left the handler.
+      expect(storage.getItem(`cio-asa:chat:v${PERSISTED_CHAT_VERSION}`)).toContain('srv-1');
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+    }
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['srv-1']);
+    expect(await store.isThreadDeleted!('local-1')).toBe(true);
+  });
+
+  it('reports a deleted thread as deleted and an evicted one as merely gone', async () => {
+    const store = createLocalStoragePersistence({ storage, maxThreads: 1 });
+    await store.saveThread(chat('a', turns(1), Date.now() - 1000));
+    await store.saveThread(chat('b', turns(1), Date.now()));
+
+    expect(await store.getThread('a')).toBeNull();
+    expect(await store.isThreadDeleted!('a')).toBe(false);
+
+    await store.deleteThread('b');
+    expect(await store.isThreadDeleted!('b')).toBe(true);
+  });
+
+  it('treats every thread as deleted once the store was cleared from outside', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('a', turns(1), Date.now()));
+    expect(await store.isThreadDeleted!('a')).toBe(false);
+
+    storage.clear();
+    expect(await store.isThreadDeleted!('a')).toBe(true);
+  });
+
   it('keeps the other threads when a new thread does not fit even trimmed', async () => {
     const store = createLocalStoragePersistence({ storage });
     const other = chat('other', turns(1), Date.now() - 1000);

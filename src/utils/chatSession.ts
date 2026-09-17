@@ -5,6 +5,7 @@ import {
   getTabId,
   isLocalThreadId,
   nextMessageCounter,
+  randomId,
 } from './chatThreads';
 
 /** Conversation state that async work must always see current; one object so a reset is one call. */
@@ -13,8 +14,8 @@ export interface ChatSession {
   serverThreadId: string | null;
   /** Id the conversation is stored under: the server id, or a `local-` one before it exists. */
   storageThreadId: string | null;
-  /** Local id whose re-keyed replacement could not be verified yet; deleted on a later save. */
-  orphanId: string | null;
+  /** Local ids whose re-keyed replacement could not be verified yet; deleted on a later save. */
+  orphanIds: string[];
   createdAt: number | null;
   /** `updatedAt` of the last snapshot written or applied; newer stored records win over it. */
   lastSyncedAt: number;
@@ -36,7 +37,7 @@ export function createChatSession(initialThreadId?: string): ChatSession {
   return {
     serverThreadId: initialThreadId && !isLocalThreadId(initialThreadId) ? initialThreadId : null,
     storageThreadId: null,
-    orphanId: null,
+    orphanIds: [],
     createdAt: null,
     lastSyncedAt: 0,
     dirty: false,
@@ -45,7 +46,7 @@ export function createChatSession(initialThreadId?: string): ChatSession {
     isStreaming: false,
     foreignInFlight: false,
     idCounter: 0,
-    idSuffix: Math.random().toString(36).slice(2, 8),
+    idSuffix: randomId().slice(0, 6),
   };
 }
 
@@ -54,7 +55,7 @@ export function resetConversation(session: ChatSession): string | null {
   const storedId = session.storageThreadId;
   session.serverThreadId = null;
   session.storageThreadId = null;
-  session.orphanId = null;
+  session.orphanIds = [];
   session.createdAt = null;
   session.lastSyncedAt = 0;
   session.dirty = false;
@@ -78,24 +79,26 @@ export function adoptStoredChat(session: ChatSession, chat: PersistedChat): void
   session.lastSyncedAt = chat.updatedAt;
 }
 
-/** Builds the record to write and moves the session onto its key; `staleId` is the record to retire once stored. */
+/** Builds the record to write and moves the session onto its key; `staleIds` are the records to retire once stored. */
 export function prepareSnapshot(
   session: ChatSession,
   messages: ChatMessage[],
   now = Date.now(),
-): { snapshot: PersistedChat; staleId: string | null } {
+): { snapshot: PersistedChat; staleIds: string[] } {
   const previousId = session.storageThreadId;
   const threadId = session.serverThreadId ?? previousId ?? createLocalThreadId();
-  const staleId = (previousId !== threadId ? previousId : null) ?? session.orphanId;
+  const staleIds = [previousId !== threadId ? previousId : null, ...session.orphanIds].filter(
+    (id): id is string => id !== null && id !== threadId,
+  );
   // Strictly increasing so other tabs read a same-millisecond save as newer.
   const updatedAt = Math.max(now, session.lastSyncedAt + 1);
   const createdAt = session.createdAt ?? updatedAt;
   session.storageThreadId = threadId;
-  session.orphanId = null;
+  session.orphanIds = [];
   session.createdAt = createdAt;
   session.lastSyncedAt = updatedAt;
   return {
-    staleId,
+    staleIds: Array.from(new Set(staleIds)),
     snapshot: {
       version: PERSISTED_CHAT_VERSION,
       threadId,

@@ -389,6 +389,29 @@ describe('useAsaResults persistence', () => {
     expect(store.saveThread).toHaveBeenCalledTimes(2);
   });
 
+  it('writes the settled turn synchronously on pagehide when the store can', async () => {
+    const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+    const { store } = createMemoryPersistence();
+    const saveThreadSync = jest.fn();
+    const { result } = renderWithPersistence(client, { ...store, saveThreadSync });
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    // Synchronously, with no await in between: an async write cannot finish during unload.
+    expect(saveThreadSync).toHaveBeenCalledTimes(1);
+    expect(saveThreadSync.mock.calls[0][0].messages.map((m: ChatMessage) => m.status)).toEqual([
+      'done',
+      'error',
+    ]);
+    expect(store.saveThread).toHaveBeenCalledTimes(1);
+  });
+
   it('saves a settled snapshot when unmounted mid-answer', async () => {
     const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
     const { store, threads } = createMemoryPersistence();
@@ -821,6 +844,28 @@ describe('useAsaResults persistence', () => {
       await waitFor(() => expect(result.current.messages).toEqual([]));
       expect(result.current.activeThreadId).toBeNull();
       expect(result.current.threads.map((t) => t.threadId)).toEqual(['other']);
+    });
+
+    it('keeps the conversation when the active thread was evicted, not deleted', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store, threads, notify } = createMemoryPersistence(seed(), true);
+      const isThreadDeleted = jest.fn(async () => false);
+      const { result } = renderWithPersistence(client, { ...store, isThreadDeleted });
+      await waitFor(() => expect(result.current.activeThreadId).toBe('active'));
+
+      threads.delete('active');
+      await act(async () => notify());
+
+      expect(isThreadDeleted).toHaveBeenCalledWith('active');
+      expect(result.current.messages.map((m) => m.text)).toEqual(['active q', 'active a']);
+      expect(result.current.activeThreadId).toBe('active');
+      // Not written back right away: that would evict the other tab's thread in turn.
+      expect(store.saveThread).not.toHaveBeenCalled();
+      // The next settled save brings it back.
+      act(() => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+      await waitFor(() => expect(threads.has('active')).toBe(true));
     });
 
     it('picks up turns added to the active thread by another tab', async () => {

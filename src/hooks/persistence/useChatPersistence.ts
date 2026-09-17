@@ -14,6 +14,7 @@ import {
   prepareSnapshot,
   resetConversation,
 } from '../../utils/chatSession';
+import useIsMounted from '../useIsMounted';
 import useLatest from '../useLatest';
 import useWriteQueue from './useWriteQueue';
 import useThreadList from './useThreadList';
@@ -47,7 +48,7 @@ export default function useChatPersistence(params: Params) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const storeRef = useLatest(store);
   const messagesRef = useLatest(messages);
-  const mountedRef = useRef(true);
+  const mountedRef = useIsMounted();
   const { enqueue: enqueueWrite, reset: resetWrites } = useWriteQueue();
   const {
     threads,
@@ -62,13 +63,6 @@ export default function useChatPersistence(params: Params) {
     stop: stopForeign,
     clearTimer: clearForeignTimer,
   } = useForeignStream(session);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   // Reset during render so the previous store's conversation never paints under the new one.
   const [renderedStore, setRenderedStore] = useState(store);
@@ -103,23 +97,29 @@ export default function useChatPersistence(params: Params) {
         setMessages((prev) => normalizeHydratedMessages(prev));
       });
     },
-    [session, stopForeign, watchForeign, setMessages],
+    [session, stopForeign, watchForeign, setMessages, mountedRef],
   );
 
-  /** Writes the conversation as it is now. `settle` marks an in-flight answer as finished. */
+  /** Writes the conversation as it is now; `settle` finishes an in-flight answer, `sync` skips awaiting. */
   const persistNow = useCallback(
-    (mode?: { settle?: boolean }): Promise<void> | undefined => {
+    (mode?: { settle?: boolean; sync?: boolean }): Promise<void> | undefined => {
       const { current } = storeRef;
       if (!current || messagesRef.current.length === 0) return undefined;
       const toSave = mode?.settle
         ? normalizeHydratedMessages(messagesRef.current)
         : messagesRef.current;
-      const { snapshot, staleId } = prepareSnapshot(session, toSave);
+      const { snapshot, staleIds } = prepareSnapshot(session, toSave);
+      if (mode?.sync && current.saveThreadSync) {
+        current.saveThreadSync(snapshot, staleIds);
+        return undefined;
+      }
       setActiveThreadId(snapshot.threadId);
       return enqueueWrite(async () => {
-        const orphan = await saveThreadAndRetireStale(current, snapshot, staleId);
+        const orphans = await saveThreadAndRetireStale(current, snapshot, staleIds);
         // A write that outlived a store switch must not leak its leftovers into the new store.
-        if (orphan && storeRef.current === current) session.orphanId = session.orphanId ?? orphan;
+        if (orphans.length > 0 && storeRef.current === current) {
+          session.orphanIds = Array.from(new Set([...session.orphanIds, ...orphans]));
+        }
       });
     },
     [session, storeRef, messagesRef, enqueueWrite],
@@ -129,6 +129,13 @@ export default function useChatPersistence(params: Params) {
     if (session.isStreaming || session.dirty) return persistNow({ settle: true });
     return undefined;
   }, [session, persistNow]);
+
+  /** Write the settled conversation without awaiting anything: the page is going away. */
+  const flushBeforeUnload = useCallback(() => {
+    if (!session.isStreaming && !session.dirty) return;
+    if (storeRef.current?.saveThreadSync) session.dirty = false;
+    persistNow({ settle: true, sync: true });
+  }, [session, storeRef, persistNow]);
 
   /** Forget the conversation on screen; returns the id it was stored under. */
   const forgetConversation = useCallback(() => {
@@ -203,9 +210,9 @@ export default function useChatPersistence(params: Params) {
   // Leaving the page or unmounting mid-answer keeps the turn, settled.
   useEffect(() => {
     if (!store || typeof window === 'undefined') return undefined;
-    window.addEventListener('pagehide', settleAndPersist);
-    return () => window.removeEventListener('pagehide', settleAndPersist);
-  }, [store, settleAndPersist]);
+    window.addEventListener('pagehide', flushBeforeUnload);
+    return () => window.removeEventListener('pagehide', flushBeforeUnload);
+  }, [store, flushBeforeUnload]);
   useEffect(
     () => () => {
       settleAndPersist();
@@ -229,8 +236,15 @@ export default function useChatPersistence(params: Params) {
           ? await findRekeyedThread(current, messagesRef.current[0]?.id)
           : null;
         if (!stillActive()) return;
-        if (rekeyed) showStoredChat(rekeyed);
-        else forgetConversation();
+        if (rekeyed) {
+          showStoredChat(rekeyed);
+          return;
+        }
+        // Evicted or expired, not deleted: keep it; writing back here would ping-pong with the other tab.
+        const deleted = current.isThreadDeleted ? await current.isThreadDeleted(activeId) : true;
+        if (!stillActive()) return;
+        if (deleted) forgetConversation();
+        else session.dirty = true;
         return;
       }
       if (session.isStreaming) return;
@@ -238,7 +252,15 @@ export default function useChatPersistence(params: Params) {
     } catch {
       /* ignore */
     }
-  }, [session, storeRef, messagesRef, refreshThreads, showStoredChat, forgetConversation]);
+  }, [
+    session,
+    storeRef,
+    messagesRef,
+    refreshThreads,
+    showStoredChat,
+    forgetConversation,
+    mountedRef,
+  ]);
 
   useEffect(() => {
     if (!store?.subscribe) return undefined;
@@ -292,7 +314,7 @@ export default function useChatPersistence(params: Params) {
         if (stillWanted()) setIsHydrating(false);
       }
     },
-    [session, storeRef, leaveConversation, showStoredChat],
+    [session, storeRef, leaveConversation, showStoredChat, mountedRef],
   );
 
   return {

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react
 import useAsaResults from '../../hooks/useAsaResults';
 import { useCioAsaContext } from '../../hooks/useCioAsaContext';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useLatest from '../../hooks/useLatest';
 import {
   ChatComponentOverrides,
   ChatMessage,
@@ -126,12 +127,11 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     ]);
 
     const hasPersistence = Boolean(useCioAsaContext()?.persistence);
-    const onThreadsChangeRef = useRef(onThreadsChange);
-    onThreadsChangeRef.current = onThreadsChange;
+    const onThreadsChangeRef = useLatest(onThreadsChange);
     useEffect(() => {
       if (!hasPersistence || isHydrating) return;
       onThreadsChangeRef.current?.(threads, activeThreadId);
-    }, [threads, activeThreadId, isHydrating, hasPersistence]);
+    }, [threads, activeThreadId, isHydrating, hasPersistence, onThreadsChangeRef]);
 
     useEffect(() => {
       if (isHydrating) return;

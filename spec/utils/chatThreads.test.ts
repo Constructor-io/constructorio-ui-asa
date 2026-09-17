@@ -107,14 +107,14 @@ describe('saveThreadAndRetireStale', () => {
   it('saves and leaves nothing behind when there is no stale id', async () => {
     const store = mockStore();
     const snapshot = chat('t1', []);
-    await expect(saveThreadAndRetireStale(store, snapshot, null)).resolves.toBeNull();
+    await expect(saveThreadAndRetireStale(store, snapshot, [])).resolves.toEqual([]);
     expect(store.saveThread).toHaveBeenCalledWith(snapshot);
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 
   it('deletes the stale record once the new one is confirmed', async () => {
     const store = mockStore();
-    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBeNull();
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), ['local-1'])).resolves.toEqual([]);
     expect(store.getThread).toHaveBeenCalledWith('t1');
     expect(store.deleteThread).toHaveBeenCalledWith('local-1');
   });
@@ -122,18 +122,18 @@ describe('saveThreadAndRetireStale', () => {
   it('keeps the stale record when the save fails', async () => {
     const store = mockStore();
     store.saveThread.mockRejectedValueOnce(new Error('boom'));
-    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBe(
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), ['local-1'])).resolves.toEqual([
       'local-1',
-    );
+    ]);
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 
   it('keeps the stale record when the new one cannot be read back', async () => {
     const store = mockStore();
     store.getThread.mockResolvedValueOnce(null);
-    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBe(
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), ['local-1'])).resolves.toEqual([
       'local-1',
-    );
+    ]);
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 
@@ -141,14 +141,16 @@ describe('saveThreadAndRetireStale', () => {
     const store = mockStore();
     const snapshot = chat('t1', []);
     store.getThread.mockResolvedValueOnce({ ...snapshot, updatedAt: snapshot.updatedAt - 1 });
-    await expect(saveThreadAndRetireStale(store, snapshot, 'local-1')).resolves.toBe('local-1');
+    await expect(saveThreadAndRetireStale(store, snapshot, ['local-1'])).resolves.toEqual([
+      'local-1',
+    ]);
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 
   it('swallows a failing delete', async () => {
     const store = mockStore();
     store.deleteThread.mockRejectedValueOnce(new Error('boom'));
-    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBeNull();
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), ['local-1'])).resolves.toEqual([]);
   });
 });
 

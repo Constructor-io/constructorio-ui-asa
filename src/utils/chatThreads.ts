@@ -13,13 +13,16 @@ const LOCAL_THREAD_PREFIX = 'local-';
 /** Thread titles are the first question, cut to this many characters. */
 const TITLE_MAX_LENGTH = 80;
 
+/** Random token for the ids that must not collide between tabs: threads, tabs and messages. */
+export function randomId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 /** Client-side thread id for a conversation the server has not named yet. */
 export function createLocalThreadId(): string {
-  const random =
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  return `${LOCAL_THREAD_PREFIX}${random}`;
+  return `${LOCAL_THREAD_PREFIX}${randomId()}`;
 }
 
 const TAB_ID_KEY = 'cio-asa:tab';
@@ -29,7 +32,7 @@ let tabId: string | undefined;
 export function getTabId(): string | undefined {
   if (tabId) return tabId;
   if (typeof window === 'undefined') return undefined;
-  const random = createLocalThreadId().slice(LOCAL_THREAD_PREFIX.length);
+  const random = randomId();
   try {
     tabId = window.sessionStorage.getItem(TAB_ID_KEY) ?? random;
     window.sessionStorage.setItem(TAB_ID_KEY, tabId);
@@ -87,22 +90,22 @@ export function mergeMessages(
   ];
 }
 
-/** Saves `snapshot`, then deletes `staleId` once the new record is confirmed; returns the id still to delete. */
+/** Saves `snapshot`, then deletes `staleIds` once the new record is confirmed; returns the ids still to delete. */
 export async function saveThreadAndRetireStale(
   store: ChatPersistence,
   snapshot: PersistedChat,
-  staleId: string | null,
-): Promise<string | null> {
+  staleIds: string[],
+): Promise<string[]> {
   try {
     await store.saveThread(snapshot);
   } catch {
-    return staleId;
+    return staleIds;
   }
-  if (!staleId) return null;
+  if (staleIds.length === 0) return [];
   const persisted = await store.getThread(snapshot.threadId).catch(() => null);
-  if (!persisted || persisted.updatedAt < snapshot.updatedAt) return staleId;
-  await store.deleteThread(staleId).catch(() => {});
-  return null;
+  if (!persisted || persisted.updatedAt < snapshot.updatedAt) return staleIds;
+  await Promise.all(staleIds.map((id) => store.deleteThread(id).catch(() => {})));
+  return [];
 }
 
 /** Finds the server-keyed record another tab re-keyed a local thread into, by its first message. */

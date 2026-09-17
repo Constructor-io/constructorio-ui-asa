@@ -28,7 +28,7 @@ describe('chatSession', () => {
     const session = createChatSession('srv-1');
     Object.assign(session, {
       storageThreadId: 'srv-1',
-      orphanId: 'local-1',
+      orphanIds: ['local-1'],
       createdAt: 5,
       lastSyncedAt: 9,
       dirty: true,
@@ -43,7 +43,7 @@ describe('chatSession', () => {
     expect(session).toMatchObject({
       serverThreadId: null,
       storageThreadId: null,
-      orphanId: null,
+      orphanIds: [],
       createdAt: null,
       lastSyncedAt: 0,
       dirty: false,
@@ -90,10 +90,10 @@ describe('prepareSnapshot', () => {
 
   it('mints a local id for an unsaved conversation without a server thread', () => {
     const session = createChatSession();
-    const { snapshot, staleId } = prepareSnapshot(session, messages, 1000);
+    const { snapshot, staleIds } = prepareSnapshot(session, messages, 1000);
     expect(snapshot.threadId).toMatch(/^local-/);
     expect(snapshot).toMatchObject({ version: 1, createdAt: 1000, updatedAt: 1000, messages });
-    expect(staleId).toBeNull();
+    expect(staleIds).toEqual([]);
     expect(session).toMatchObject({
       storageThreadId: snapshot.threadId,
       createdAt: 1000,
@@ -106,7 +106,7 @@ describe('prepareSnapshot', () => {
     const first = prepareSnapshot(session, messages, 1000);
     const second = prepareSnapshot(session, messages, 2000);
     expect(second.snapshot.threadId).toBe(first.snapshot.threadId);
-    expect(second.staleId).toBeNull();
+    expect(second.staleIds).toEqual([]);
     expect(second.snapshot.createdAt).toBe(1000);
   });
 
@@ -114,18 +114,31 @@ describe('prepareSnapshot', () => {
     const session = createChatSession();
     const local = prepareSnapshot(session, messages, 1000).snapshot.threadId;
     Object.assign(session, { serverThreadId: 'srv-1' });
-    const { snapshot, staleId } = prepareSnapshot(session, messages, 2000);
+    const { snapshot, staleIds } = prepareSnapshot(session, messages, 2000);
     expect(snapshot.threadId).toBe('srv-1');
-    expect(staleId).toBe(local);
+    expect(staleIds).toEqual([local]);
     expect(session.storageThreadId).toBe('srv-1');
   });
 
   it('retries a deletion left over from an earlier save', () => {
     const session = createChatSession('srv-1');
-    Object.assign(session, { storageThreadId: 'srv-1', orphanId: 'local-old' });
-    const { staleId } = prepareSnapshot(session, messages, 1000);
-    expect(staleId).toBe('local-old');
-    expect(session.orphanId).toBeNull();
+    Object.assign(session, { storageThreadId: 'srv-1', orphanIds: ['local-old'] });
+    const { staleIds } = prepareSnapshot(session, messages, 1000);
+    expect(staleIds).toEqual(['local-old']);
+    expect(session.orphanIds).toEqual([]);
+  });
+
+  it('retires the re-keyed record and a pending orphan together', () => {
+    const session = createChatSession();
+    Object.assign(session, {
+      storageThreadId: 'srv-1',
+      serverThreadId: 'srv-2',
+      orphanIds: ['local-old'],
+    });
+    const { snapshot, staleIds } = prepareSnapshot(session, messages, 1000);
+    expect(snapshot.threadId).toBe('srv-2');
+    expect(staleIds).toEqual(['srv-1', 'local-old']);
+    expect(session.orphanIds).toEqual([]);
   });
 
   it('never reuses an updatedAt, even within the same millisecond', () => {

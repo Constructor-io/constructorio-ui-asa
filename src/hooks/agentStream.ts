@@ -7,6 +7,7 @@ import {
   handleServerError,
   handleStreamEnd,
   handleStreamError,
+  updateMessageById,
 } from './asaStreamHandlers';
 
 type SetMessages = Dispatch<SetStateAction<ChatMessage[]>>;
@@ -41,7 +42,7 @@ export function readAgentStream(
   let groupCount = 0;
 
   const patchAssistant = (patch: Partial<ChatMessage>) => {
-    setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, ...patch } : m)));
+    updateMessageById(setMessages, assistantId, (m) => ({ ...m, ...patch }));
   };
 
   const fireLoadStart = () => {
@@ -95,7 +96,8 @@ export function readAgentStream(
     } catch {
       if (!cancelled) handleStreamError(assistantId, setMessages);
     } finally {
-      if (!cancelled) reader.cancel();
+      // Cancelling an errored stream rejects with the stored error; nothing here needs it.
+      if (!cancelled) reader.cancel().catch(() => {});
     }
   })();
 
@@ -103,7 +105,7 @@ export function readAgentStream(
     done,
     cancel: () => {
       cancelled = true;
-      reader.cancel();
+      reader.cancel().catch(() => {});
     },
   };
 }

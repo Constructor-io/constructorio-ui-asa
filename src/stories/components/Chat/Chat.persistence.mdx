@@ -41,7 +41,7 @@ Everything below is optional and only active when `persistence` is set on the pr
 {`
 | Aspect | Behaviour |
 |--------|-----------|
-| Storage key | \`cio-asa:chat:v1:<apiKey>:<domain>\`, plus the client's \`userId\` when one is configured, so one shopper's chats follow them across pages of the same site and a login change on a shared browser starts a separate history |
+| Storage key | \`cio-asa:chat:v1:<apiKey>:<domain>\`, plus the \`userId\` when one is configured, so one shopper's chats follow them across pages of the same site and a login change on a shared browser starts a separate history. The id is read from the client instance, so a login must hand the provider a new client (or new client options) rather than mutate the existing one with \`setClientOptions\` |
 | What is stored | Messages, product results as received, and the agent's \`thread_id\`; the next message continues the same server-side conversation |
 | When it saves | When the answer stream starts, when it completes (or fails), and as a settled snapshot on \`pagehide\`, on unmount, and on \`newThread\` / \`switchThread\` while an answer is still in flight. Never per streamed chunk |
 | On load | The most recent thread is restored before anything renders, so there is no welcome-screen flash. \`isHydrating\` is \`true\` meanwhile |

@@ -28,7 +28,8 @@ export default function CioAsaProvider(
     cioClient as unknown as { options?: { apiKey?: string; userId?: string | number } } | null
   )?.options;
   const resolvedApiKey = apiKey ?? clientOptions?.apiKey;
-  const userId = clientOptions?.userId != null ? String(clientOptions.userId) : undefined;
+  const rawUserId = clientOptions?.userId;
+  const userId = rawUserId != null && rawUserId !== '' ? String(rawUserId) : undefined;
   const { domain } = staticRequestConfigs;
   const persistence = useMemo(() => {
     if (!persistenceEnabled) return undefined;

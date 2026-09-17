@@ -228,6 +228,16 @@ export interface ChatPersistence {
   saveThread(chat: PersistedChat): Promise<void>;
   deleteThread(threadId: string): Promise<void>;
   /**
+   * Optional. Whether `threadId` was explicitly deleted (or the whole store was cleared), as
+   * opposed to expired or evicted. Without it, a thread that has gone missing is treated as deleted.
+   */
+  isThreadDeleted?(threadId: string): Promise<boolean>;
+  /**
+   * Optional. Write `chat` synchronously, retiring `staleIds` in the same step, for use while the
+   * page is unloading: an async write cannot finish there. Falls back to `saveThread` when absent.
+   */
+  saveThreadSync?(chat: PersistedChat, staleIds?: string[]): void;
+  /**
    * Optional. Notify when stored threads change outside this hook instance (another tab).
    * Returns an unsubscribe function.
    */

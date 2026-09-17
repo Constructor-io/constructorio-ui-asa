@@ -50,13 +50,15 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     cancelStream,
   });
 
+  const { beginTurn, onStreamStart } = store;
+
   useEffect(() => cancelStream, [cancelStream]);
 
   const sendMessage = useCallback(
     (text: string, source: AssistantSubmitSource = 'input') => {
       const intent = text.trim();
       if (!intent || session.isStreaming || session.foreignInFlight) return;
-      store.beginTurn();
+      beginTurn();
 
       trackingRef.current.trackSubmit(intent);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
@@ -91,7 +93,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       const handle = readAgentStream(stream, assistantMessage.id, setMessages, {
         onStart: (threadId) => {
           if (threadId) session.serverThreadId = threadId;
-          store.onStreamStart();
+          onStreamStart();
         },
         onLoadStart: (intentResultId) => {
           const args = { intent, intentResultId };
@@ -114,7 +116,16 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
         setIsStreaming(false);
       });
     },
-    [cioClient, domain, session, store, trackingRef, callbacksRef, staticRequestConfigsRef],
+    [
+      cioClient,
+      domain,
+      session,
+      beginTurn,
+      onStreamStart,
+      trackingRef,
+      callbacksRef,
+      staticRequestConfigsRef,
+    ],
   );
 
   return {
