@@ -575,10 +575,10 @@ The hook returns exactly:
 | `abort` | `() => void` | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle. |
 | `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
 
-**Cancelling a response.** `abort()` covers both a user-facing cancel button and a UI-side timeout. The partial reply is kept and settled, and the thread is preserved, so the next message continues the same conversation — use `clearHistory()` when you want to start over instead.
+**Cancelling a response.** `abort()` keeps the partial reply and the thread, so the next message continues the same conversation; `clearHistory()` starts over.
 
 ```jsx
-const { sendMessage, isStreaming, abort } = useAsaResults();
+const { isStreaming, abort } = useAsaResults();
 
 // A cancel button
 <button onClick={abort} disabled={!isStreaming}>Stop</button>
@@ -591,23 +591,15 @@ useEffect(() => {
 }, [isStreaming, abort]);
 ```
 
-No tracking beacon is sent for an aborted turn — there is no "aborted" ASA event, and reporting the load as finished would be false. An aborted turn therefore leaves an `assistant_result_load_started` with no matching `assistant_result_load_finished`.
+No beacon is sent for an aborted turn, so it leaves an `assistant_result_load_started` with no matching `assistant_result_load_finished`.
 
-`Chat` can show a stop button in place of send while a reply streams, wired to `abort()`. It is **off by default** — pass `showStopButton` to enable it, and the packaged UI is otherwise unchanged:
-
-```jsx
-<Chat showStopButton />
-```
-
-With it off, cancelling is reachable only through `abort()` on the ref or your own input override. If you replace the input via `componentOverrides.input`, render your own stop button from the `isStreaming` and `onAbort` render props — those reach you regardless of `showStopButton`, so you can build your own control without enabling the built-in one.
-
-`Chat` also exposes both calls on its imperative handle, for a timeout or a cancel button of your own:
+With `Chat`, pass `showStopButton` to turn the input's send button into a stop button while a reply streams — it is off by default. The same `abort()` is on the ref, for a timeout or a button of your own:
 
 ```jsx
 const chatRef = useRef(null);
 
+<Chat ref={chatRef} showStopButton />
 <button onClick={() => chatRef.current?.abort()}>Stop</button>
-<Chat ref={chatRef} />
 ```
 
 Each `ChatMessage` has this shape:
