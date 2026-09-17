@@ -1203,6 +1203,47 @@ describe('useAsaResults persistence', () => {
       expect(storeA.saveThread).toHaveBeenCalledTimes(1);
     });
 
+    it('does not carry a leftover from a save that finished after the store switch', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [startEvent('srv'), { type: 'message', data: { text: 'Hi' } }],
+      });
+      getAgentResultsStream.mockReturnValueOnce(
+        createEventStream([{ type: 'message', data: { text: 'Hi' } }]),
+      );
+      const { store: storeA } = createMemoryPersistence();
+      const { store: storeB } = createMemoryPersistence();
+      const { result, switchTo } = renderSwitchable(client, storeA);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('no thread yet'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(storeA.saveThread).toHaveBeenCalledTimes(1));
+      expect(storeA.saveThread.mock.calls[0][0].threadId).toMatch(/^local-/);
+
+      let release!: () => void;
+      const slow = new Promise<void>((r) => {
+        release = r;
+      });
+      storeA.saveThread.mockImplementation(() => slow);
+      act(() => result.current.sendMessage('now on the server'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(storeA.saveThread.mock.calls[1][0].threadId).toBe('srv');
+
+      switchTo(storeB);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      await act(async () => {
+        release();
+        await slow;
+      });
+
+      act(() => result.current.sendMessage('into B'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(storeB.saveThread).toHaveBeenCalled());
+      await act(async () => {});
+
+      expect(storeB.deleteThread).not.toHaveBeenCalled();
+    });
+
     it('clears the restored conversation when persistence is turned off', async () => {
       const { client } = createMockCioClient({ events: [] });
       const { store } = createMemoryPersistence([

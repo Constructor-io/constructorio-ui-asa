@@ -95,9 +95,13 @@ function trimToTurns(messages: ChatMessage[], maxTurns: number): ChatMessage[] {
   return trimmed;
 }
 
+type LockCapable = Navigator & {
+  locks?: { request: (name: string, callback: () => void | Promise<void>) => Promise<void> };
+};
+
 // Web Locks where available; elsewhere the cycle runs synchronously.
 async function withStorageLock(name: string, fn: () => void): Promise<void> {
-  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  const locks = typeof navigator !== 'undefined' ? (navigator as LockCapable).locks : undefined;
   if (!locks?.request) {
     fn();
     return;
@@ -302,11 +306,12 @@ export function createLocalStoragePersistence(
       const raw = readRaw(storage);
       const next = mutate(parse(raw));
       if (!next) return;
-      if (readRaw(storage) === raw || attempt === MAX_COMMIT_ATTEMPTS - 1) {
+      if (readRaw(storage) === raw) {
         write(storage, next, priorityThreadId);
         return;
       }
     }
+    // The key kept changing under us: skip rather than overwrite another tab's turns.
   };
 
   return {
@@ -397,7 +402,7 @@ export async function saveThreadAndRetireStale(
   }
   if (!staleId) return null;
   const persisted = await store.getThread(snapshot.threadId).catch(() => null);
-  if (!persisted) return staleId;
+  if (!persisted || persisted.updatedAt < snapshot.updatedAt) return staleId;
   await store.deleteThread(staleId).catch(() => {});
   return null;
 }

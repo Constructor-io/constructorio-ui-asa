@@ -253,6 +253,28 @@ describe('createLocalStoragePersistence', () => {
     expect((await store.getThread('a'))?.messages).toHaveLength(6);
   });
 
+  it('skips the commit rather than overwriting when the key keeps changing', async () => {
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('a', turns(1)));
+
+    let latest = JSON.parse(storage.getItem(key)!);
+    let tick = 0;
+    storage.beforeGetItem = () => {
+      tick += 1;
+      latest = {
+        ...latest,
+        threads: { ...latest.threads, [`other-${tick}`]: chat(`other-${tick}`, turns(1)) },
+      };
+      storage.poke(key, JSON.stringify(latest));
+    };
+    await store.saveThread(chat('a', turns(2)));
+    storage.beforeGetItem = undefined;
+
+    expect((await store.getThread('a'))?.messages).toHaveLength(2);
+    expect((await store.listThreads()).length).toBeGreaterThan(1);
+  });
+
   it('namespaces the storage key', async () => {
     const store = createLocalStoragePersistence({ storage, namespace: 'key_1:chatbot' });
     await store.saveThread(chat('t1', turns(1)));
@@ -581,6 +603,14 @@ describe('saveThreadAndRetireStale', () => {
     await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBe(
       'local-1',
     );
+    expect(store.deleteThread).not.toHaveBeenCalled();
+  });
+
+  it('keeps the stale record when the read-back is older than this save', async () => {
+    const store = mockStore();
+    const snapshot = chat('t1', []);
+    store.getThread.mockResolvedValueOnce({ ...snapshot, updatedAt: snapshot.updatedAt - 1 });
+    await expect(saveThreadAndRetireStale(store, snapshot, 'local-1')).resolves.toBe('local-1');
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 

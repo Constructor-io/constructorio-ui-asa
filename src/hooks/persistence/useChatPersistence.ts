@@ -113,7 +113,8 @@ export default function useChatPersistence(params: Params) {
       setActiveThreadId(snapshot.threadId);
       return enqueueWrite(async () => {
         const orphan = await saveThreadAndRetireStale(current, snapshot, staleId);
-        if (orphan) session.orphanId = session.orphanId ?? orphan;
+        // A write that outlived a store switch must not leak its leftovers into the new store.
+        if (orphan && storeRef.current === current) session.orphanId = session.orphanId ?? orphan;
       });
     },
     [session, storeRef, messagesRef, enqueueWrite],
