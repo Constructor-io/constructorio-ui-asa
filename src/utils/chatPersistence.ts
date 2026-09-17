@@ -443,3 +443,14 @@ export async function findRekeyedThread(
   const loaded = await Promise.all(candidates.map((t) => store.getThread(t.threadId)));
   return loaded.find((c) => c?.messages[0]?.id === firstMessageId) ?? null;
 }
+
+/**
+ * How much longer a stored answer should be shown as streaming in another tab, in ms, or `0`
+ * when it should be settled: it is finished, older than the grace period, or was written by
+ * this very tab (which cannot still be streaming after a reload).
+ */
+export function foreignStreamRemainingMs(chat: PersistedChat, now = Date.now()): number {
+  if (!isInFlight(chat.messages)) return 0;
+  if (chat.owner !== undefined && chat.owner === getTabId()) return 0;
+  return Math.max(0, IN_FLIGHT_GRACE_MS - (now - chat.updatedAt));
+}

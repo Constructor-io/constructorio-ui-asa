@@ -1,4 +1,11 @@
-import { isLocalThreadId } from '../utils/chatPersistence';
+import { ChatMessage, PersistedChat } from '../types';
+import {
+  PERSISTED_CHAT_VERSION,
+  createLocalThreadId,
+  getTabId,
+  isLocalThreadId,
+  nextMessageCounter,
+} from '../utils/chatPersistence';
 
 /**
  * Mutable state of the conversation on screen that async work (the stream loop, storage reads
@@ -66,4 +73,51 @@ export function resetConversation(session: ChatSession): string | null {
 export function nextMessageId(session: ChatSession): string {
   Object.assign(session, { idCounter: session.idCounter + 1 });
   return `msg-${session.idCounter}-${Date.now()}-${session.idSuffix}`;
+}
+
+/** Makes a stored conversation the one this session continues. */
+export function adoptStoredChat(session: ChatSession, chat: PersistedChat): void {
+  Object.assign(session, {
+    storageThreadId: chat.threadId,
+    createdAt: chat.createdAt,
+    serverThreadId: isLocalThreadId(chat.threadId) ? null : chat.threadId,
+    idCounter: nextMessageCounter(chat.messages),
+    lastSyncedAt: chat.updatedAt,
+  });
+}
+
+/**
+ * Builds the record to write for `messages` and moves the session onto its key. `staleId` is
+ * a record left under a previous key (a `local-` id replaced by the server one, or an earlier
+ * orphan) that should be deleted once this snapshot is confirmed stored.
+ */
+export function prepareSnapshot(
+  session: ChatSession,
+  messages: ChatMessage[],
+  now = Date.now(),
+): { snapshot: PersistedChat; staleId: string | null } {
+  const previousId = session.storageThreadId;
+  const threadId = session.serverThreadId ?? previousId ?? createLocalThreadId();
+  const staleId = (previousId !== threadId ? previousId : null) ?? session.orphanId;
+  // Strictly increasing so a save issued in the same millisecond as the previous one still
+  // reads as newer to other tabs.
+  const updatedAt = Math.max(now, session.lastSyncedAt + 1);
+  const createdAt = session.createdAt ?? updatedAt;
+  Object.assign(session, {
+    storageThreadId: threadId,
+    orphanId: null,
+    createdAt,
+    lastSyncedAt: updatedAt,
+  });
+  return {
+    staleId,
+    snapshot: {
+      version: PERSISTED_CHAT_VERSION,
+      threadId,
+      messages,
+      createdAt,
+      updatedAt,
+      owner: getTabId(),
+    },
+  };
 }

@@ -1,18 +1,18 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
-import { ChatMessage, ChatPersistence, PersistedChat, ThreadSummary } from '../types';
+import { ChatMessage, ChatPersistence, PersistedChat } from '../../types';
 import {
-  IN_FLIGHT_GRACE_MS,
-  PERSISTED_CHAT_VERSION,
-  createLocalThreadId,
   findRekeyedThread,
-  getTabId,
+  foreignStreamRemainingMs,
   isInFlight,
   isLocalThreadId,
-  nextMessageCounter,
   normalizeHydratedMessages,
   saveThreadAndRetireStale,
-} from '../utils/chatPersistence';
-import { ChatSession, resetConversation } from './chatSession';
+} from '../../utils/chatPersistence';
+import { ChatSession, adoptStoredChat, prepareSnapshot, resetConversation } from '../chatSession';
+import useLatest from './useLatest';
+import useWriteQueue from './useWriteQueue';
+import useThreadList from './useThreadList';
+import useForeignStream from './useForeignStream';
 
 interface Params {
   store: ChatPersistence | undefined;
@@ -43,19 +43,24 @@ export default function useChatPersistence(params: Params) {
     cancelStream,
   } = params;
   const [isHydrating, setIsHydrating] = useState(Boolean(store));
-  const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const [foreignInFlight, setForeignInFlight] = useState(false);
-
-  const storeRef = useRef(store);
-  storeRef.current = store;
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  const storeRef = useLatest(store);
+  const messagesRef = useLatest(messages);
   const mountedRef = useRef(true);
-  const refreshRequestRef = useRef(0);
-  const foreignTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Writes are chained so an async store applies them in the order they were issued.
-  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const { enqueue: enqueueWrite, reset: resetWrites } = useWriteQueue();
+  const {
+    threads,
+    setThreads,
+    refreshThreads,
+    invalidate: invalidateThreads,
+  } = useThreadList(storeRef);
+  const {
+    foreignInFlight,
+    setForeignInFlight,
+    watch: watchForeign,
+    stop: stopForeign,
+    clearTimer: clearForeignTimer,
+  } = useForeignStream(session);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -77,73 +82,29 @@ export default function useChatPersistence(params: Params) {
     setIsHydrating(Boolean(store));
   }
 
-  const setForeign = useCallback(
-    (value: boolean) => {
-      session.foreignInFlight = value;
-      setForeignInFlight(value);
-    },
-    [session],
-  );
-
-  const clearForeignTimer = useCallback(() => {
-    if (foreignTimerRef.current) clearTimeout(foreignTimerRef.current);
-    foreignTimerRef.current = null;
-  }, []);
-
-  const enqueueWrite = useCallback((run: () => Promise<void>) => {
-    saveChainRef.current = saveChainRef.current.then(run, run);
-    return saveChainRef.current;
-  }, []);
-
-  const refreshThreads = useCallback(async () => {
-    const { current } = storeRef;
-    if (!current) return;
-    refreshRequestRef.current += 1;
-    const request = refreshRequestRef.current;
-    try {
-      const list = await current.listThreads();
-      if (mountedRef.current && request === refreshRequestRef.current) setThreads(list);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   /** Puts a stored conversation on screen and makes it the one this tab continues. */
   const showStoredChat = useCallback(
     (chat: PersistedChat) => {
-      clearForeignTimer();
-      session.storageThreadId = chat.threadId;
-      session.createdAt = chat.createdAt;
-      session.serverThreadId = isLocalThreadId(chat.threadId) ? null : chat.threadId;
-      session.idCounter = nextMessageCounter(chat.messages);
-      session.lastSyncedAt = chat.updatedAt;
+      adoptStoredChat(session, chat);
       setActiveThreadId(chat.threadId);
-
-      const inFlight = isInFlight(chat.messages);
-      const age = Date.now() - chat.updatedAt;
-      // A record this tab wrote itself cannot still be streaming after a reload.
-      const ownRecord = chat.owner !== undefined && chat.owner === getTabId();
-      const streamingElsewhere = inFlight && !ownRecord && age < IN_FLIGHT_GRACE_MS;
-      if (!streamingElsewhere) {
-        setForeign(false);
+      const remainingMs = foreignStreamRemainingMs(chat);
+      if (remainingMs === 0) {
+        stopForeign();
         setMessages(normalizeHydratedMessages(chat.messages));
         // A stale in-flight snapshot is settled locally; write it back so the stored record
         // (and `inFlight` in the thread list) stops reporting a stream forever.
-        if (inFlight) session.dirty = true;
+        if (isInFlight(chat.messages)) Object.assign(session, { dirty: true });
         return;
       }
-      setForeign(true);
       setMessages(chat.messages);
-      foreignTimerRef.current = setTimeout(() => {
-        foreignTimerRef.current = null;
+      watchForeign(remainingMs, () => {
         if (!mountedRef.current || session.storageThreadId !== chat.threadId) return;
-        setForeign(false);
         if (session.isStreaming) return;
-        session.dirty = true;
+        Object.assign(session, { dirty: true });
         setMessages((prev) => normalizeHydratedMessages(prev));
-      }, IN_FLIGHT_GRACE_MS - age);
+      });
     },
-    [session, clearForeignTimer, setForeign, setMessages],
+    [session, stopForeign, watchForeign, setMessages],
   );
 
   /** Writes the conversation as it is now. `settle` marks an in-flight answer as finished. */
@@ -154,34 +115,16 @@ export default function useChatPersistence(params: Params) {
       const toSave = mode?.settle
         ? normalizeHydratedMessages(messagesRef.current)
         : messagesRef.current;
-
-      const previousId = session.storageThreadId;
-      const threadId = session.serverThreadId ?? previousId ?? createLocalThreadId();
-      session.storageThreadId = threadId;
-      const staleId = (previousId !== threadId ? previousId : null) ?? session.orphanId;
-      session.orphanId = null;
-      // Strictly increasing so a save issued in the same millisecond as the previous one still
-      // reads as newer to other tabs.
-      const now = Math.max(Date.now(), session.lastSyncedAt + 1);
-      session.createdAt = session.createdAt ?? now;
-      session.lastSyncedAt = now;
-      setActiveThreadId(threadId);
-      const snapshot: PersistedChat = {
-        version: PERSISTED_CHAT_VERSION,
-        threadId,
-        messages: toSave,
-        createdAt: session.createdAt,
-        updatedAt: now,
-        owner: getTabId(),
-      };
+      const { snapshot, staleId } = prepareSnapshot(session, toSave);
+      setActiveThreadId(snapshot.threadId);
       // `current` is captured so a write still queued when the store changes lands where it
       // was meant to.
       return enqueueWrite(async () => {
         const orphan = await saveThreadAndRetireStale(current, snapshot, staleId);
-        if (orphan) session.orphanId = session.orphanId ?? orphan;
+        if (orphan) Object.assign(session, { orphanId: session.orphanId ?? orphan });
       });
     },
-    [session, enqueueWrite],
+    [session, storeRef, messagesRef, enqueueWrite],
   );
 
   const settleAndPersist = useCallback(() => {
@@ -191,16 +134,15 @@ export default function useChatPersistence(params: Params) {
 
   /** Forget the conversation on screen; returns the id it was stored under. */
   const forgetConversation = useCallback(() => {
-    clearForeignTimer();
+    stopForeign();
     cancelStream();
     const storedId = resetConversation(session);
-    session.interacted = true;
-    setForeign(false);
+    Object.assign(session, { interacted: true });
     setActiveThreadId(null);
     setMessages([]);
     setIsStreaming(false);
     return storedId;
-  }, [session, clearForeignTimer, cancelStream, setForeign, setMessages, setIsStreaming]);
+  }, [session, stopForeign, cancelStream, setMessages, setIsStreaming]);
 
   // Restore on mount, and again from scratch whenever the store changes.
   const storeInitializedRef = useRef(false);
@@ -211,9 +153,9 @@ export default function useChatPersistence(params: Params) {
       clearForeignTimer();
       cancelStream();
       resetConversation(session);
-      session.interacted = false;
-      refreshRequestRef.current += 1;
-      saveChainRef.current = Promise.resolve();
+      Object.assign(session, { interacted: false });
+      invalidateThreads();
+      resetWrites();
     }
     storeInitializedRef.current = true;
 
@@ -225,18 +167,19 @@ export default function useChatPersistence(params: Params) {
     let cancelled = false;
     (async () => {
       try {
-        const list = await store.listThreads();
+        const summaries = await store.listThreads();
         if (cancelled) return;
         if (session.interacted) {
           refreshThreads();
           return;
         }
-        setThreads(list);
-        const targetId = initialThreadId ?? list[0]?.threadId;
+        setThreads(summaries);
+        const targetId = initialThreadId ?? summaries[0]?.threadId;
         const chat = targetId ? await store.getThread(targetId) : null;
         if (cancelled || session.interacted) return;
         if (!chat) {
-          if (targetId && isLocalThreadId(targetId)) session.serverThreadId = null;
+          if (targetId && isLocalThreadId(targetId))
+            Object.assign(session, { serverThreadId: null });
           return;
         }
         showStoredChat(chat);
@@ -257,9 +200,9 @@ export default function useChatPersistence(params: Params) {
   useEffect(() => {
     if (!storeRef.current || messages.length === 0) return;
     if (isStreaming || !session.dirty) return;
-    session.dirty = false;
+    Object.assign(session, { dirty: false });
     persistNow()?.then(refreshThreads);
-  }, [messages, isStreaming, session, persistNow, refreshThreads]);
+  }, [messages, isStreaming, session, storeRef, persistNow, refreshThreads]);
 
   // Leaving the page or unmounting mid-answer keeps the turn, settled.
   useEffect(() => {
@@ -299,7 +242,7 @@ export default function useChatPersistence(params: Params) {
     } catch {
       /* ignore */
     }
-  }, [session, refreshThreads, showStoredChat, forgetConversation]);
+  }, [session, storeRef, messagesRef, refreshThreads, showStoredChat, forgetConversation]);
 
   useEffect(() => {
     if (!store?.subscribe) return undefined;
@@ -310,8 +253,7 @@ export default function useChatPersistence(params: Params) {
 
   /** The user is sending a message: nothing still loading may land on top of it. */
   const beginTurn = useCallback(() => {
-    session.interacted = true;
-    session.loadRequest += 1;
+    Object.assign(session, { interacted: true, loadRequest: session.loadRequest + 1 });
     setIsHydrating(false);
   }, [session]);
 
@@ -325,7 +267,7 @@ export default function useChatPersistence(params: Params) {
     if (!storedId || !current) return;
     // Queued behind pending saves so one of them cannot recreate the deleted thread.
     enqueueWrite(() => current.deleteThread(storedId).catch(() => {})).then(refreshThreads);
-  }, [forgetConversation, enqueueWrite, refreshThreads]);
+  }, [forgetConversation, storeRef, enqueueWrite, refreshThreads]);
 
   const leaveConversation = useCallback(() => {
     settleAndPersist()?.then(refreshThreads);
@@ -334,7 +276,7 @@ export default function useChatPersistence(params: Params) {
 
   const newThread = useCallback(() => {
     if (storeRef.current) leaveConversation();
-  }, [leaveConversation]);
+  }, [storeRef, leaveConversation]);
 
   const switchThread = useCallback(
     async (threadId: string) => {
@@ -353,7 +295,7 @@ export default function useChatPersistence(params: Params) {
         if (stillWanted()) setIsHydrating(false);
       }
     },
-    [session, leaveConversation, showStoredChat],
+    [session, storeRef, leaveConversation, showStoredChat],
   );
 
   return {

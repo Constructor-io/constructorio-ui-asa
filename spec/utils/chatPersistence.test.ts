@@ -2,7 +2,9 @@ import {
   createLocalStoragePersistence,
   createLocalThreadId,
   findRekeyedThread,
+  foreignStreamRemainingMs,
   getTabId,
+  IN_FLIGHT_GRACE_MS,
   getThreadTitle,
   isLocalThreadId,
   isInFlight,
@@ -607,5 +609,34 @@ describe('findRekeyedThread', () => {
 
     await expect(findRekeyedThread(store, undefined)).resolves.toBeNull();
     await expect(findRekeyedThread(store, 'nope')).resolves.toBeNull();
+  });
+});
+
+describe('foreignStreamRemainingMs', () => {
+  const streaming = (updatedAt: number, owner?: string): PersistedChat => ({
+    ...chat('t', [msg('user', 'q'), msg('assistant', '', 'streaming')], updatedAt),
+    owner,
+  });
+
+  it('is zero for a finished answer', () => {
+    expect(foreignStreamRemainingMs(chat('t', turns(1)), 5000)).toBe(0);
+  });
+
+  it('counts down the grace period from the last write', () => {
+    expect(foreignStreamRemainingMs(streaming(1000), 1000 + 10_000)).toBe(
+      IN_FLIGHT_GRACE_MS - 10_000,
+    );
+  });
+
+  it('is zero once the grace period has passed', () => {
+    expect(foreignStreamRemainingMs(streaming(1000), 1000 + IN_FLIGHT_GRACE_MS)).toBe(0);
+  });
+
+  it('is zero for a record this tab wrote itself', () => {
+    expect(foreignStreamRemainingMs(streaming(1000, getTabId()), 1000)).toBe(0);
+  });
+
+  it('treats a record from another tab as streaming', () => {
+    expect(foreignStreamRemainingMs(streaming(1000, 'other-tab'), 1000)).toBe(IN_FLIGHT_GRACE_MS);
   });
 });

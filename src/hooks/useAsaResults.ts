@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
 import { AssistantSubmitSource, ChatMessage, UseAsaResultsOptions, UseChatReturn } from '../types';
 import useAsaTracking from './useAsaTracking';
-import useChatPersistence from './useChatPersistence';
+import useChatPersistence from './persistence/useChatPersistence';
 import { AgentStreamHandle, readAgentStream } from './agentStream';
 import { createChatSession, nextMessageId } from './chatSession';
 
