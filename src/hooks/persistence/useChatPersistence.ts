@@ -7,8 +7,13 @@ import {
   isLocalThreadId,
   normalizeHydratedMessages,
   saveThreadAndRetireStale,
-} from '../../utils/chatPersistence';
-import { ChatSession, adoptStoredChat, prepareSnapshot, resetConversation } from '../chatSession';
+} from '../../utils/chatThreads';
+import {
+  ChatSession,
+  adoptStoredChat,
+  prepareSnapshot,
+  resetConversation,
+} from '../../utils/chatSession';
 import useLatest from '../useLatest';
 import useWriteQueue from './useWriteQueue';
 import useThreadList from './useThreadList';

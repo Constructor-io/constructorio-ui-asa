@@ -4,7 +4,7 @@ import {
   nextMessageId,
   prepareSnapshot,
   resetConversation,
-} from '../../src/hooks/chatSession';
+} from '../../src/utils/chatSession';
 import type { ChatMessage, PersistedChat } from '../../src/types';
 
 describe('chatSession', () => {

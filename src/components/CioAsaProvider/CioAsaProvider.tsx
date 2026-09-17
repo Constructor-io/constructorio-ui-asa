@@ -4,7 +4,7 @@ import { AsaContextValue, IncludeRenderProps, CioAsaProviderProps } from '../../
 import { AsaContext } from '../../hooks/useCioAsaContext';
 import * as defaultFormatters from '../../utils/formatters';
 import * as defaultUrlHelpers from '../../utils/urlHelpers';
-import { createLocalStoragePersistence } from '../../utils/chatPersistence';
+import { createLocalStoragePersistence } from '../../utils/localStoragePersistence';
 
 export default function CioAsaProvider(
   props: IncludeRenderProps<CioAsaProviderProps, AsaContextValue>,

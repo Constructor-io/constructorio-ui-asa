@@ -4,7 +4,7 @@ import { AssistantSubmitSource, ChatMessage, UseAsaResultsOptions, UseChatReturn
 import useAsaTracking from './useAsaTracking';
 import useChatPersistence from './persistence/useChatPersistence';
 import { AgentStreamHandle, readAgentStream } from './agentStream';
-import { createChatSession, nextMessageId } from './chatSession';
+import { createChatSession, nextMessageId } from '../utils/chatSession';
 import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {

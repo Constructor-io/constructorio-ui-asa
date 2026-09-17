@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChatSession } from '../chatSession';
+import { ChatSession } from '../../utils/chatSession';
 
 /** An answer streaming in another tab: blocks sending and settles after the grace period. */
 export default function useForeignStream(session: ChatSession) {

@@ -5,7 +5,7 @@ import {
   getTabId,
   isLocalThreadId,
   nextMessageCounter,
-} from '../utils/chatPersistence';
+} from './chatThreads';
 
 /** Conversation state that async work must always see current; one object so a reset is one call. */
 export interface ChatSession {

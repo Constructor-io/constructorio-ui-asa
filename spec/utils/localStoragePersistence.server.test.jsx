@@ -1,4 +1,4 @@
-import { createLocalStoragePersistence } from '../../src/utils/chatPersistence';
+import { createLocalStoragePersistence } from '../../src/utils/localStoragePersistence';
 
 describe('createLocalStoragePersistence (SSR)', () => {
   it('is a no-op without window', async () => {

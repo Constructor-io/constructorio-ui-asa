@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import useForeignStream from '../../../src/hooks/persistence/useForeignStream';
-import { createChatSession } from '../../../src/hooks/chatSession';
+import { createChatSession } from '../../../src/utils/chatSession';
 
 describe('useForeignStream', () => {
   beforeEach(() => jest.useFakeTimers());
