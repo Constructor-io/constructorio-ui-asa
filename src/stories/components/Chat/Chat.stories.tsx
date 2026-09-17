@@ -25,7 +25,7 @@ const meta: Meta<typeof Chat> = {
           '**Results** — Product results are rendered using the <a href="./?path=/docs/components-resultsblock--variants" target="_top">ResultsBlock</a> component internally. ' +
           'See its documentation for available layout and display options (`aspectRatio`, `minCardWidth`, `gap`, `showTitle`, etc.).\n\n' +
           "**Cancelling** — while a reply streams, the input's send button becomes a stop button that " +
-          'calls `abort()`; pass `showStopButton={false}` to opt out. ' +
+          'calls `abort()` — opt in with `showStopButton`, it is off by default. ' +
           'Attach a `ref` to reach the same ' +
           '`abort()` plus `clearHistory()` (cancel, then reset everything) programmatically — for a ' +
           'UI-side timeout, say. See the "Cancelling a Response" story.',
@@ -112,13 +112,14 @@ const meta: Meta<typeof Chat> = {
     showStopButton: {
       description:
         "Whether the input's send button becomes a stop button while a reply streams. " +
-        'Set to `false` to keep the send button in place (disabled) — cancelling is then only ' +
-        'reachable via `abort()` on the ref, or from your own `componentOverrides.input`.',
+        'Off by default, so the packaged UI is unchanged unless you opt in. While it is off, ' +
+        'cancelling is only reachable via `abort()` on the ref, or from your own ' +
+        '`componentOverrides.input`.',
       control: 'boolean',
       table: {
         category: 'Content',
         type: { summary: 'boolean' },
-        defaultValue: { summary: 'true' },
+        defaultValue: { summary: 'false' },
       },
     },
     initialThreadId: {
@@ -539,6 +540,7 @@ function CancellableChatExample() {
       <div style={{ height: 700 }}>
         <Chat
           ref={chatRef}
+          showStopButton
           currency='$'
           initialSuggestions={['Tell me everything about winter coats']}
           onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
@@ -554,7 +556,8 @@ export const CancellingAResponse: Story = {
     docs: {
       description: {
         story:
-          'Attach a `ref` to reach the chat handle. Send a message, then press **Stop response** ' +
+          'This story sets `showStopButton` (off by default), so the input shows a stop button while ' +
+          'streaming. It also attaches a `ref` to reach the chat handle. Send a message, then press **Stop response** ' +
           'while the reply is still streaming — `abort()` cancels the request, keeps the partial ' +
           'reply, and preserves the thread, so a follow-up continues the same conversation. ' +
           '**Stop after 2s** is the same call on a timer, for a UI-side timeout. ' +

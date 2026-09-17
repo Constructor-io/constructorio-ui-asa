@@ -593,9 +593,13 @@ useEffect(() => {
 
 No tracking beacon is sent for an aborted turn — there is no "aborted" ASA event, and reporting the load as finished would be false. An aborted turn therefore leaves an `assistant_result_load_started` with no matching `assistant_result_load_finished`.
 
-`Chat` cancels out of the box: while a reply streams, the input's send button becomes a stop button wired to `abort()`. Pass `showStopButton={false}` to opt out and keep the previous behavior (the send button stays, disabled).
+`Chat` can show a stop button in place of send while a reply streams, wired to `abort()`. It is **off by default** — pass `showStopButton` to enable it, and the packaged UI is otherwise unchanged:
 
-If you replace the input via `componentOverrides.input`, render your own stop button from the `isStreaming` and `onAbort` render props, or cancelling disappears from the UI. Those render props keep working even with `showStopButton={false}`, so opting out of the built-in control does not prevent you building your own.
+```jsx
+<Chat showStopButton />
+```
+
+With it off, cancelling is reachable only through `abort()` on the ref or your own input override. If you replace the input via `componentOverrides.input`, render your own stop button from the `isStreaming` and `onAbort` render props — those reach you regardless of `showStopButton`, so you can build your own control without enabling the built-in one.
 
 `Chat` also exposes both calls on its imperative handle, for a timeout or a cancel button of your own:
 

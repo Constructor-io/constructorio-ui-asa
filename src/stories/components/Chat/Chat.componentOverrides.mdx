@@ -56,9 +56,8 @@ Replace the chat header. Receives `{ title, onClose? }`.
 
 Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }`.
 
-> **Cancelling.** The default input swaps its send button for a stop button while `isStreaming`
-> is true. An override replaces that button, so wire `onAbort` yourself — otherwise users cannot
-> cancel a reply from the packaged UI at all.
+`isStreaming` and `onAbort` are there if you want a cancel control: show a stop button while
+`isStreaming` is true and call `onAbort` when it is clicked.
 
 <Canvas of={OverridesStories.CustomInput} />
 
