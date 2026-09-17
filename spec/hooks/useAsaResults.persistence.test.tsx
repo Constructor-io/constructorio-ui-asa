@@ -1220,6 +1220,52 @@ describe('useAsaResults persistence', () => {
     });
   });
 
+  it('starts a separate history on login and returns to the anonymous one on logout', async () => {
+    window.localStorage.clear();
+    const events = [startEvent('thread-x'), { type: 'message', data: { text: 'Hi' } }];
+    const clientFor = (userId?: string) => {
+      const { client } = createMockCioClient({ events });
+      (client as unknown as { options: object }).options = { apiKey: 'key_test', userId };
+      return client;
+    };
+    let client = clientFor();
+    const hook = renderHook(() => useAsaResults(), {
+      wrapper: ({ children }) => (
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }} persistence>
+          {children}
+        </CioAsaProvider>
+      ),
+    });
+    await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+    act(() => hook.result.current.sendMessage('as guest'));
+    await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toContain('as guest'),
+    );
+
+    client = clientFor('user-1');
+    hook.rerender();
+    await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+    expect(hook.result.current.messages).toEqual([]);
+    act(() => hook.result.current.sendMessage('as user'));
+    await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-1')).toContain(
+        'as user',
+      ),
+    );
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).not.toContain(
+      'as user',
+    );
+
+    client = clientFor();
+    hook.rerender();
+    await waitFor(() =>
+      expect(hook.result.current.messages.map((m) => m.text)).toEqual(['as guest', 'Hi']),
+    );
+    window.localStorage.clear();
+  });
+
   it('scopes the built-in storage key by a numeric user id of 0 too', async () => {
     window.localStorage.clear();
     const { client } = createMockCioClient({
