@@ -226,7 +226,7 @@ export function createLocalStoragePersistence(
             threads: { ...current.threads, [chat.threadId]: merged },
           };
           if (Number.isFinite(maxThreads)) {
-            const kept = sortedThreads(next).slice(0, maxThreads);
+            const kept = sortedThreads(next).slice(0, Math.max(0, maxThreads));
             next = { ...next, threads: Object.fromEntries(kept.map((t) => [t.threadId, t])) };
             if (!next.threads[chat.threadId]) return null;
           }

@@ -75,6 +75,18 @@ describe('createLocalStoragePersistence', () => {
     expect(await store.listThreads()).toEqual([]);
   });
 
+  it('treats a negative maxThreads as 0 instead of dropping the oldest thread', async () => {
+    const seed = createLocalStoragePersistence({ storage });
+    await seed.saveThread(chat('t1', turns(1)));
+    await seed.saveThread(chat('t2', turns(1)));
+
+    const capped = createLocalStoragePersistence({ storage, maxThreads: -1 });
+    await capped.saveThread(chat('t3', turns(1)));
+
+    expect(await capped.getThread('t3')).toBeNull();
+    expect((await capped.listThreads()).map((t) => t.threadId).sort()).toEqual(['t1', 't2']);
+  });
+
   it('deletes a thread and leaves a tombstone so it cannot be resurrected', async () => {
     const store = createLocalStoragePersistence({ storage });
     const original = chat('t1', turns(1), Date.now() - 1000);
