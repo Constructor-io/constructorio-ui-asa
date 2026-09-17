@@ -24,14 +24,14 @@
 
 /* Dark theme */
 .cio-asa-button--dark.cio-button {
-  background: #14151a;
+  background: #14151A;
   color: #ffffff;
 }
 
 /* Light theme */
 .cio-asa-button--light.cio-button {
   background: #ffffff;
-  color: #14151a;
+  color: #14151A;
 }
 
 /* Sizes */
@@ -56,8 +56,6 @@
   font-size: 13px;
   line-height: 16px;
   letter-spacing: -0.005em;
-  font-feature-settings:
-    'tnum' on,
-    'lnum' on;
+  font-feature-settings: 'tnum' on, 'lnum' on;
   white-space: nowrap;
 }

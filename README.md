@@ -34,13 +34,13 @@ npm i @constructor-io/constructorio-ui-asa
 
 This library declares the following as peer dependencies, so they must be present in your project:
 
-| Package                                           | Version     |
-| ------------------------------------------------- | ----------- |
-| `@constructor-io/constructorio-client-javascript` | `^2.93.1`   |
-| `@constructor-io/constructorio-ui-components`     | `^1.6.0`    |
-| `react`                                           | `>=16.12.0` |
-| `react-dom`                                       | `>=16.12.0` |
-| `tslib`                                           | `^2.4.0`    |
+| Package | Version |
+|---------|---------|
+| `@constructor-io/constructorio-client-javascript` | `^2.93.1` |
+| `@constructor-io/constructorio-ui-components` | `^1.6.0` |
+| `react` | `>=16.12.0` |
+| `react-dom` | `>=16.12.0` |
+| `tslib` | `^2.4.0` |
 
 On npm 7+ these are installed automatically. If your package manager doesn't install peer dependencies automatically (yarn, pnpm, npm 6 and below), install any that are missing:
 
@@ -77,14 +77,14 @@ function ShoppingAgent() {
 
 `CioAsaProvider` accepts:
 
-| Prop                   | Type                  | Description                                                                                                                                                                                                                                            |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apiKey`               | `string`              | Your Constructor index key. Required unless you pass your own `cioClient`.                                                                                                                                                                             |
-| `cioClient`            | `ConstructorIOClient` | A pre-configured Constructor client. Provide this instead of `apiKey` when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`).                                                                                             |
-| `staticRequestConfigs` | `RequestConfigs`      | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`.                                                                                                                                                                     |
-| `formatters`           | `Formatters`          | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults.                                                                                                                                                                           |
-| `urlHelpers`           | `UrlHelpers`          | Override built-in URL read/write helpers. Merged over the defaults.                                                                                                                                                                                    |
-| `persistence`          | `boolean`             | Keep the conversation across page loads in `localStorage`, keyed by api key, domain and user id. Off when omitted. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants). |
+| Prop | Type | Description |
+|------|------|-------------|
+| `apiKey` | `string` | Your Constructor index key. Required unless you pass your own `cioClient`. |
+| `cioClient` | `ConstructorIOClient` | A pre-configured Constructor client. Provide this instead of `apiKey` when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`). |
+| `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
+| `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
+| `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
+| `persistence` | `boolean` | Keep the conversation across page loads in `localStorage`, keyed by api key, domain and user id. Off when omitted. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants). |
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. The AI Shopping Agent must be enabled for your account — contact your Constructor representative if agent requests return errors.
 

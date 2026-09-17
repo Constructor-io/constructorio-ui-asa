@@ -4,7 +4,7 @@
   align-items: flex-start;
   padding: 12px;
   gap: 8px;
-  background: #eceef3;
+  background: #ECEEF3;
   border-radius: 6px;
 }
 
@@ -19,7 +19,7 @@
 .cio-asa-typing-indicator__dot {
   width: 8px;
   height: 8px;
-  background: #c8cad0;
+  background: #C8CAD0;
   border-radius: 50%;
   animation: cio-asa-typing-bounce 1.4s infinite ease-in-out both;
 }

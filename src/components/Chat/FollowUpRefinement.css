@@ -14,7 +14,7 @@
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.005em;
-  color: #0f1324;
+  color: #0F1324;
 }
 
 .cio-asa-follow-up-refinement__options {
@@ -29,10 +29,7 @@
   justify-content: center;
   padding: 8px 14px;
   background: #ffffff;
-  box-shadow:
-    0px 0.4px 1px rgba(18, 18, 105, 0.13),
-    0px 0.9px 6px rgba(18, 18, 105, 0.05),
-    0px 1px 3px rgba(18, 18, 105, 0.05);
+  box-shadow: 0px 0.4px 1px rgba(18, 18, 105, 0.13), 0px 0.9px 6px rgba(18, 18, 105, 0.05), 0px 1px 3px rgba(18, 18, 105, 0.05);
   border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
@@ -42,33 +39,24 @@
   text-align: center;
   color: #343434;
   box-sizing: border-box;
-  transition:
-    background-color 0.2s,
-    box-shadow 0.2s,
-    border-color 0.2s;
+  transition: background-color 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .cio-asa-follow-up-refinement__chip:hover:not(:disabled) {
   border-color: #ffffff;
-  box-shadow:
-    0px 6px 14px rgba(18, 18, 105, 0.11),
-    0px 2px 4px rgba(18, 18, 105, 0.0716748),
-    0px 1px 2px rgba(18, 18, 105, 0.055);
+  box-shadow: 0px 6px 14px rgba(18, 18, 105, 0.11), 0px 2px 4px rgba(18, 18, 105, 0.0716748), 0px 1px 2px rgba(18, 18, 105, 0.055);
 }
 
 .cio-asa-follow-up-refinement__chip:active:not(:disabled) {
-  background: #e0e3eb;
-  border-color: #dee0e3;
-  box-shadow:
-    inset 1px 1px 2px rgba(18, 18, 105, 0.1),
-    inset 0px 1px 4px rgba(18, 18, 105, 0.05),
-    inset 1px 1px 1px rgba(18, 18, 105, 0.05);
+  background: #E0E3EB;
+  border-color: #DEE0E3;
+  box-shadow: inset 1px 1px 2px rgba(18, 18, 105, 0.1), inset 0px 1px 4px rgba(18, 18, 105, 0.05), inset 1px 1px 1px rgba(18, 18, 105, 0.05);
 }
 
 .cio-asa-follow-up-refinement__chip:disabled {
   cursor: default;
-  background: #f4f5f7;
-  border-color: #e9eaec;
+  background: #F4F5F7;
+  border-color: #E9EAEC;
   box-shadow: none;
-  color: #6b7080;
+  color: #6B7080;
 }

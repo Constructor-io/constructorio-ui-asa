@@ -12,14 +12,14 @@
   align-items: flex-start;
   padding: 12px;
   gap: 8px;
-  background: #eceef3;
+  background: #ECEEF3;
   border-radius: 6px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .cio-asa-ai-message__bubble--error {
-  background: #fdecec;
+  background: #FDECEC;
 }
 
 .cio-asa-ai-message__text {
@@ -27,9 +27,9 @@
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.005em;
-  color: #0f1324;
+  color: #0F1324;
 }
 
 .cio-asa-ai-message__bubble--error .cio-asa-ai-message__text {
-  color: #b42318;
+  color: #B42318;
 }

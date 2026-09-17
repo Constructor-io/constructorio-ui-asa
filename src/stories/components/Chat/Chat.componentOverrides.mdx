@@ -12,7 +12,7 @@ Every override receives typed props so you have full access to the data and call
 ## Override Hierarchy
 
 <Markdown>
-  {`
+{`
 | Path                                         | Props Type                        | Description                  |
 |----------------------------------------------|-----------------------------------|------------------------------|
 | \`header.reactNode\`                           | \`ChatHeaderRenderProps\`           | Chat header bar              |
@@ -42,7 +42,7 @@ Replace the chat header. Receives `{ title, onClose? }`.
   componentOverrides={{
     header: {
       reactNode: ({ title, onClose }) => (
-        <div className='my-header'>
+        <div className="my-header">
           <h2>{title}</h2>
           <button onClick={onClose}>×</button>
         </div>
@@ -63,7 +63,7 @@ Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, i
   componentOverrides={{
     input: {
       reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled }) => (
-        <div className='my-input'>
+        <div className="my-input">
           <input
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -71,9 +71,7 @@ Replace the message input. Receives `{ value, onChange, onSubmit, placeholder, i
             placeholder={placeholder}
             disabled={isDisabled}
           />
-          <button onClick={onSubmit} disabled={isDisabled}>
-            Send
-          </button>
+          <button onClick={onSubmit} disabled={isDisabled}>Send</button>
         </div>
       ),
     },
@@ -91,7 +89,9 @@ Replace user message bubbles. Receives `{ text }`.
 <Chat
   componentOverrides={{
     userMessage: {
-      reactNode: ({ text }) => <div className='my-user-msg'>{text}</div>,
+      reactNode: ({ text }) => (
+        <div className="my-user-msg">{text}</div>
+      ),
     },
   }}
 />
@@ -108,7 +108,7 @@ Replace the typing indicator shown while the assistant is generating a response.
   componentOverrides={{
     aiMessage: {
       loader: {
-        reactNode: () => <div className='my-loader'>Thinking...</div>,
+        reactNode: () => <div className="my-loader">Thinking...</div>,
       },
     },
   }}
@@ -126,7 +126,9 @@ Replace the AI response text. Receives `{ text }`.
   componentOverrides={{
     aiMessage: {
       text: {
-        reactNode: ({ text }) => <div className='my-ai-bubble'>{text}</div>,
+        reactNode: ({ text }) => (
+          <div className="my-ai-bubble">{text}</div>
+        ),
       },
     },
   }}
@@ -144,7 +146,7 @@ Replace the welcome screen heading. Receives `{ text }`.
   componentOverrides={{
     welcomeScreen: {
       title: {
-        reactNode: ({ text }) => <h1 className='my-title'>{text}</h1>,
+        reactNode: ({ text }) => <h1 className="my-title">{text}</h1>,
       },
     },
   }}
@@ -163,7 +165,7 @@ Replace suggestion chips on the welcome screen. Receives `{ suggestions, onSugge
     welcomeScreen: {
       suggestedQuestions: {
         reactNode: ({ suggestions, onSuggestionClick }) => (
-          <ul className='my-suggestions'>
+          <ul className="my-suggestions">
             {suggestions.map((s) => (
               <li key={s}>
                 <button onClick={() => onSuggestionClick(s)}>{s}</button>
@@ -189,7 +191,7 @@ Replace the "View more" link in results. Receives `{ group, onClick }`. Send a m
     resultsBlock: {
       viewMore: {
         reactNode: ({ group, onClick }) => (
-          <a className='my-view-more' onClick={onClick}>
+          <a className="my-view-more" onClick={onClick}>
             See all {group.display_name} →
           </a>
         ),
@@ -214,13 +216,17 @@ Customize product card parts (title, price, footer) via `resultsBlock.carousel.i
           productCard: {
             content: {
               price: {
-                reactNode: ({ product }) => <span className='my-price'>${product?.price}</span>,
+                reactNode: ({ product }) => (
+                  <span className="my-price">${product?.price}</span>
+                ),
               },
             },
             footer: {
               addToCartButton: {
                 reactNode: ({ product, onAddToCart }) => (
-                  <button onClick={(e) => onAddToCart?.(e, product)}>Add to bag</button>
+                  <button onClick={(e) => onAddToCart?.(e, product)}>
+                    Add to bag
+                  </button>
                 ),
               },
             },
@@ -231,3 +237,4 @@ Customize product card parts (title, price, footer) via `resultsBlock.carousel.i
   }}
 />
 ```
+

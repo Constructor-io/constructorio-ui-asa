@@ -50,9 +50,7 @@
   line-height: 32px;
   text-align: center;
   letter-spacing: -0.005em;
-  font-feature-settings:
-    'tnum' on,
-    'lnum' on;
+  font-feature-settings: 'tnum' on, 'lnum' on;
   color: #000000;
   margin: 0;
   align-self: stretch;
@@ -68,11 +66,8 @@
   height: 40px;
   margin-top: 32px;
   background: #ffffff;
-  border: 1px solid #dee0e3;
-  box-shadow:
-    inset 1px 1px 2px rgba(18, 18, 105, 0.1),
-    inset 0px 1px 4px rgba(18, 18, 105, 0.05),
-    inset 1px 1px 1px rgba(18, 18, 105, 0.05);
+  border: 1px solid #DEE0E3;
+  box-shadow: inset 1px 1px 2px rgba(18, 18, 105, 0.1), inset 0px 1px 4px rgba(18, 18, 105, 0.05), inset 1px 1px 1px rgba(18, 18, 105, 0.05);
   border-radius: 4px;
   box-sizing: border-box;
 }
@@ -85,7 +80,7 @@
   font-size: 14px;
   line-height: 16px;
   letter-spacing: -0.005em;
-  color: #0f1324;
+  color: #0F1324;
   outline: none;
   background: transparent;
 }
@@ -96,30 +91,27 @@
 
 /* Input states */
 .cio-asa-welcome-screen__input-row:hover {
-  border-color: #c8cad0;
+  border-color: #C8CAD0;
 }
 
 .cio-asa-welcome-screen__input-row:focus-within {
-  border-color: #a980ff;
+  border-color: #A980FF;
   box-shadow: 0px 0px 0px 2px rgba(201, 176, 254, 0.7);
 }
 
 .cio-asa-welcome-screen__input-row:active {
   border-color: #000000;
-  box-shadow:
-    inset 0px 1px 4px rgba(18, 18, 105, 0.14),
-    inset 2.1px 2px 2px rgba(18, 18, 105, 0.1),
-    inset 0px 1.5px 3px rgba(18, 18, 105, 0.05);
+  box-shadow: inset 0px 1px 4px rgba(18, 18, 105, 0.14), inset 2.1px 2px 2px rgba(18, 18, 105, 0.1), inset 0px 1.5px 3px rgba(18, 18, 105, 0.05);
 }
 
 .cio-asa-welcome-screen__input-row--disabled {
-  border-color: #e9eaec;
+  border-color: #E9EAEC;
   box-shadow: none;
   pointer-events: none;
 }
 
 .cio-asa-welcome-screen__input-row--disabled .cio-asa-welcome-screen__send-btn {
-  background: #e9eaec;
+  background: #E9EAEC;
   box-shadow: none;
   color: rgba(10, 15, 41, 0.25);
   cursor: default;
@@ -137,11 +129,8 @@
   padding: 0 8px;
   gap: 6px;
   height: 24px;
-  background: #14151a;
-  box-shadow:
-    0px 0.4px 1px rgba(18, 18, 105, 0.13),
-    0px 0.9px 6px rgba(18, 18, 105, 0.05),
-    0px 1px 3px rgba(18, 18, 105, 0.05);
+  background: #14151A;
+  box-shadow: 0px 0.4px 1px rgba(18, 18, 105, 0.13), 0px 0.9px 6px rgba(18, 18, 105, 0.05), 0px 1px 3px rgba(18, 18, 105, 0.05);
   border-radius: 4px;
   border: none;
   cursor: pointer;
@@ -149,9 +138,7 @@
   font-size: 13px;
   line-height: 16px;
   letter-spacing: -0.005em;
-  font-feature-settings:
-    'tnum' on,
-    'lnum' on;
+  font-feature-settings: 'tnum' on, 'lnum' on;
   color: #ffffff;
   white-space: nowrap;
   flex-shrink: 0;
@@ -178,10 +165,7 @@
   align-items: center;
   padding: 18px 16px;
   background: #ffffff;
-  box-shadow:
-    0px 0.4px 1px rgba(18, 18, 105, 0.13),
-    0px 0.9px 6px rgba(18, 18, 105, 0.05),
-    0px 1px 3px rgba(18, 18, 105, 0.05);
+  box-shadow: 0px 0.4px 1px rgba(18, 18, 105, 0.13), 0px 0.9px 6px rgba(18, 18, 105, 0.05), 0px 1px 3px rgba(18, 18, 105, 0.05);
   border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
@@ -191,28 +175,19 @@
   text-align: center;
   color: #343434;
   box-sizing: border-box;
-  transition:
-    background-color 0.2s,
-    box-shadow 0.2s,
-    border-color 0.2s;
+  transition: background-color 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .cio-asa-welcome-screen__suggestion-chip:hover {
   background: #ffffff;
   border-color: #ffffff;
-  box-shadow:
-    0px 6px 14px rgba(18, 18, 105, 0.11),
-    0px 2px 4px rgba(18, 18, 105, 0.0716748),
-    0px 1px 2px rgba(18, 18, 105, 0.055);
+  box-shadow: 0px 6px 14px rgba(18, 18, 105, 0.11), 0px 2px 4px rgba(18, 18, 105, 0.0716748), 0px 1px 2px rgba(18, 18, 105, 0.055);
 }
 
 .cio-asa-welcome-screen__suggestion-chip:active {
-  background: #e0e3eb;
-  border-color: #dee0e3;
-  box-shadow:
-    inset 1px 1px 2px rgba(18, 18, 105, 0.1),
-    inset 0px 1px 4px rgba(18, 18, 105, 0.05),
-    inset 1px 1px 1px rgba(18, 18, 105, 0.05);
+  background: #E0E3EB;
+  border-color: #DEE0E3;
+  box-shadow: inset 1px 1px 2px rgba(18, 18, 105, 0.1), inset 0px 1px 4px rgba(18, 18, 105, 0.05), inset 1px 1px 1px rgba(18, 18, 105, 0.05);
 }
 
 .cio-asa-welcome-screen__terms {
