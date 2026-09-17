@@ -8,13 +8,21 @@ import type {
   ThreadSummary,
 } from '../types';
 
+/**
+ * Shape version written into every stored record. Bump it when the stored format changes in an
+ * incompatible way: records with another version are ignored on read instead of crashing the
+ * chat with data it cannot interpret.
+ */
 export const PERSISTED_CHAT_VERSION = 1;
+/** Prefix of the `localStorage` key; the api key, domain and user id are appended to it. */
 export const DEFAULT_PERSISTENCE_KEY = 'cio-asa:chat';
+/** One week, matching how long the agent itself remembers a thread. */
 export const DEFAULT_PERSISTENCE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
+/** How long a stored answer written by another tab is still shown as "typing" before it is settled. */
 export const IN_FLIGHT_GRACE_MS = 60 * 1000;
-
+/** Marks client-side thread ids, used before the server has assigned one. Never sent to the agent. */
 const LOCAL_THREAD_PREFIX = 'local-';
+/** Thread titles are the first question, cut to this many characters. */
 const TITLE_MAX_LENGTH = 80;
 
 interface StoredThreads {
@@ -23,6 +31,7 @@ interface StoredThreads {
   deleted?: Record<string, number>;
 }
 
+/** Client-side thread id for a conversation the server has not named yet. */
 export function createLocalThreadId(): string {
   const random =
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -51,15 +60,21 @@ export function getTabId(): string | undefined {
   return tabId;
 }
 
+/** Whether `threadId` was made by `createLocalThreadId` rather than by the server. */
 export function isLocalThreadId(threadId: string | null | undefined): boolean {
   return typeof threadId === 'string' && threadId.startsWith(LOCAL_THREAD_PREFIX);
 }
 
+/** Title for a thread list: the first user message, truncated with an ellipsis. */
 export function getThreadTitle(messages: ChatMessage[]): string {
   const first = messages.find((m) => m.role === 'user')?.text ?? '';
   return first.length > TITLE_MAX_LENGTH ? `${first.slice(0, TITLE_MAX_LENGTH - 1)}…` : first;
 }
 
+/**
+ * Counter to continue message ids from after restoring `messages`, so new ids never collide
+ * with restored ones. Falls back to the message count for ids in another format.
+ */
 export function nextMessageCounter(messages: ChatMessage[]): number {
   return messages.reduce((max, m) => {
     const match = /^msg-(\d+)-/.exec(m.id);
@@ -67,11 +82,16 @@ export function nextMessageCounter(messages: ChatMessage[]): number {
   }, messages.length);
 }
 
+/** Whether the latest answer in `messages` has not finished streaming. */
 export function isInFlight(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1];
   return last?.status === 'loading' || last?.status === 'streaming';
 }
 
+/**
+ * Settles answers that were still streaming when they were stored: one with any content becomes
+ * `done`, an empty one becomes `error`. Messages already settled are returned as they are.
+ */
 export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.map((m) => {
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
@@ -80,6 +100,7 @@ export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[
   });
 }
 
+/** Keeps the last `maxTurns` user/assistant pairs, always starting on a user message. */
 function trimToTurns(messages: ChatMessage[], maxTurns: number): ChatMessage[] {
   if (maxTurns <= 0) return [];
   let trimmed = Number.isFinite(maxTurns) ? messages.slice(-maxTurns * 2) : messages;
@@ -106,6 +127,7 @@ async function withStorageLock(name: string, fn: () => void): Promise<void> {
   }
 }
 
+/** The storage to use, or `null` when none is available (server, or access blocked). */
 function resolveStorage(storage?: Storage): Storage | null {
   if (storage) return storage;
   try {
@@ -185,6 +207,11 @@ function isPersistedChat(value: unknown): value is PersistedChat {
   );
 }
 
+/**
+ * Conversation store on top of `localStorage`. All threads of one namespace live under a single
+ * key; reads drop expired threads, writes merge with what other tabs wrote in between, and a
+ * full storage falls back to keeping only the thread being saved, trimmed.
+ */
 export function createLocalStoragePersistence(
   options: LocalStoragePersistenceOptions = {},
 ): ChatPersistence {
@@ -382,3 +409,37 @@ export function createLocalStoragePersistence(
 }
 
 export default createLocalStoragePersistence;
+
+/**
+ * Writes `snapshot` and, when the conversation moved from `staleId` to a new key, deletes the
+ * old record once the new one is confirmed to exist. Returns the id that still has to be
+ * deleted later, or `null` when nothing is left behind.
+ */
+export async function saveThreadAndRetireStale(
+  store: ChatPersistence,
+  snapshot: PersistedChat,
+  staleId: string | null,
+): Promise<string | null> {
+  try {
+    await store.saveThread(snapshot);
+  } catch {
+    return staleId;
+  }
+  if (!staleId) return null;
+  const persisted = await store.getThread(snapshot.threadId).catch(() => null);
+  if (!persisted) return staleId;
+  await store.deleteThread(staleId).catch(() => {});
+  return null;
+}
+
+/** Finds the server-keyed record another tab re-keyed a local thread into, by its first message. */
+export async function findRekeyedThread(
+  store: ChatPersistence,
+  firstMessageId: string | undefined,
+): Promise<PersistedChat | null> {
+  if (!firstMessageId) return null;
+  const list = await store.listThreads();
+  const candidates = list.filter((t) => !isLocalThreadId(t.threadId));
+  const loaded = await Promise.all(candidates.map((t) => store.getThread(t.threadId)));
+  return loaded.find((c) => c?.messages[0]?.id === firstMessageId) ?? null;
+}

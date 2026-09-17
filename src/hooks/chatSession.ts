@@ -1,0 +1,69 @@
+import { isLocalThreadId } from '../utils/chatPersistence';
+
+/**
+ * Mutable state of the conversation on screen that async work (the stream loop, storage reads
+ * and writes, timers) must always see current. Kept in one object behind a single ref so a
+ * reset is one call instead of a dozen ref assignments.
+ */
+export interface ChatSession {
+  /** Server thread id, sent with the next request. Never a `local-` id. */
+  serverThreadId: string | null;
+  /** Id the conversation is stored under: the server id, or a `local-` one before it exists. */
+  storageThreadId: string | null;
+  /** Local id whose re-keyed replacement could not be verified yet; deleted on a later save. */
+  orphanId: string | null;
+  createdAt: number | null;
+  /** `updatedAt` of the last snapshot written or applied; newer stored records win over it. */
+  lastSyncedAt: number;
+  /** There are changes since the last write. */
+  dirty: boolean;
+  /** The user acted; a load that was still running must not overwrite the result. */
+  interacted: boolean;
+  /** Bumped to invalidate loads started before the conversation changed. */
+  loadRequest: number;
+  isStreaming: boolean;
+  /** The thread is streaming in another tab; sending is blocked meanwhile. */
+  foreignInFlight: boolean;
+  idCounter: number;
+  /** Per-instance suffix so two tabs cannot mint the same message id in the same millisecond. */
+  idSuffix: string;
+}
+
+export function createChatSession(initialThreadId?: string): ChatSession {
+  return {
+    serverThreadId: initialThreadId && !isLocalThreadId(initialThreadId) ? initialThreadId : null,
+    storageThreadId: null,
+    orphanId: null,
+    createdAt: null,
+    lastSyncedAt: 0,
+    dirty: false,
+    interacted: false,
+    loadRequest: 0,
+    isStreaming: false,
+    foreignInFlight: false,
+    idCounter: 0,
+    idSuffix: Math.random().toString(36).slice(2, 8),
+  };
+}
+
+/** Forget the current conversation. Returns the id it was stored under, if any. */
+export function resetConversation(session: ChatSession): string | null {
+  const storedId = session.storageThreadId;
+  Object.assign(session, {
+    serverThreadId: null,
+    storageThreadId: null,
+    orphanId: null,
+    createdAt: null,
+    lastSyncedAt: 0,
+    dirty: false,
+    loadRequest: session.loadRequest + 1,
+    isStreaming: false,
+    foreignInFlight: false,
+  });
+  return storedId;
+}
+
+export function nextMessageId(session: ChatSession): string {
+  Object.assign(session, { idCounter: session.idCounter + 1 });
+  return `msg-${session.idCounter}-${Date.now()}-${session.idSuffix}`;
+}

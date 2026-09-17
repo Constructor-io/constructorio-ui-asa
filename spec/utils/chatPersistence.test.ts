@@ -1,13 +1,16 @@
 import {
   createLocalStoragePersistence,
   createLocalThreadId,
+  findRekeyedThread,
   getTabId,
   getThreadTitle,
   isLocalThreadId,
   isInFlight,
+  mergeMessages,
   nextMessageCounter,
   normalizeHydratedMessages,
   PERSISTED_CHAT_VERSION,
+  saveThreadAndRetireStale,
 } from '../../src/utils/chatPersistence';
 import type { ChatMessage, PersistedChat } from '../../src/types';
 
@@ -511,5 +514,98 @@ describe('persistence helpers', () => {
         { ...msg('assistant', 'b'), id: 'msg-42-1' },
       ]),
     ).toBe(42);
+  });
+});
+
+describe('mergeMessages', () => {
+  it('appends messages only the incoming list has, after the stored ones', () => {
+    const [a, b, c] = turns(2).slice(0, 3);
+    const merged = mergeMessages([a, b], [b, c]);
+    expect(merged.map((m) => m.id)).toEqual([a.id, b.id, c.id]);
+  });
+
+  it('takes the incoming version of a message both lists have', () => {
+    const a = msg('assistant', 'a', 'streaming');
+    const merged = mergeMessages([a], [{ ...a, status: 'done' }]);
+    expect(merged[0].status).toBe('done');
+  });
+
+  it('keeps the stored version when asked to prefer it', () => {
+    const a = msg('assistant', 'a', 'done');
+    const b = msg('assistant', 'b');
+    const merged = mergeMessages([a], [{ ...a, status: 'streaming' }, b], true);
+    expect(merged.map((m) => [m.id, m.status])).toEqual([
+      [a.id, 'done'],
+      [b.id, 'done'],
+    ]);
+  });
+});
+
+describe('saveThreadAndRetireStale', () => {
+  const mockStore = () => ({
+    listThreads: jest.fn(async () => []),
+    getThread: jest.fn(async (id: string) => chat(id, [])),
+    saveThread: jest.fn(async () => {}),
+    deleteThread: jest.fn(async () => {}),
+  });
+
+  it('saves and leaves nothing behind when there is no stale id', async () => {
+    const store = mockStore();
+    const snapshot = chat('t1', []);
+    await expect(saveThreadAndRetireStale(store, snapshot, null)).resolves.toBeNull();
+    expect(store.saveThread).toHaveBeenCalledWith(snapshot);
+    expect(store.deleteThread).not.toHaveBeenCalled();
+  });
+
+  it('deletes the stale record once the new one is confirmed', async () => {
+    const store = mockStore();
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBeNull();
+    expect(store.getThread).toHaveBeenCalledWith('t1');
+    expect(store.deleteThread).toHaveBeenCalledWith('local-1');
+  });
+
+  it('keeps the stale record when the save fails', async () => {
+    const store = mockStore();
+    store.saveThread.mockRejectedValueOnce(new Error('boom'));
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBe(
+      'local-1',
+    );
+    expect(store.deleteThread).not.toHaveBeenCalled();
+  });
+
+  it('keeps the stale record when the new one cannot be read back', async () => {
+    const store = mockStore();
+    store.getThread.mockResolvedValueOnce(null);
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBe(
+      'local-1',
+    );
+    expect(store.deleteThread).not.toHaveBeenCalled();
+  });
+
+  it('swallows a failing delete', async () => {
+    const store = mockStore();
+    store.deleteThread.mockRejectedValueOnce(new Error('boom'));
+    await expect(saveThreadAndRetireStale(store, chat('t1', []), 'local-1')).resolves.toBeNull();
+  });
+});
+
+describe('findRekeyedThread', () => {
+  it('finds the server thread that starts with the same message', async () => {
+    const store = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const first = msg('user', 'q');
+    await store.saveThread(chat('local-1', [first]));
+    await store.saveThread(chat('srv-other', [msg('user', 'other')]));
+    await store.saveThread(chat('srv-1', [first, msg('assistant', 'a')]));
+
+    const found = await findRekeyedThread(store, first.id);
+    expect(found?.threadId).toBe('srv-1');
+  });
+
+  it('returns null without a first message id or without a match', async () => {
+    const store = createLocalStoragePersistence({ storage: new FakeStorage() });
+    await store.saveThread(chat('srv-1', [msg('user', 'q')]));
+
+    await expect(findRekeyedThread(store, undefined)).resolves.toBeNull();
+    await expect(findRekeyedThread(store, 'nope')).resolves.toBeNull();
   });
 });
