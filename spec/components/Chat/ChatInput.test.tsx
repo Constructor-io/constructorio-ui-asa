@@ -34,8 +34,23 @@ describe('ChatInput', () => {
   });
 
   describe('stop button', () => {
-    it('replaces the send button while a reply is streaming', () => {
+    it('is off by default, leaving the send button in place while streaming', () => {
       render(<ChatInput onSubmit={jest.fn()} isDisabled isStreaming onAbort={jest.fn()} />);
+
+      expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Stop response' })).not.toBeInTheDocument();
+    });
+
+    it('replaces the send button while a reply is streaming when enabled', () => {
+      render(
+        <ChatInput
+          onSubmit={jest.fn()}
+          isDisabled
+          isStreaming
+          onAbort={jest.fn()}
+          showStopButton
+        />,
+      );
 
       expect(screen.getByRole('button', { name: 'Stop response' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Send message' })).not.toBeInTheDocument();
@@ -43,7 +58,9 @@ describe('ChatInput', () => {
 
     it('stays actionable even though the input itself is disabled', async () => {
       const onAbort = jest.fn();
-      render(<ChatInput onSubmit={jest.fn()} isDisabled isStreaming onAbort={onAbort} />);
+      render(
+        <ChatInput onSubmit={jest.fn()} isDisabled isStreaming onAbort={onAbort} showStopButton />,
+      );
 
       const stop = screen.getByRole('button', { name: 'Stop response' });
       expect(stop).not.toBeDisabled();
@@ -51,7 +68,7 @@ describe('ChatInput', () => {
       expect(onAbort).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the send button when showStopButton is false', () => {
+    it('keeps the send button when showStopButton is explicitly false', () => {
       render(
         <ChatInput
           onSubmit={jest.fn()}
@@ -90,15 +107,23 @@ describe('ChatInput', () => {
     });
 
     it('keeps the send button when no onAbort is wired up', () => {
-      render(<ChatInput onSubmit={jest.fn()} isDisabled isStreaming />);
+      render(<ChatInput onSubmit={jest.fn()} isDisabled isStreaming showStopButton />);
       expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
     });
 
     it('returns to the send button once streaming ends', () => {
       const { rerender } = render(
-        <ChatInput onSubmit={jest.fn()} isDisabled isStreaming onAbort={jest.fn()} />,
+        <ChatInput
+          onSubmit={jest.fn()}
+          isDisabled
+          isStreaming
+          onAbort={jest.fn()}
+          showStopButton
+        />,
       );
-      rerender(<ChatInput onSubmit={jest.fn()} isStreaming={false} onAbort={jest.fn()} />);
+      rerender(
+        <ChatInput onSubmit={jest.fn()} isStreaming={false} onAbort={jest.fn()} showStopButton />,
+      );
 
       expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Stop response' })).not.toBeInTheDocument();
@@ -110,6 +135,7 @@ describe('ChatInput', () => {
           onSubmit={jest.fn()}
           isStreaming
           onAbort={jest.fn()}
+          showStopButton
           translations={{ 'CioAsa.input.stopAriaLabel': 'Cancel the reply' }}
         />,
       );
@@ -118,7 +144,13 @@ describe('ChatInput', () => {
 
     it('has no accessibility violations', async () => {
       const { container } = render(
-        <ChatInput onSubmit={jest.fn()} isDisabled isStreaming onAbort={jest.fn()} />,
+        <ChatInput
+          onSubmit={jest.fn()}
+          isDisabled
+          isStreaming
+          onAbort={jest.fn()}
+          showStopButton
+        />,
       );
       expect(await axe(container)).toHaveNoViolations();
     });

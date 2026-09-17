@@ -13,9 +13,9 @@ interface ChatInputProps {
   /** Cancel the in-flight reply. */
   onAbort?: () => void;
   /**
-   * Whether the built-in stop button replaces send while streaming. When false the send
-   * button stays (disabled, as before), but `onAbort` still reaches the render props — a
-   * consumer who opts out of the default control can still render their own.
+   * Whether the built-in stop button replaces send while streaming. Defaults to `false`:
+   * the send button stays (disabled). `onAbort` reaches the render props either way, so a
+   * consumer can render their own control without enabling this one.
    */
   showStopButton?: boolean;
   translations?: Translations;
@@ -27,7 +27,7 @@ export default function ChatInput({
   isDisabled = false,
   isStreaming = false,
   onAbort,
-  showStopButton = true,
+  showStopButton = false,
   translations,
   componentOverrides,
 }: ChatInputProps) {

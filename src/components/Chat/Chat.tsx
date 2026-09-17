@@ -53,8 +53,8 @@ interface ChatProps {
   initialThreadId?: string;
   /**
    * Whether the input's send button becomes a stop button while a reply streams.
-   * Defaults to `true`. Set to `false` to keep the previous behavior (send stays,
-   * disabled) — cancelling is then only reachable via `abort()` on the ref.
+   * Defaults to `false`, so the packaged UI is unchanged unless you opt in. While it is
+   * off, cancelling is only reachable via `abort()` on the ref or your own input override.
    */
   showStopButton?: boolean;
 }
@@ -94,7 +94,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       componentOverrides,
       translations,
       initialThreadId,
-      showStopButton = true,
+      showStopButton = false,
     },
     ref,
   ) => {

@@ -169,8 +169,10 @@ describe('Chat', () => {
     expect(screen.getByText('hello')).toBeInTheDocument();
   });
 
-  it('cancels from the built-in stop button, with no ref required', async () => {
-    renderChatMidStream([{ type: 'message', data: { text: 'Partial ans' } }], null);
+  it('cancels from the built-in stop button when enabled, with no ref required', async () => {
+    renderChatMidStream([{ type: 'message', data: { text: 'Partial ans' } }], null, {
+      showStopButton: true,
+    });
 
     await userEvent.type(screen.getByRole('textbox'), 'hello{Enter}');
     expect(await screen.findByText('Partial ans')).toBeInTheDocument();
@@ -186,11 +188,9 @@ describe('Chat', () => {
     expect(screen.getByText('Partial ans')).toBeInTheDocument();
   });
 
-  it('hides the stop button when showStopButton is false, leaving the ref as the way out', async () => {
+  it('shows no stop button by default, leaving the ref as the way out', async () => {
     const ref = createRef<ChatHandle>();
-    renderChatMidStream([{ type: 'message', data: { text: 'Partial ans' } }], ref, {
-      showStopButton: false,
-    });
+    renderChatMidStream([{ type: 'message', data: { text: 'Partial ans' } }], ref);
 
     await userEvent.type(screen.getByRole('textbox'), 'hello{Enter}');
     expect(await screen.findByText('Partial ans')).toBeInTheDocument();

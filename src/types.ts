@@ -273,9 +273,9 @@ export interface ChatInputRenderProps {
   placeholder: string;
   isDisabled: boolean;
   /**
-   * Whether a reply is currently streaming. The default input swaps its send button for a
-   * stop button while this is true; an override should do the same, or cancelling is
-   * unreachable from the packaged UI.
+   * Whether a reply is currently streaming. Pair it with `onAbort` to offer a cancel
+   * control while it is true — the built-in stop button is off by default, so an override
+   * is often the only way a user can cancel.
    */
   isStreaming: boolean;
   /** Cancel the in-flight reply. Keeps the conversation and the thread. */
