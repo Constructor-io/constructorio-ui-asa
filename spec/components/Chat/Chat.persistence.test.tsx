@@ -2,7 +2,6 @@ import React, { createRef } from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import Chat, { ChatHandle } from '../../../src/components/Chat/Chat';
 import CioAsaProvider from '../../../src/components/CioAsaProvider/CioAsaProvider';
-import { createLocalStoragePersistence } from '../../../src/utils/chatPersistence';
 import { createMockCioClient } from '../../local_examples/mockCioClient';
 
 const STORAGE_KEY = 'cio-asa:chat:v1:key_test:chatbot';
@@ -72,31 +71,6 @@ describe('Chat persistence', () => {
     await waitFor(() =>
       expect(window.localStorage.getItem(STORAGE_KEY)).not.toContain('restored question'),
     );
-  });
-
-  it('accepts a custom adapter', async () => {
-    const storage = window.sessionStorage;
-    storage.clear();
-    const store = createLocalStoragePersistence({ storage, namespace: 'custom' });
-    await store.saveThread({
-      version: 1,
-      threadId: 't2',
-      createdAt: 1,
-      updatedAt: Date.now(),
-      messages: [{ id: 'u1', role: 'user', text: 'from session', status: 'done' }],
-    });
-    const { client } = createMockCioClient({ events: [] });
-    render(
-      <CioAsaProvider
-        cioClient={client}
-        staticRequestConfigs={{ domain: 'chatbot' }}
-        persistence={store}>
-        <Chat />
-      </CioAsaProvider>,
-    );
-
-    expect(await screen.findByText('from session')).toBeInTheDocument();
-    storage.clear();
   });
 
   it('reports stored threads and switches between them through the handle', async () => {

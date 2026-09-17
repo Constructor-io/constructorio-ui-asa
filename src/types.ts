@@ -32,7 +32,7 @@ export interface AsaContextValue {
   urlHelpers: UrlHelpers;
   callbacks?: AsaCallbacks;
   section?: string;
-  /** Resolved chat persistence adapter, or `undefined` when persistence is off. */
+  /** Resolved chat persistence store, or `undefined` when persistence is off. */
   persistence?: ChatPersistence;
 }
 
@@ -61,13 +61,10 @@ export interface CioAsaProviderProps
   > {
   apiKey?: string;
   /**
-   * Persist the conversation so it survives page loads. `true` uses the library's default
-   * strategy (currently `localStorage`, keyed by api key + domain + user id, 7 day TTL); pass a
-   * custom `ChatPersistence` adapter (e.g. `createLocalStoragePersistence({...})`) to control
-   * storage yourself. Off when omitted. Pass a stable instance (created once, or memoized): a
-   * new instance on every render is treated as a different store and restarts the chat.
+   * Persist the conversation so it survives page loads. Stored in `localStorage`, keyed by
+   * api key + domain + user id, with a 7 day TTL. Off when omitted.
    */
-  persistence?: ChatPersistenceOption;
+  persistence?: boolean;
 }
 
 export interface UseCioClientProps {
@@ -223,10 +220,7 @@ export interface ThreadSummary {
   inFlight: boolean;
 }
 
-/**
- * Storage adapter for conversations. The built-in `createLocalStoragePersistence` implements it
- * against `localStorage`; a server-backed adapter can implement the same contract.
- */
+/** Storage contract the chat hook talks to; implemented by `createLocalStoragePersistence`. */
 export interface ChatPersistence {
   /** Most recently updated first. */
   listThreads(): Promise<ThreadSummary[]>;
@@ -234,13 +228,11 @@ export interface ChatPersistence {
   saveThread(chat: PersistedChat): Promise<void>;
   deleteThread(threadId: string): Promise<void>;
   /**
-   * Optional. Notify when stored threads change outside this hook instance (another tab, another
-   * device once server-backed). Returns an unsubscribe function.
+   * Optional. Notify when stored threads change outside this hook instance (another tab).
+   * Returns an unsubscribe function.
    */
   subscribe?(listener: () => void): () => void;
 }
-
-export type ChatPersistenceOption = ChatPersistence | boolean;
 
 export interface LocalStoragePersistenceOptions {
   /** Storage key prefix. Default `'cio-asa:chat'`. */

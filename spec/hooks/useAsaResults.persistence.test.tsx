@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import useAsaResults from '../../src/hooks/useAsaResults';
 import CioAsaProvider from '../../src/components/CioAsaProvider/CioAsaProvider';
+import { AsaContext } from '../../src/hooks/useCioAsaContext';
+import * as formatters from '../../src/utils/formatters';
+import * as urlHelpers from '../../src/utils/urlHelpers';
 import {
   createEventStream,
   createMockCioClient,
   createPendingStream,
   StreamEvent,
 } from '../local_examples/mockCioClient';
-import type { ChatMessage, ChatPersistence, PersistedChat } from '../../src/types';
+import type { AsaContextValue, ChatMessage, ChatPersistence, PersistedChat } from '../../src/types';
 
 function createMemoryPersistence(initial: PersistedChat[] = [], withSubscribe = false) {
   const threads = new Map(initial.map((t) => [t.threadId, t]));
@@ -62,6 +65,41 @@ const aiMsg = (id: string, text: string, status: ChatMessage['status'] = 'done')
   groups: [],
 });
 
+// The provider only exposes `persistence: boolean`; tests that need a controllable store
+// hand it to the hook through the context the provider would otherwise populate.
+function Wrapper({
+  cioClient,
+  persistence,
+  children,
+}: {
+  cioClient: ConstructorIOClient;
+  persistence: ChatPersistence | boolean | undefined;
+  children: React.ReactNode;
+}) {
+  const store = typeof persistence === 'object' ? persistence : undefined;
+  const value = useMemo(
+    (): AsaContextValue => ({
+      cioClient,
+      cioClientOptions: {},
+      setCioClientOptions: () => {},
+      staticRequestConfigs: { domain: 'chatbot' },
+      formatters,
+      urlHelpers,
+      persistence: store,
+    }),
+    [cioClient, store],
+  );
+  if (store) return <AsaContext.Provider value={value}>{children}</AsaContext.Provider>;
+  return (
+    <CioAsaProvider
+      cioClient={cioClient}
+      staticRequestConfigs={{ domain: 'chatbot' }}
+      persistence={persistence}>
+      {children}
+    </CioAsaProvider>
+  );
+}
+
 function renderWithPersistence(
   cioClient: ConstructorIOClient,
   persistence: ChatPersistence | boolean | undefined,
@@ -69,12 +107,9 @@ function renderWithPersistence(
 ) {
   return renderHook(() => useAsaResults({ initialThreadId }), {
     wrapper: ({ children }) => (
-      <CioAsaProvider
-        cioClient={cioClient}
-        staticRequestConfigs={{ domain: 'chatbot' }}
-        persistence={persistence}>
+      <Wrapper cioClient={cioClient} persistence={persistence}>
         {children}
-      </CioAsaProvider>
+      </Wrapper>
     ),
   });
 }
@@ -535,7 +570,7 @@ describe('useAsaResults persistence', () => {
     );
   });
 
-  it('starts empty when the adapter rejects', async () => {
+  it('starts empty when the store rejects', async () => {
     const { client } = createMockCioClient({ events: [] });
     const { store } = createMemoryPersistence();
     store.listThreads.mockRejectedValueOnce(new Error('boom'));
@@ -1034,7 +1069,7 @@ describe('useAsaResults persistence', () => {
     });
   });
 
-  describe('adapter changes', () => {
+  describe('store changes (e.g. a login change)', () => {
     function renderSwitchable(
       client: ConstructorIOClient,
       initial: ChatPersistence | boolean | undefined,
@@ -1042,12 +1077,9 @@ describe('useAsaResults persistence', () => {
       let current = initial;
       const hook = renderHook(() => useAsaResults(), {
         wrapper: ({ children }) => (
-          <CioAsaProvider
-            cioClient={client}
-            staticRequestConfigs={{ domain: 'chatbot' }}
-            persistence={current}>
+          <Wrapper cioClient={client} persistence={current}>
             {children}
-          </CioAsaProvider>
+          </Wrapper>
         ),
       });
       return {
@@ -1059,7 +1091,7 @@ describe('useAsaResults persistence', () => {
       };
     }
 
-    it('re-hydrates from a new adapter and leaves the old conversation behind', async () => {
+    it('re-hydrates from a new store and leaves the old conversation behind', async () => {
       const { client } = createMockCioClient({ events: [] });
       const { store: storeA } = createMemoryPersistence(
         [persisted('a', [userMsg('u1', 'from A'), aiMsg('a1', 'answer A')])],
@@ -1081,7 +1113,7 @@ describe('useAsaResults persistence', () => {
       expect(storeB.subscribe).toHaveBeenCalled();
     });
 
-    it('saves new turns into the new adapter only', async () => {
+    it('saves new turns into the new store only', async () => {
       const { client } = createMockCioClient({
         events: [startEvent('thread-new'), { type: 'message', data: { text: 'Hi' } }],
       });
@@ -1104,7 +1136,7 @@ describe('useAsaResults persistence', () => {
       expect(storeB.saveThread.mock.calls[0][0].messages[0].text).toBe('hello');
     });
 
-    it('does not let a slow save into the old adapter delay or leak into the new one', async () => {
+    it('does not let a slow save into the old store delay or leak into the new one', async () => {
       const { client } = createMockCioClient({
         events: [startEvent('thread-new'), { type: 'message', data: { text: 'Hi' } }],
       });

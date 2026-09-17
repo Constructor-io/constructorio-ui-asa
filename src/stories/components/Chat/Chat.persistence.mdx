@@ -21,7 +21,7 @@ Everything below is optional and only active when `persistence` is set on the pr
 {`
 | Where | Name | What it does |
 |-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistence\` | \`true\` enables persistent chat with the built-in \`localStorage\` strategy. A \`ChatPersistence\` adapter is accepted instead: \`createLocalStoragePersistence({ storage, ttlMs, maxTurns, maxThreads, namespace })\` tunes the built-in one, or implement \`listThreads\` / \`getThread\` / \`saveThread\` / \`deleteThread\` (and optionally \`subscribe\`) for your own backend |
+| \`CioAsaProvider\` prop | \`persistence\` | \`true\` keeps conversations in \`localStorage\` |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | Fires after the initial load and whenever the stored list or the active conversation changes, including changes made in another tab. Use it to render a history list outside \`Chat\` |
 | \`Chat\` prop | \`initialThreadId\` | Restores that thread's stored transcript instead of the most recent one; falls back to seeding the thread id alone when nothing is stored |
 | \`Chat\` ref | \`newThread()\` | Opens an empty conversation and keeps the current one in storage |
@@ -36,10 +36,6 @@ Everything below is optional and only active when `persistence` is set on the pr
 `ThreadSummary` carries `threadId`, `title` (the first question), `createdAt`, `updatedAt` and `inFlight`, which is `true` while the latest answer of that thread is still streaming.
 
 ## How it works
-
-`true` selects the library's default strategy. Today that is `localStorage`; a future release can move it to a server-backed store without changes on your side.
-
-A custom adapter must be a stable instance: create it once at module level or with `useMemo`. A new instance on every render is treated as a switch to a different store and restarts the conversation.
 
 <Markdown>
 {`

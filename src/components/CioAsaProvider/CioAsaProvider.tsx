@@ -17,7 +17,7 @@ export default function CioAsaProvider(
     cioClient: customCioClient,
     callbacks,
     section = 'Products',
-    persistence: persistenceOption,
+    persistence: persistenceEnabled,
     children,
   } = props;
 
@@ -31,18 +31,15 @@ export default function CioAsaProvider(
   const userId = clientOptions?.userId != null ? String(clientOptions.userId) : undefined;
   const { domain } = staticRequestConfigs;
   const persistence = useMemo(() => {
-    if (!persistenceOption) return undefined;
-    if (persistenceOption === true) {
-      // Scoped per user when the client carries one, so a shared browser never shows
-      // the previous shopper's conversation after a login change.
-      return createLocalStoragePersistence({
-        namespace: [resolvedApiKey ?? 'default', domain ?? 'default', userId]
-          .filter(Boolean)
-          .join(':'),
-      });
-    }
-    return persistenceOption;
-  }, [persistenceOption, resolvedApiKey, domain, userId]);
+    if (!persistenceEnabled) return undefined;
+    // Scoped per user when the client carries one, so a shared browser never shows
+    // the previous shopper's conversation after a login change.
+    return createLocalStoragePersistence({
+      namespace: [resolvedApiKey ?? 'default', domain ?? 'default', userId]
+        .filter(Boolean)
+        .join(':'),
+    });
+  }, [persistenceEnabled, resolvedApiKey, domain, userId]);
 
   const contextValue = useMemo(
     (): AsaContextValue => ({

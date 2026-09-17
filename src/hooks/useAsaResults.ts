@@ -80,7 +80,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const refreshRequestRef = useRef(0);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
 
-  // Reset synchronously while rendering so the previous adapter's conversation is never
+  // Reset synchronously while rendering so the previous store's conversation is never
   // painted under the new one (e.g. right after a login change).
   const [renderedStore, setRenderedStore] = useState(persistence);
   if (renderedStore !== persistence) {
@@ -180,13 +180,13 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     };
   }, []);
 
-  const adapterInitializedRef = useRef(false);
+  const storeInitializedRef = useRef(false);
   useEffect(() => {
     const store = persistence;
-    if (adapterInitializedRef.current) {
-      // The adapter changed (e.g. a different user logged in): drop the conversation that
+    if (storeInitializedRef.current) {
+      // The store changed (e.g. a different user logged in): drop the conversation that
       // belongs to the previous store instead of saving it into the new one. The write chain
-      // restarts so a slow save into the old store cannot delay the new adapter.
+      // restarts so a slow save into the old store cannot delay the new store.
       clearInFlightTimer();
       killSwitchRef.current = true;
       readerRef.current?.cancel();
@@ -205,7 +205,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       lastSyncedAtRef.current = 0;
       lastSavedCountRef.current = 0;
     }
-    adapterInitializedRef.current = true;
+    storeInitializedRef.current = true;
 
     if (!store) {
       setIsHydrating(false);
@@ -272,8 +272,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       updatedAt: now,
       owner: getTabId(),
     };
-    // Writes are chained so an async adapter applies them in the order they were issued.
-    // The adapter and snapshot are captured here, so a write still queued when the adapter
+    // Writes are chained so an async store applies them in the order they were issued.
+    // The store and snapshot are captured here, so a write still queued when the store
     // changes lands in the store it was meant for. On a local-to-server rekey the old record
     // is deleted only once the new one is confirmed to exist; otherwise it is kept and the
     // deletion is retried with the next save.
