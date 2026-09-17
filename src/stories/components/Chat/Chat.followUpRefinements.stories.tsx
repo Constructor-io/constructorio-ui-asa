@@ -67,6 +67,26 @@ export const Default: Story = {
   },
 };
 
+export const AfterChoosingAnOption: Story = {
+  decorators: [decorator],
+  args: {
+    onClose: () => alert('Close'),
+    aspectRatio: '3:4',
+    currency: '$',
+  },
+  play: async ({ canvasElement }) => {
+    await askAndWaitForChips(canvasElement);
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: "Men's styles" }));
+    await waitFor(() => {
+      const chips = canvas.getAllByRole('button', { name: "Men's styles" }) as HTMLButtonElement[];
+      assert(chips.length === 2, 'expected the earlier and the new refinement to both render');
+      assert(chips[0].disabled, 'earlier refinement should be inert');
+      assert(!chips[1].disabled, 'latest refinement should be interactive');
+    }, WAIT);
+  },
+};
+
 export const CustomRendering: Story = {
   decorators: [decorator],
   args: {
