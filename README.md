@@ -85,6 +85,9 @@ function ShoppingAgent() {
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
 | `persistConversation` | `boolean` | Keep the conversation across page loads in `localStorage`, keyed by api key, domain and user id. Off when omitted. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants). |
+| `userId` | `string` or `null` | Whose conversation this is. Pass the signed-in shopper's id on login and `null` (or nothing) on logout, so each shopper only ever sees their own history. Use the same stable, non-personal id you give Constructor for personalization. With `apiKey` it is also set on the client. |
+
+> **Login and logout.** History is stored per `userId`; changing it switches the chat to that shopper's own history in every open tab. Nothing is deleted on logout by default: the old history stays on the device for 7 days and returns when that shopper signs in again. To delete it on logout, call `clearPersistedConversations({ apiKey, domain, userId })`. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants).
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. The AI Shopping Agent must be enabled for your account — contact your Constructor representative if agent requests return errors.
 

@@ -1,6 +1,7 @@
 import type {
   ChatMessage,
   ChatPersistence,
+  ClearPersistedConversationsOptions,
   LocalStoragePersistenceOptions,
   PersistedChat,
   ThreadSummary,
@@ -62,6 +63,46 @@ function resolveStorage(storage?: Storage): Storage | null {
   }
 }
 
+/** Namespace the provider stores under: api key, domain and, for a signed-in shopper, the user id. */
+export function persistenceNamespace(parts: {
+  apiKey?: string;
+  domain?: string;
+  userId?: string | null;
+}): string {
+  const userId = parts.userId == null || parts.userId === '' ? undefined : String(parts.userId);
+  return [parts.apiKey ?? 'default', parts.domain ?? 'default', userId]
+    .filter((part): part is string => part !== undefined)
+    .map(encodeURIComponent)
+    .join(':');
+}
+
+function storageKeyFor(key: string, namespace?: string): string {
+  return [key, `v${PERSISTED_CHAT_VERSION}`, namespace].filter(Boolean).join(':');
+}
+
+/** Deletes every stored conversation of one shopper, or of the guest without `userId`; open tabs follow. */
+export function clearPersistedConversations(options: ClearPersistedConversationsOptions): void {
+  const { apiKey, domain = 'chatbot', userId, storage: storageOption } = options;
+  const storage = resolveStorage(storageOption);
+  if (!storage) return;
+  const key = storageKeyFor(
+    DEFAULT_PERSISTENCE_KEY,
+    persistenceNamespace({ apiKey, domain, userId }),
+  );
+  try {
+    storage.removeItem(key);
+  } catch {
+    return;
+  }
+  // Other tabs get a native storage event; this tab does not, so dispatch one for a mounted chat.
+  if (typeof window === 'undefined' || typeof StorageEvent === 'undefined') return;
+  try {
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: storage }));
+  } catch {
+    /* a non-Storage `storage` option cannot be attached to the event */
+  }
+}
+
 /** Conversation store on top of `localStorage`; one key per namespace, merged across tabs. */
 export function createLocalStoragePersistence(
   options: LocalStoragePersistenceOptions = {},
@@ -74,7 +115,7 @@ export function createLocalStoragePersistence(
     maxThreads = Infinity,
     storage: storageOption,
   } = options;
-  const storageKey = [key, `v${PERSISTED_CHAT_VERSION}`, namespace].filter(Boolean).join(':');
+  const storageKey = storageKeyFor(key, namespace);
 
   const readRaw = (storage: Storage): string | null => {
     try {

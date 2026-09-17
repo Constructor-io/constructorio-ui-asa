@@ -65,6 +65,12 @@ export interface CioAsaProviderProps
    * api key + domain + user id, with a 7 day TTL. Off when omitted.
    */
   persistConversation?: boolean;
+  /**
+   * The signed-in shopper's id, the same stable non-personal one given to Constructor for
+   * personalization. Set it on login and `null` on logout: each shopper only sees their own
+   * history. With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id.
+   */
+  userId?: string | null;
 }
 
 export interface UseCioClientProps {
@@ -242,6 +248,18 @@ export interface ChatPersistence {
    * Returns an unsubscribe function.
    */
   subscribe?(listener: () => void): () => void;
+}
+
+/** Which stored history `clearPersistedConversations` deletes; mirror what the provider was given. */
+export interface ClearPersistedConversationsOptions {
+  /** The provider's `apiKey`, or the api key of the `cioClient` given to it. */
+  apiKey: string;
+  /** The `domain` from `staticRequestConfigs`. Default `'chatbot'`, the provider's default. */
+  domain?: string;
+  /** The shopper whose history to delete. Omit or pass `null` for the guest history. */
+  userId?: string | null;
+  /** Storage to clear instead of `window.localStorage`. */
+  storage?: Storage;
 }
 
 export interface LocalStoragePersistenceOptions {

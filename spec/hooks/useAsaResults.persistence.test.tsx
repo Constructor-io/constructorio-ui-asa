@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import useAsaResults from '../../src/hooks/useAsaResults';
 import CioAsaProvider from '../../src/components/CioAsaProvider/CioAsaProvider';
+import { clearPersistedConversations } from '../../src/utils/localStoragePersistence';
 import { AsaContext } from '../../src/hooks/useCioAsaContext';
 import * as formatters from '../../src/utils/formatters';
 import * as urlHelpers from '../../src/utils/urlHelpers';
@@ -1356,6 +1357,40 @@ describe('useAsaResults persistence', () => {
       expect(hook.result.current.messages.map((m) => m.text)).toEqual(['as guest', 'Hi']),
     );
     window.localStorage.clear();
+  });
+
+  it('forgets the conversation on screen when clearPersistedConversations runs in this tab', async () => {
+    window.localStorage.clear();
+    const { client } = createMockCioClient({
+      events: [startEvent('thread-c'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    (client as unknown as { options: object }).options = { apiKey: 'key_test' };
+    const { result } = renderHook(() => useAsaResults(), {
+      wrapper: ({ children }) => (
+        <CioAsaProvider
+          cioClient={client}
+          staticRequestConfigs={{ domain: 'chatbot' }}
+          userId='user-c'
+          persistConversation>
+          {children}
+        </CioAsaProvider>
+      ),
+    });
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-c')).toContain(
+        'thread-c',
+      ),
+    );
+
+    act(() => clearPersistedConversations({ apiKey: 'key_test', userId: 'user-c' }));
+
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-c')).toBeNull();
+    await waitFor(() => expect(result.current.messages).toEqual([]));
+    expect(result.current.threads).toEqual([]);
+    expect(result.current.activeThreadId).toBeNull();
   });
 
   it('escapes namespace parts so ids containing the separator cannot collide', async () => {

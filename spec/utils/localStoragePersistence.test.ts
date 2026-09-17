@@ -1,6 +1,61 @@
-import { createLocalStoragePersistence } from '../../src/utils/localStoragePersistence';
+import {
+  clearPersistedConversations,
+  createLocalStoragePersistence,
+  persistenceNamespace,
+} from '../../src/utils/localStoragePersistence';
 import { PERSISTED_CHAT_VERSION } from '../../src/utils/chatThreads';
 import { FakeStorage, chat, msg, turns } from './chatFixtures';
+
+describe('persistenceNamespace', () => {
+  it('joins api key, domain and user id, encoding each part', () => {
+    expect(persistenceNamespace({ apiKey: 'k', domain: 'chatbot', userId: 'a:b' })).toBe(
+      'k:chatbot:a%3Ab',
+    );
+  });
+
+  it('leaves the user id out for a guest, whether missing, null or empty', () => {
+    expect(persistenceNamespace({ apiKey: 'k', domain: 'd' })).toBe('k:d');
+    expect(persistenceNamespace({ apiKey: 'k', domain: 'd', userId: null })).toBe('k:d');
+    expect(persistenceNamespace({ apiKey: 'k', domain: 'd', userId: '' })).toBe('k:d');
+  });
+
+  it('falls back to a default api key and domain', () => {
+    expect(persistenceNamespace({})).toBe('default:default');
+  });
+});
+
+describe('clearPersistedConversations', () => {
+  let storage: FakeStorage;
+  const keyFor = (userId?: string) =>
+    ['cio-asa:chat', `v${PERSISTED_CHAT_VERSION}`, 'k:chatbot', userId].filter(Boolean).join(':');
+
+  beforeEach(async () => {
+    storage = new FakeStorage();
+    const guest = createLocalStoragePersistence({ storage, namespace: 'k:chatbot' });
+    const user = createLocalStoragePersistence({ storage, namespace: 'k:chatbot:u1' });
+    await guest.saveThread(chat('g', turns(1)));
+    await user.saveThread(chat('u', turns(1)));
+  });
+
+  it('deletes one shopper and leaves the guest alone', () => {
+    clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    expect(storage.getItem(keyFor('u1'))).toBeNull();
+    expect(storage.getItem(keyFor())).toContain('g');
+  });
+
+  it('deletes the guest history without a user id and leaves shoppers alone', () => {
+    clearPersistedConversations({ apiKey: 'k', userId: null, storage });
+    expect(storage.getItem(keyFor())).toBeNull();
+    expect(storage.getItem(keyFor('u1'))).toContain('u');
+  });
+
+  it('defaults the domain to the provider default', () => {
+    clearPersistedConversations({ apiKey: 'k', domain: 'other', userId: 'u1', storage });
+    expect(storage.getItem(keyFor('u1'))).toContain('u');
+    clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    expect(storage.getItem(keyFor('u1'))).toBeNull();
+  });
+});
 
 describe('createLocalStoragePersistence', () => {
   let storage: FakeStorage;
