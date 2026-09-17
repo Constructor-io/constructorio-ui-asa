@@ -71,7 +71,7 @@ const meta: Meta<typeof Chat> = {
     onThreadsChange: {
       description:
         'Fires with the stored conversations (`ThreadSummary[]`) and the active thread id whenever ' +
-        'either changes, including changes made in another tab. Requires `persistence` on the ' +
+        'either changes, including changes made in another tab. Requires `persistConversation` on the ' +
         'provider. See Components/Chat/Persistent Chat.',
       table: { category: 'Callbacks' },
     },
@@ -115,7 +115,7 @@ const meta: Meta<typeof Chat> = {
       description:
         'Resume a specific agent thread. Read once on mount; the thread id is then tracked ' +
         'internally across turns and reset by `clearHistory()` on the chat handle. With ' +
-        '`persistence` enabled on the provider, the stored transcript of that thread is restored too.',
+        '`persistConversation` enabled on the provider, the stored transcript of that thread is restored too.',
       control: 'text',
       table: {
         category: 'Content',

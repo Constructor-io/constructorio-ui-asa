@@ -17,7 +17,7 @@ export default function CioAsaProvider(
     cioClient: customCioClient,
     callbacks,
     section = 'Products',
-    persistence: persistenceEnabled,
+    persistConversation: persistenceEnabled,
     children,
   } = props;
 

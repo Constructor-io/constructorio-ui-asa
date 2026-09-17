@@ -5,23 +5,23 @@ import * as PersistenceStories from './Chat.persistence.stories';
 
 # Persistent Chat
 
-By default a conversation lives only in memory and is lost on page load. Enable `persistence` on `CioAsaProvider` and the transcript plus the agent's thread id are kept in the browser, so a shopper who navigates between product pages, reloads, or comes back later continues where they left off.
+By default a conversation lives only in memory and is lost on page load. Enable `persistConversation` on `CioAsaProvider` and the transcript plus the agent's thread id are kept in the browser, so a shopper who navigates between product pages, reloads, or comes back later continues where they left off.
 
 ```jsx
-<CioAsaProvider apiKey="YOUR_API_KEY" persistence>
+<CioAsaProvider apiKey="YOUR_API_KEY" persistConversation>
   <Chat />
 </CioAsaProvider>
 ```
 
 ## Public API
 
-Everything below is optional and only active when `persistence` is set on the provider.
+Everything below is optional and only active when `persistConversation` is set on the provider.
 
 <Markdown>
 {`
 | Where | Name | What it does |
 |-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistence\` | \`true\` keeps conversations in \`localStorage\` |
+| \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in \`localStorage\` |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | Fires after the initial load and whenever the stored list or the active conversation changes, including changes made in another tab. Use it to render a history list outside \`Chat\` |
 | \`Chat\` prop | \`initialThreadId\` | Restores that thread's stored transcript instead of the most recent one; falls back to seeding the thread id alone when nothing is stored |
 | \`Chat\` ref | \`newThread()\` | Opens an empty conversation and keeps the current one in storage |

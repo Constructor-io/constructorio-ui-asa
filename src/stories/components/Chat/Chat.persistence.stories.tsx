@@ -31,7 +31,7 @@ function PersistentChat() {
       <button type='button' style={buttonStyle} onClick={() => setMountKey((k) => k + 1)}>
         Simulate page reload
       </button>
-      <CioAsaProvider key={mountKey} apiKey={DEMO_API_KEY} persistence>
+      <CioAsaProvider key={mountKey} apiKey={DEMO_API_KEY} persistConversation>
         <div style={frameStyle}>
           <Chat initialSuggestions={SUGGESTIONS} aspectRatio='3:4' currency='$' />
         </div>
@@ -81,7 +81,7 @@ function PersistentChatWithHistory() {
           Delete active chat
         </button>
       </aside>
-      <CioAsaProvider key={mountKey} apiKey={DEMO_API_KEY} persistence>
+      <CioAsaProvider key={mountKey} apiKey={DEMO_API_KEY} persistConversation>
         <div style={frameStyle}>
           <Chat
             ref={chatRef}
@@ -108,7 +108,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** `persistence` on the provider is all that is needed. Send a message, then reload. */
+/** `persistConversation` on the provider is all that is needed. Send a message, then reload. */
 export const Default: Story = {
   render: () => <PersistentChat />,
 };

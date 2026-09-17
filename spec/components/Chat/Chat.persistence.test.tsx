@@ -31,7 +31,10 @@ function renderChat(ref?: React.Ref<ChatHandle>) {
   const { client } = createMockCioClient({ events: [] });
   (client as unknown as { options: { apiKey: string } }).options = { apiKey: 'key_test' };
   return render(
-    <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }} persistence>
+    <CioAsaProvider
+      cioClient={client}
+      staticRequestConfigs={{ domain: 'chatbot' }}
+      persistConversation>
       <Chat ref={ref} />
     </CioAsaProvider>,
   );
@@ -80,7 +83,10 @@ describe('Chat persistence', () => {
     const { client } = createMockCioClient({ events: [] });
     (client as unknown as { options: { apiKey: string } }).options = { apiKey: 'key_test' };
     render(
-      <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }} persistence>
+      <CioAsaProvider
+        cioClient={client}
+        staticRequestConfigs={{ domain: 'chatbot' }}
+        persistConversation>
         <Chat ref={ref} onThreadsChange={onThreadsChange} />
       </CioAsaProvider>,
     );

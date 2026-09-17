@@ -166,7 +166,7 @@ The provider accepts the following props:
 | `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
-| `persistence` | `boolean` | Keep the conversation across page loads in `localStorage`, keyed by api key, domain and user id. Off when omitted. See the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page. |
+| `persistConversation` | `boolean` | Keep the conversation across page loads in `localStorage`, keyed by api key, domain and user id. Off when omitted. See the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page. |
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. AI Shopping Assistant must be enabled for your account — contact your Constructor representative if agent requests return errors. If you already instantiate a `ConstructorIOClient` elsewhere in your app, pass it via `cioClient` instead of `apiKey`.
 
@@ -239,16 +239,16 @@ The `Chat` component accepts:
 | `normalizeItem` | `(item, options?) => Product` | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
 | `translations` | `Translations` | Override UI strings (see Translations section) |
 | `componentOverrides` | `ChatComponentOverrides` | Override any sub-component (see Component Overrides section) |
-| `initialThreadId` | `string` | Resume a specific agent thread. With `persistence` on, its stored transcript is restored too (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
-| `onThreadsChange` | `(threads, activeThreadId) => void` | Fires when the list of stored conversations or the active one changes. Requires `persistence` (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
+| `initialThreadId` | `string` | Resume a specific agent thread. With `persistConversation` on, its stored transcript is restored too (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
+| `onThreadsChange` | `(threads, activeThreadId) => void` | Fires when the list of stored conversations or the active one changes. Requires `persistConversation` (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
 
 `Chat` also exposes methods through a `ref` (`ChatHandle`):
 
 | Method | Description |
 |--------|-------------|
-| `clearHistory()` | Reset the conversation and, with `persistence` on, delete it from storage |
-| `newThread()` | Start an empty conversation and keep the current one in storage. Requires `persistence` |
-| `switchThread(threadId)` | Load a stored conversation and continue it. Requires `persistence` |
+| `clearHistory()` | Reset the conversation and, with `persistConversation` on, delete it from storage |
+| `newThread()` | Start an empty conversation and keep the current one in storage. Requires `persistConversation` |
+| `switchThread(threadId)` | Load a stored conversation and continue it. Requires `persistConversation` |
 
 ### Follow-up refinements
 

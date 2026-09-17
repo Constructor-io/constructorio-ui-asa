@@ -88,7 +88,10 @@ describe('CioAsaProvider', () => {
     window.localStorage.clear();
     let received: AsaContextValue | undefined;
     render(
-      <CioAsaProvider apiKey='key_test' staticRequestConfigs={{} as RequestConfigs} persistence>
+      <CioAsaProvider
+        apiKey='key_test'
+        staticRequestConfigs={{} as RequestConfigs}
+        persistConversation>
         {(ctx) => {
           received = ctx;
           return null;

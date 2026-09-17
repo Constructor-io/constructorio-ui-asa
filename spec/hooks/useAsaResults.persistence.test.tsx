@@ -65,7 +65,7 @@ const aiMsg = (id: string, text: string, status: ChatMessage['status'] = 'done')
   groups: [],
 });
 
-// The provider only exposes `persistence: boolean`; tests that need a controllable store
+// The provider only exposes `persistConversation: boolean`; tests that need a controllable store
 // hand it to the hook through the context the provider would otherwise populate.
 function Wrapper({
   cioClient,
@@ -94,7 +94,7 @@ function Wrapper({
     <CioAsaProvider
       cioClient={cioClient}
       staticRequestConfigs={{ domain: 'chatbot' }}
-      persistence={typeof persistence === 'boolean' ? persistence : undefined}>
+      persistConversation={typeof persistence === 'boolean' ? persistence : undefined}>
       {children}
     </CioAsaProvider>
   );
@@ -1320,7 +1320,10 @@ describe('useAsaResults persistence', () => {
     let client = clientFor();
     const hook = renderHook(() => useAsaResults(), {
       wrapper: ({ children }) => (
-        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }} persistence>
+        <CioAsaProvider
+          cioClient={client}
+          staticRequestConfigs={{ domain: 'chatbot' }}
+          persistConversation>
           {children}
         </CioAsaProvider>
       ),

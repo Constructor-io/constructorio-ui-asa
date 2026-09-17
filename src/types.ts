@@ -64,7 +64,7 @@ export interface CioAsaProviderProps
    * Persist the conversation so it survives page loads. Stored in `localStorage`, keyed by
    * api key + domain + user id, with a 7 day TTL. Off when omitted.
    */
-  persistence?: boolean;
+  persistConversation?: boolean;
 }
 
 export interface UseCioClientProps {
