@@ -6,7 +6,7 @@
   position: relative;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(222, 224, 227, 1);
-  background: #FFFFFF;
+  background: #ffffff;
 }
 
 .cio-asa-chat-header__title {
@@ -16,7 +16,7 @@
   font-weight: 600;
   font-size: 16px;
   line-height: 1;
-  color: #0F1324;
+  color: #0f1324;
 }
 
 .cio-asa-chat-header__close {

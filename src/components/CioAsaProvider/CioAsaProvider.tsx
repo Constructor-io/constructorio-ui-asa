@@ -35,7 +35,8 @@ export default function CioAsaProvider(
     // Per-user namespace so a shared browser never shows the previous shopper's chat.
     return createLocalStoragePersistence({
       namespace: [resolvedApiKey ?? 'default', domain ?? 'default', userId]
-        .filter(Boolean)
+        .filter((part): part is string => part !== undefined)
+        .map(encodeURIComponent)
         .join(':'),
     });
   }, [persistenceEnabled, resolvedApiKey, domain, userId]);

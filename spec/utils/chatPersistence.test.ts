@@ -142,6 +142,12 @@ describe('createLocalStoragePersistence', () => {
     expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['c', 'b']);
   });
 
+  it('stores nothing when maxThreads is 0', async () => {
+    const store = createLocalStoragePersistence({ storage, maxThreads: 0 });
+    await store.saveThread(chat('t1', turns(1)));
+    expect(await store.listThreads()).toEqual([]);
+  });
+
   it('deletes a thread and leaves a tombstone so it cannot be resurrected', async () => {
     const store = createLocalStoragePersistence({ storage });
     const original = chat('t1', turns(1), Date.now() - 1000);

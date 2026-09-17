@@ -17,7 +17,9 @@
   font-size: 14px;
   line-height: 16px;
   letter-spacing: -0.005em;
-  font-feature-settings: 'tnum' on, 'lnum' on;
+  font-feature-settings:
+    'tnum' on,
+    'lnum' on;
   color: #ffffff;
   max-width: 100%;
   word-wrap: break-word;

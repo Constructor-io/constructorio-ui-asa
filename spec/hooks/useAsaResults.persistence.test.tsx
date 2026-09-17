@@ -1310,6 +1310,26 @@ describe('useAsaResults persistence', () => {
     window.localStorage.clear();
   });
 
+  it('escapes namespace parts so ids containing the separator cannot collide', async () => {
+    window.localStorage.clear();
+    const { client } = createMockCioClient({
+      events: [startEvent('thread-esc'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    (client as unknown as { options: object }).options = { apiKey: 'key_test', userId: 'a:b' };
+    const { result } = renderWithPersistence(client, true);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:a%3Ab')).toContain(
+        'thread-esc',
+      ),
+    );
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:a:b')).toBeNull();
+    window.localStorage.clear();
+  });
+
   it('scopes the built-in storage key by a numeric user id of 0 too', async () => {
     window.localStorage.clear();
     const { client } = createMockCioClient({

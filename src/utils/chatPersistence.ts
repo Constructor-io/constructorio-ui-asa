@@ -311,7 +311,8 @@ export function createLocalStoragePersistence(
         return;
       }
     }
-    // The key kept changing under us: skip rather than overwrite another tab's turns.
+    // The key kept changing under us: skip rather than overwrite another tab's turns. Without
+    // Web Locks this check is best effort; a write between the compare and the set can still win.
   };
 
   return {
@@ -356,7 +357,7 @@ export function createLocalStoragePersistence(
             threads: { ...current.threads, [chat.threadId]: merged },
           };
           if (Number.isFinite(maxThreads)) {
-            const kept = sortedThreads(next).slice(0, Math.max(1, maxThreads));
+            const kept = sortedThreads(next).slice(0, maxThreads);
             next = { ...next, threads: Object.fromEntries(kept.map((t) => [t.threadId, t])) };
             if (!next.threads[chat.threadId]) return null;
           }

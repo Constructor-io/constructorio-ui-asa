@@ -8,7 +8,7 @@ import * as PersistenceStories from './Chat.persistence.stories';
 By default a conversation lives only in memory and is lost on page load. Enable `persistence` on `CioAsaProvider` and the transcript plus the agent's thread id are kept in the browser, so a shopper who navigates between product pages, reloads, or comes back later continues where they left off.
 
 ```jsx
-<CioAsaProvider apiKey="YOUR_API_KEY" persistence>
+<CioAsaProvider apiKey='YOUR_API_KEY' persistence>
   <Chat />
 </CioAsaProvider>
 ```
@@ -18,7 +18,7 @@ By default a conversation lives only in memory and is lost on page load. Enable 
 Everything below is optional and only active when `persistence` is set on the provider.
 
 <Markdown>
-{`
+  {`
 | Where | Name | What it does |
 |-------|------|--------------|
 | \`CioAsaProvider\` prop | \`persistence\` | \`true\` keeps conversations in \`localStorage\` |
@@ -38,7 +38,7 @@ Everything below is optional and only active when `persistence` is set on the pr
 ## How it works
 
 <Markdown>
-{`
+  {`
 | Aspect | Behaviour |
 |--------|-----------|
 | Storage key | \`cio-asa:chat:v1:<apiKey>:<domain>\`, plus the client's \`userId\` when one is configured, so one shopper's chats follow them across pages of the same site and a login change on a shared browser starts a separate history |
@@ -53,7 +53,7 @@ Everything below is optional and only active when `persistence` is set on the pr
 
 Storage stays on the device. Another browser or device starts fresh, and so does the agent's own memory, which is scoped per browser as well.
 
-Two tabs on the same thread merge their turns instead of overwriting each other: writes go through a Web Lock where the browser has one, the merge is redone if another tab committed in between, and an older snapshot can add turns but never regresses a message a newer one already settled.
+Two tabs on the same thread merge their turns instead of overwriting each other: writes go through a Web Lock, the merge is redone if another tab committed in between, and an older snapshot can add turns but never regresses a message a newer one already settled. In browsers without Web Locks (Safari before 15.4) the merge is best effort: two tabs writing in the very same instant can still lose the slower turn.
 
 ## Several conversations
 
