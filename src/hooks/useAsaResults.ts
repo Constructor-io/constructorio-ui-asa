@@ -5,6 +5,7 @@ import useAsaTracking from './useAsaTracking';
 import useChatPersistence from './persistence/useChatPersistence';
 import { AgentStreamHandle, readAgentStream } from './agentStream';
 import { createChatSession, nextMessageId } from './chatSession';
+import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
   const contextValue = useCioAsaContext();
@@ -29,12 +30,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     section,
     threadId: session.serverThreadId ?? undefined,
   });
-  const trackingRef = useRef(tracking);
-  trackingRef.current = tracking;
-  const callbacksRef = useRef(callbacks);
-  callbacksRef.current = callbacks;
-  const staticRequestConfigsRef = useRef(staticRequestConfigs);
-  staticRequestConfigsRef.current = staticRequestConfigs;
+  const trackingRef = useLatest(tracking);
+  const callbacksRef = useLatest(callbacks);
+  const staticRequestConfigsRef = useLatest(staticRequestConfigs);
 
   const cancelStream = useCallback(() => {
     streamRef.current?.cancel();
@@ -116,7 +114,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
         setIsStreaming(false);
       });
     },
-    [cioClient, domain, session, store],
+    [cioClient, domain, session, store, trackingRef, callbacksRef, staticRequestConfigsRef],
   );
 
   return {

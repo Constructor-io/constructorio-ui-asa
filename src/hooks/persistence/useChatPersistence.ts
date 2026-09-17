@@ -9,7 +9,7 @@ import {
   saveThreadAndRetireStale,
 } from '../../utils/chatPersistence';
 import { ChatSession, adoptStoredChat, prepareSnapshot, resetConversation } from '../chatSession';
-import useLatest from './useLatest';
+import useLatest from '../useLatest';
 import useWriteQueue from './useWriteQueue';
 import useThreadList from './useThreadList';
 import useForeignStream from './useForeignStream';
