@@ -70,4 +70,39 @@ describe('CioAsaProvider', () => {
     });
     expect(result.current!.cioClient).toBe(fakeClient);
   });
+
+  it('has no persistence store unless asked for one', () => {
+    let received: AsaContextValue | undefined;
+    render(
+      <CioAsaProvider apiKey={DEMO_API_KEY}>
+        {(ctx) => {
+          received = ctx;
+          return null;
+        }}
+      </CioAsaProvider>,
+    );
+    expect(received!.persistence).toBeUndefined();
+  });
+
+  it('scopes the built-in store by api key and falls back to a default domain', async () => {
+    window.localStorage.clear();
+    let received: AsaContextValue | undefined;
+    render(
+      <CioAsaProvider apiKey='key_test' staticRequestConfigs={{}} persistence>
+        {(ctx) => {
+          received = ctx;
+          return null;
+        }}
+      </CioAsaProvider>,
+    );
+    await received!.persistence!.saveThread({
+      version: 1,
+      threadId: 't1',
+      messages: [{ id: 'u1', role: 'user', text: 'q', status: 'done' }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:default')).toContain('t1');
+    window.localStorage.clear();
+  });
 });

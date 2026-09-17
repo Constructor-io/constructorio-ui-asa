@@ -570,6 +570,34 @@ describe('useAsaResults persistence', () => {
     );
   });
 
+  it('keeps a message sent while the thread list was still loading', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('thread-new'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store } = createMemoryPersistence([
+      persisted('old', [userMsg('u1', 'old q'), aiMsg('a1', 'old a')]),
+    ]);
+    let releaseList!: () => void;
+    const gate = new Promise<void>((r) => {
+      releaseList = r;
+    });
+    const listThreads = store.listThreads.getMockImplementation()!;
+    store.listThreads.mockImplementationOnce(async () => {
+      await gate;
+      return listThreads();
+    });
+    const { result } = renderWithPersistence(client, store);
+
+    act(() => result.current.sendMessage('hello'));
+    expect(result.current.isHydrating).toBe(false);
+    releaseList();
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    expect(result.current.messages.map((m) => m.text)).toEqual(['hello', 'Hi']);
+    expect(store.getThread).not.toHaveBeenCalledWith('old');
+    await waitFor(() => expect(result.current.threads.length).toBe(2));
+  });
+
   it('starts empty when the store rejects', async () => {
     const { client } = createMockCioClient({ events: [] });
     const { store } = createMemoryPersistence();
@@ -1054,6 +1082,20 @@ describe('useAsaResults persistence', () => {
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
       expect(result.current.messages.map((m) => m.text)).toContain('mine');
+    });
+
+    it('only refreshes the list when nothing is on screen yet', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store, threads, notify } = createMemoryPersistence([], true);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      threads.set('t', persisted('t', [userMsg('u1', 'elsewhere'), aiMsg('a1', 'answer')]));
+      act(() => notify());
+
+      await waitFor(() => expect(result.current.threads.map((t) => t.threadId)).toEqual(['t']));
+      expect(result.current.messages).toEqual([]);
+      expect(store.getThread).not.toHaveBeenCalled();
     });
 
     it('unsubscribes on unmount', async () => {

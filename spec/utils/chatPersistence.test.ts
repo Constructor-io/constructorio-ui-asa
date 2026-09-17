@@ -640,3 +640,57 @@ describe('foreignStreamRemainingMs', () => {
     expect(foreignStreamRemainingMs(streaming(1000, 'other-tab'), 1000)).toBe(IN_FLIGHT_GRACE_MS);
   });
 });
+
+describe('storage fallbacks', () => {
+  it('still runs the write when the lock request rejects before running it', async () => {
+    const request = jest.fn(() => Promise.reject(new Error('locks unavailable')));
+    Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
+    try {
+      const storage = new FakeStorage();
+      const store = createLocalStoragePersistence({ storage, namespace: 'nolock' });
+      await store.saveThread(chat('t1', turns(1)));
+      expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['t1']);
+    } finally {
+      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+    }
+  });
+
+  it('is a no-op when localStorage access itself throws', async () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'localStorage')!;
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    try {
+      const store = createLocalStoragePersistence();
+      await expect(store.saveThread(chat('t1', turns(1)))).resolves.toBeUndefined();
+      await expect(store.listThreads()).resolves.toEqual([]);
+    } finally {
+      Object.defineProperty(window, 'localStorage', original);
+    }
+  });
+
+  it('falls back to an in-memory tab id when sessionStorage is blocked', () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'sessionStorage')!;
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    try {
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+        const fresh =
+          require('../../src/utils/chatPersistence') as typeof import('../../src/utils/chatPersistence');
+        const id = fresh.getTabId();
+        expect(id).toEqual(expect.any(String));
+        expect(fresh.getTabId()).toBe(id);
+      });
+    } finally {
+      Object.defineProperty(window, 'sessionStorage', original);
+    }
+  });
+});

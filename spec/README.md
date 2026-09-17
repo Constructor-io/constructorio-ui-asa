@@ -13,10 +13,10 @@ spec/components/Chat/ChatInput.server.test.jsx  # server (node / SSR)
 
 `jest.config.js` defines two projects, distinguished purely by filename:
 
-| Project  | Files                  | Environment | Setup                    |
-| -------- | ---------------------- | ----------- | ------------------------ |
-| `client` | `*.test.{ts,tsx,js,jsx}` | `jsdom`   | `spec/setupTests.ts`        |
-| `server` | `*.server.test.{ts,tsx,js,jsx}` | `node` | `spec/setupTests.server.ts` |
+| Project  | Files                           | Environment | Setup                       |
+| -------- | ------------------------------- | ----------- | --------------------------- |
+| `client` | `*.test.{ts,tsx,js,jsx}`        | `jsdom`     | `spec/setupTests.ts`        |
+| `server` | `*.server.test.{ts,tsx,js,jsx}` | `node`      | `spec/setupTests.server.ts` |
 
 Run one at a time with `npx jest --selectProjects client` / `--selectProjects server`.
 
