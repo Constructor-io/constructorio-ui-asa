@@ -1,36 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
-import {
-  AssistantSubmitSource,
-  ResultGroupMeta,
-  ChatMessage,
-  UseAsaResultsOptions,
-  UseChatReturn,
-} from '../types';
-import {
-  handleSearchResult,
-  handleMessage,
-  handleFollowUpRefinement,
-  handleServerError,
-  handleStreamEnd,
-  handleStreamError,
-} from './asaStreamHandlers';
+import { AssistantSubmitSource, ChatMessage, UseAsaResultsOptions, UseChatReturn } from '../types';
 import useAsaTracking from './useAsaTracking';
+import useChatPersistence from './persistence/useChatPersistence';
+import { AgentStreamHandle, readAgentStream } from './agentStream';
+import { createChatSession, nextMessageId } from '../utils/chatSession';
+import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const isStreamingRef = useRef(false);
-  const killSwitchRef = useRef(false);
-  const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
-  const threadIdRef = useRef<string | null>(options?.initialThreadId ?? null);
-  const idCounterRef = useRef(0);
-
   const contextValue = useCioAsaContext();
   if (!contextValue) {
     throw new Error('useAsaResults must be used within a CioAsaProvider.');
   }
-  const { cioClient, staticRequestConfigs, callbacks, section } = contextValue;
+  const { cioClient, staticRequestConfigs, callbacks, section, persistence, persistenceScope } =
+    contextValue;
   const { domain } = staticRequestConfigs || {};
   if (!cioClient || !domain) {
     throw new Error(
@@ -38,186 +21,124 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     );
   }
 
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const session = useRef(createChatSession(options?.initialThreadId)).current;
+  const streamRef = useRef<AgentStreamHandle | null>(null);
+
   const tracking = useAsaTracking({
     tracker: cioClient.tracker,
     section,
-    threadId: threadIdRef.current ?? undefined,
+    threadId: session.serverThreadId ?? undefined,
   });
-  const trackingRef = useRef(tracking);
-  trackingRef.current = tracking;
-  const callbacksRef = useRef(callbacks);
-  callbacksRef.current = callbacks;
-  const staticRequestConfigsRef = useRef(staticRequestConfigs);
-  staticRequestConfigsRef.current = staticRequestConfigs;
+  const trackingRef = useLatest(tracking);
+  const callbacksRef = useLatest(callbacks);
+  const staticRequestConfigsRef = useLatest(staticRequestConfigs);
 
-  const nextMessageId = useCallback(() => {
-    idCounterRef.current += 1;
-    return `msg-${idCounterRef.current}-${Date.now()}`;
+  const cancelStream = useCallback(() => {
+    streamRef.current?.cancel();
+    streamRef.current = null;
   }, []);
+
+  const store = useChatPersistence({
+    store: persistence,
+    scope: persistenceScope,
+    session,
+    initialThreadId: options?.initialThreadId,
+    messages,
+    setMessages,
+    isStreaming,
+    setIsStreaming,
+    cancelStream,
+  });
+
+  const { beginTurn, onStreamStart } = store;
+
+  useEffect(() => cancelStream, [cancelStream]);
 
   const sendMessage = useCallback(
     (text: string, source: AssistantSubmitSource = 'input') => {
       const intent = text.trim();
-      if (!intent || isStreamingRef.current) return;
+      if (!intent || session.isStreaming || session.foreignInFlight) return;
+      beginTurn();
 
       trackingRef.current.trackSubmit(intent);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
 
       const userMessage: ChatMessage = {
-        id: nextMessageId(),
+        id: nextMessageId(session),
         role: 'user',
         text: intent,
         status: 'done',
       };
-
       const assistantMessage: ChatMessage = {
-        id: nextMessageId(),
+        id: nextMessageId(session),
         role: 'assistant',
         text: '',
         groups: [],
         status: 'loading',
         intent,
       };
-
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsStreaming(true);
-      isStreamingRef.current = true;
-      killSwitchRef.current = false;
+      session.isStreaming = true;
 
-      // `intent` is passed as the first argument and `threadId` is managed per-stream
-      // below, so both are stripped here. Everything else configured on the provider
-      // (filters, guard, numResultsPerEvent, numResultEvents, qsParam,
-      // preFilterExpression, fmtOptions, ...) is forwarded to the agent as-is.
       const agentParams = { ...staticRequestConfigsRef.current };
       delete agentParams.intent;
       delete agentParams.threadId;
       const stream = cioClient.agent.getAgentResultsStream(intent, {
         ...agentParams,
         domain,
-        ...(threadIdRef.current && { threadId: threadIdRef.current }),
+        ...(session.serverThreadId && { threadId: session.serverThreadId }),
       });
-      const reader = stream.getReader();
-      readerRef.current = reader;
 
-      // Mutable per-stream state kept on an object so the closures below don't capture
-      // reassigned loop-locals (which eslint's no-loop-func forbids).
-      const streamState = {
-        pendingGroup: null as ResultGroupMeta | null,
-        intentResultId: undefined as string | undefined,
-        loadStartFired: false,
-        groupCount: 0,
-      };
-
-      const patchAssistant = (patch: Partial<ChatMessage>) => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantMessage.id ? { ...m, ...patch } : m)),
-        );
-      };
-
-      const fireLoadStart = () => {
-        if (streamState.loadStartFired) return;
-        streamState.loadStartFired = true;
-        const args = { intent, intentResultId: streamState.intentResultId };
-        trackingRef.current.trackResultLoadStarted(args);
-        callbacksRef.current?.onResultLoadStart?.(args);
-      };
-
-      (async () => {
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          while (!killSwitchRef.current) {
-            // eslint-disable-next-line no-await-in-loop
-            const res = await reader.read();
-            if (killSwitchRef.current) break;
-            if (res.done) {
-              handleStreamEnd(assistantMessage.id, setMessages);
-              const finishArgs = {
-                intent,
-                searchResultCount: streamState.groupCount,
-                intentResultId: streamState.intentResultId,
-              };
-              trackingRef.current.trackResultLoadFinished(finishArgs);
-              callbacksRef.current?.onResultLoadFinish?.(finishArgs);
-              break;
-            }
-
-            const { type, data } = res.value;
-
-            // `intent_result_id` is shared across the stream; capture it from the first
-            // event that carries it so load-start/finish can attribute correctly.
-            if (!streamState.intentResultId && data?.intent_result_id) {
-              streamState.intentResultId = data.intent_result_id;
-              patchAssistant({ intentResultId: streamState.intentResultId });
-            }
-
-            if (type === 'start') {
-              if (data?.thread_id) {
-                threadIdRef.current = data.thread_id;
-                patchAssistant({ threadId: data.thread_id });
-              }
-              fireLoadStart();
-            } else if (type === 'group') {
-              streamState.pendingGroup = {
-                display_name: data?.display_name ?? data?.group ?? '',
-                value: data?.value ?? data?.group ?? '',
-              };
-            } else if (type === 'search_result') {
-              fireLoadStart();
-              streamState.groupCount += 1;
-              streamState.pendingGroup = handleSearchResult(
-                data,
-                streamState.pendingGroup,
-                assistantMessage.id,
-                setMessages,
-              );
-            } else if (type === 'message') {
-              fireLoadStart();
-              handleMessage(data, assistantMessage.id, setMessages);
-            } else if (type === 'follow_up_refinement') {
-              fireLoadStart();
-              handleFollowUpRefinement(data, assistantMessage.id, setMessages);
-            } else if (type === 'server_error') {
-              handleServerError(assistantMessage.id, setMessages);
-              break;
-            }
-          }
-        } catch {
-          handleStreamError(assistantMessage.id, setMessages);
-        } finally {
-          if (readerRef.current === reader) {
-            reader.cancel();
-            readerRef.current = null;
-            setIsStreaming(false);
-            isStreamingRef.current = false;
-          }
-        }
-      })();
+      const handle = readAgentStream(stream, assistantMessage.id, setMessages, {
+        onStart: (threadId) => {
+          if (threadId) session.serverThreadId = threadId;
+          onStreamStart();
+        },
+        onLoadStart: (intentResultId) => {
+          const args = { intent, intentResultId };
+          trackingRef.current.trackResultLoadStarted(args);
+          callbacksRef.current?.onResultLoadStart?.(args);
+        },
+        onFinish: (result) => {
+          const args = { intent, ...result };
+          trackingRef.current.trackResultLoadFinished(args);
+          callbacksRef.current?.onResultLoadFinish?.(args);
+        },
+      });
+      streamRef.current = handle;
+      handle.done.then(() => {
+        // A stream cancelled by a reset has already been accounted for.
+        if (streamRef.current !== handle) return;
+        streamRef.current = null;
+        session.dirty = true;
+        session.isStreaming = false;
+        setIsStreaming(false);
+      });
     },
-    [cioClient, domain, nextMessageId],
+    [
+      cioClient,
+      domain,
+      session,
+      beginTurn,
+      onStreamStart,
+      trackingRef,
+      callbacksRef,
+      staticRequestConfigsRef,
+    ],
   );
 
-  useEffect(
-    () => () => {
-      killSwitchRef.current = true;
-      if (readerRef.current) {
-        readerRef.current.cancel();
-        readerRef.current = null;
-      }
-    },
-    [],
-  );
-
-  const clearHistory = useCallback(() => {
-    killSwitchRef.current = true;
-    if (readerRef.current) {
-      readerRef.current.cancel();
-      readerRef.current = null;
-    }
-    threadIdRef.current = null;
-    setMessages([]);
-    setIsStreaming(false);
-    isStreamingRef.current = false;
-  }, []);
-
-  return { messages, sendMessage, isStreaming, clearHistory };
+  return {
+    messages,
+    sendMessage,
+    isStreaming: isStreaming || store.foreignInFlight,
+    clearHistory: store.clearHistory,
+    isHydrating: store.isHydrating,
+    threads: store.threads,
+    activeThreadId: store.activeThreadId,
+    newThread: store.newThread,
+    switchThread: store.switchThread,
+  };
 }

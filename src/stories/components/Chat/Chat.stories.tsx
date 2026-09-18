@@ -68,6 +68,13 @@ const meta: Meta<typeof Chat> = {
         'Called when the close button (✕) is clicked. The consumer controls component visibility.',
       table: { category: 'Callbacks' },
     },
+    onThreadsChange: {
+      description:
+        'Fires with the stored conversations (`ThreadSummary[]`) and the active thread id whenever ' +
+        'either changes, including changes made in another tab. Requires `persistConversation` on the ' +
+        'provider. See Components/Chat/Persistent Chat.',
+      table: { category: 'Callbacks' },
+    },
     onProductClick: {
       description: 'Called when a product card is clicked in results.',
       table: { category: 'Callbacks' },
@@ -106,9 +113,9 @@ const meta: Meta<typeof Chat> = {
     },
     initialThreadId: {
       description:
-        'Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. ' +
-        'Read once on mount; the thread id is then tracked internally across turns and reset when ' +
-        '`clearHistory()` is called on the chat handle.',
+        'Resume a specific agent thread. Read once on mount; the thread id is then tracked ' +
+        'internally across turns and reset by `clearHistory()` on the chat handle. With ' +
+        '`persistConversation` enabled on the provider, the stored transcript of that thread is restored too.',
       control: 'text',
       table: {
         category: 'Content',
@@ -457,22 +464,4 @@ export const IntegrationMobile: Story = {
     layout: 'fullscreen',
   },
   render: () => <MobileIntegrationExample />,
-};
-
-export const Inline: Story = {
-  name: 'Inline (no onClose)',
-  render: () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '504px' }}>
-      <a href='#after-chat'>Focusable element before the chat</a>
-      <div style={{ height: '700px' }}>
-        <Chat
-          initialSuggestions={['I need luggage suitable for holiday travel']}
-          onProductClick={(product) => alert(`Product clicked: ${product.name}`)}
-        />
-      </div>
-      <button id='after-chat' type='button' onClick={() => alert('Reached the page again')}>
-        Focusable element after the chat
-      </button>
-    </div>
-  ),
 };
