@@ -173,13 +173,14 @@ export default function useChatPersistence(params: Params) {
       // A login mid-conversation: the guest conversation continues as the shopper's own.
       stopForeign();
       invalidateThreads();
-      resetWrites();
       const guestId = session.storageThreadId;
+      // Behind the guest store's pending writes, so none of them can recreate the record.
+      if (guestId) enqueueWrite(() => carryOverFrom.deleteThread(guestId).catch(() => {}));
+      resetWrites();
       session.orphanIds = [];
       session.lastSyncedAt = 0;
       session.loadRequest += 1;
       session.interacted = true;
-      if (guestId) carryOverFrom.deleteThread(guestId).catch(() => {});
       if (session.isStreaming) {
         session.dirty = true;
       } else {

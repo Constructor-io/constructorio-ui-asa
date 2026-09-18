@@ -1486,6 +1486,45 @@ describe('useAsaResults persistence', () => {
       );
     });
 
+    it('deletes the guest record only after the pending guest save has landed', async () => {
+      const held: Array<() => Promise<void>> = [];
+      const request = jest.fn(
+        (_name: string, callback: () => void | Promise<void>) =>
+          new Promise<void>((resolve) => {
+            held.push(async () => {
+              await callback();
+              resolve();
+            });
+          }),
+      );
+      const guestLocks = () => request.mock.calls.filter(([name]) => name === GUEST_KEY).length;
+      Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
+      try {
+        const hook = renderAs();
+        await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+        act(() => hook.result.current.sendMessage('as guest'));
+        await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+        await waitFor(() => expect(guestLocks()).toBe(1));
+
+        hook.become('user-1');
+        await act(async () => {});
+        // The completion save and the delete wait behind the held stream-start save.
+        expect(guestLocks()).toBe(1);
+
+        while (held.length > 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await act(async () => {
+            await held.shift()!();
+          });
+        }
+        expect(guestLocks()).toBe(3);
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('as guest');
+        expect(window.sessionStorage.getItem(GUEST_KEY) ?? '').not.toContain('as guest');
+      } finally {
+        Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+      }
+    });
+
     it('finishes an answer that was streaming at login in the shopper history', async () => {
       const { client, getAgentResultsStream } = createMockCioClient({ events });
       (client as unknown as { options: object }).options = { apiKey: 'key_test' };
