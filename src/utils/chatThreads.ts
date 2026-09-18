@@ -120,6 +120,13 @@ export async function findRekeyedThread(
   return loaded.find((c) => c?.messages[0]?.id === firstMessageId) ?? null;
 }
 
+/** Whether a stored thread still reads as streaming: this tab's own always, another tab's only within the grace. */
+export function isThreadStreaming(chat: PersistedChat, now = Date.now()): boolean {
+  if (!isInFlight(chat.messages)) return false;
+  if (chat.owner !== undefined && chat.owner === getTabId()) return true;
+  return now - chat.updatedAt < IN_FLIGHT_GRACE_MS;
+}
+
 /** Ms left to show a stored answer as streaming in another tab; `0` when it should be settled. */
 export function foreignStreamRemainingMs(chat: PersistedChat, now = Date.now()): number {
   if (!isInFlight(chat.messages)) return 0;

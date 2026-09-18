@@ -2,8 +2,9 @@ import {
   clearPersistedConversations,
   createLocalStoragePersistence,
   persistenceNamespace,
+  storageAreaFor,
 } from '../../src/utils/localStoragePersistence';
-import { PERSISTED_CHAT_VERSION } from '../../src/utils/chatThreads';
+import { IN_FLIGHT_GRACE_MS, PERSISTED_CHAT_VERSION, getTabId } from '../../src/utils/chatThreads';
 import { FakeStorage, chat, msg, turns } from './chatFixtures';
 
 describe('persistenceNamespace', () => {
@@ -21,6 +22,15 @@ describe('persistenceNamespace', () => {
 
   it('falls back to a default api key and domain', () => {
     expect(persistenceNamespace({})).toBe('default:default');
+  });
+});
+
+describe('storageAreaFor', () => {
+  it('puts a guest in sessionStorage and a shopper in localStorage', () => {
+    expect(storageAreaFor(undefined)).toBe('session');
+    expect(storageAreaFor(null)).toBe('session');
+    expect(storageAreaFor('')).toBe('session');
+    expect(storageAreaFor('u1')).toBe('local');
   });
 });
 
@@ -55,6 +65,27 @@ describe('clearPersistedConversations', () => {
     clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
     expect(storage.getItem(keyFor('u1'))).toBeNull();
   });
+
+  it('clears a shopper from localStorage and the guest from sessionStorage by default', async () => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    await createLocalStoragePersistence({ namespace: 'k:chatbot:u1' }).saveThread(
+      chat('u', turns(1)),
+    );
+    await createLocalStoragePersistence({
+      namespace: 'k:chatbot',
+      storageArea: 'session',
+    }).saveThread(chat('g', turns(1)));
+
+    clearPersistedConversations({ apiKey: 'k', userId: 'u1' });
+    expect(window.localStorage.getItem(keyFor('u1'))).toBeNull();
+    expect(window.sessionStorage.getItem(keyFor())).toContain('g');
+
+    clearPersistedConversations({ apiKey: 'k' });
+    expect(window.sessionStorage.getItem(keyFor())).toBeNull();
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
 });
 
 describe('createLocalStoragePersistence', () => {
@@ -82,6 +113,36 @@ describe('createLocalStoragePersistence', () => {
 
     await store.saveThread(chat('t2', [msg('user', 'q'), msg('assistant', '', 'error')]));
     expect((await store.listThreads()).find((t) => t.threadId === 't2')?.inFlight).toBe(false);
+  });
+
+  it('stops flagging a thread another tab abandoned mid-stream once the grace period passes', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const stalled = {
+      ...chat(
+        't1',
+        [msg('user', 'q'), msg('assistant', '', 'streaming')],
+        Date.now() - IN_FLIGHT_GRACE_MS - 1,
+      ),
+      owner: 'other-tab',
+    };
+    await store.saveThread(stalled);
+
+    expect((await store.listThreads())[0].inFlight).toBe(false);
+  });
+
+  it('keeps flagging a thread this tab is still streaming, however long it takes', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const mine = {
+      ...chat(
+        't1',
+        [msg('user', 'q'), msg('assistant', '', 'streaming')],
+        Date.now() - IN_FLIGHT_GRACE_MS * 10,
+      ),
+      owner: getTabId(),
+    };
+    await store.saveThread(mine);
+
+    expect((await store.listThreads())[0].inFlight).toBe(true);
   });
 
   it('returns null for an unknown thread', async () => {
@@ -482,7 +543,7 @@ describe('createLocalStoragePersistence', () => {
     expect((await store.listThreads()).map((t) => t.threadId).sort()).toEqual(['a', 'b']);
   });
 
-  it('drops tombstones before threads when a delete does not fit in storage', async () => {
+  it('sheds threads before the tombstone of the delete being recorded', async () => {
     const store = createLocalStoragePersistence({ storage });
     await store.saveThread(chat('a', turns(1), Date.now() - 1000));
     await store.saveThread(chat('b', turns(1)));
@@ -496,8 +557,31 @@ describe('createLocalStoragePersistence', () => {
 
     await store.deleteThread('a');
 
-    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['b']);
-    expect(JSON.parse(storage.getItem(key)!).deleted).toEqual({});
+    // An evicted thread is written back by the tab holding it; a lost tombstone cannot be recovered.
+    expect(await store.isThreadDeleted!('a')).toBe(true);
+    expect(await store.isThreadDeleted!('b')).toBe(false);
+  });
+
+  it('sheds the oldest tombstones before evicting any thread', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const kept = chat('c', turns(1));
+    await store.saveThread(chat('a', turns(1), Date.now() - 2000));
+    await store.saveThread(chat('b', turns(1), Date.now() - 1000));
+    await store.saveThread(kept);
+    await store.deleteThread('a');
+    await store.deleteThread('b');
+
+    const stored = JSON.parse(storage.getItem(key)!);
+    storage.quotaBytes = JSON.stringify({
+      version: PERSISTED_CHAT_VERSION,
+      threads: stored.threads,
+      deleted: { b: stored.deleted.b },
+    }).length;
+    await store.saveThread(kept);
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['c']);
+    expect(Object.keys(JSON.parse(storage.getItem(key)!).deleted)).toEqual(['b']);
   });
 
   it('removes the key when the last thread is deleted and the tombstone does not fit', async () => {
@@ -583,6 +667,30 @@ describe('createLocalStoragePersistence', () => {
       '"t1"',
     );
     window.localStorage.clear();
+  });
+
+  it('uses window.sessionStorage for the session area', async () => {
+    window.sessionStorage.clear();
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const store = createLocalStoragePersistence({ storageArea: 'session' });
+    await store.saveThread(chat('t1', turns(1)));
+
+    expect(window.sessionStorage.getItem(key)).toContain('"t1"');
+    expect(window.localStorage.getItem(key)).toBeNull();
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['t1']);
+    window.sessionStorage.clear();
+  });
+
+  it('only reacts to storage events from its own area', () => {
+    const listener = jest.fn();
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}:area`;
+    const store = createLocalStoragePersistence({ namespace: 'area', storageArea: 'session' });
+    const unsubscribe = store.subscribe!(listener);
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: window.localStorage }));
+    expect(listener).not.toHaveBeenCalled();
+    window.dispatchEvent(new StorageEvent('storage', { key, storageArea: window.sessionStorage }));
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
   });
 });
 

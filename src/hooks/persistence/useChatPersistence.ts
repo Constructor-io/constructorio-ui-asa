@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
-import { ChatMessage, ChatPersistence, PersistedChat } from '../../types';
+import { ChatMessage, ChatPersistence, PersistedChat, PersistenceScope } from '../../types';
 import {
   findRekeyedThread,
   foreignStreamRemainingMs,
@@ -22,6 +22,8 @@ import useForeignStream from './useForeignStream';
 
 interface Params {
   store: ChatPersistence | undefined;
+  /** Whose store it is; a switch from `'guest'` to `'user'` carries the conversation over. */
+  scope?: PersistenceScope;
   session: ChatSession;
   initialThreadId?: string;
   messages: ChatMessage[];
@@ -36,6 +38,7 @@ interface Params {
 export default function useChatPersistence(params: Params) {
   const {
     store,
+    scope,
     session,
     initialThreadId,
     messages,
@@ -65,15 +68,27 @@ export default function useChatPersistence(params: Params) {
   } = useForeignStream(session);
 
   // Reset during render so the previous store's conversation never paints under the new one.
-  const [renderedStore, setRenderedStore] = useState(store);
-  if (renderedStore !== store) {
-    setRenderedStore(store);
-    setMessages([]);
+  // A login keeps the guest conversation on screen instead and moves it into the shopper's store.
+  const [rendered, setRendered] = useState({ store, scope });
+  const carryOverFromRef = useRef<ChatPersistence | undefined>(undefined);
+  if (rendered.store !== store) {
+    const carryOver =
+      rendered.store &&
+      store &&
+      rendered.scope === 'guest' &&
+      scope === 'user' &&
+      messages.length > 0;
+    setRendered({ store, scope });
     setThreads([]);
-    setActiveThreadId(null);
-    setForeignInFlight(false);
-    setIsStreaming(false);
-    setIsHydrating(Boolean(store));
+    if (carryOver) {
+      carryOverFromRef.current = rendered.store;
+    } else {
+      setMessages([]);
+      setActiveThreadId(null);
+      setForeignInFlight(false);
+      setIsStreaming(false);
+      setIsHydrating(Boolean(store));
+    }
   }
 
   /** Puts a stored conversation on screen and makes it the one this tab continues. */
@@ -152,8 +167,30 @@ export default function useChatPersistence(params: Params) {
   // Restore on mount, and again from scratch whenever the store changes.
   const storeInitializedRef = useRef(false);
   useEffect(() => {
+    const carryOverFrom = carryOverFromRef.current;
+    carryOverFromRef.current = undefined;
+    if (carryOverFrom && store) {
+      // A login mid-conversation: the guest conversation continues as the shopper's own.
+      stopForeign();
+      invalidateThreads();
+      resetWrites();
+      const guestId = session.storageThreadId;
+      session.orphanIds = [];
+      session.lastSyncedAt = 0;
+      session.loadRequest += 1;
+      session.interacted = true;
+      if (guestId) carryOverFrom.deleteThread(guestId).catch(() => {});
+      if (session.isStreaming) {
+        session.dirty = true;
+      } else {
+        session.dirty = false;
+        persistNow()?.then(refreshThreads);
+      }
+      setIsHydrating(false);
+      return undefined;
+    }
     if (storeInitializedRef.current) {
-      // The store changed (e.g. a login): start over instead of saving the old conversation into it.
+      // The store changed (e.g. a logout): start over instead of saving the old conversation into it.
       clearForeignTimer();
       cancelStream();
       resetConversation(session);

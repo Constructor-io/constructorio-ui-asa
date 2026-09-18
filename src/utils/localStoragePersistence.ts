@@ -4,6 +4,7 @@ import type {
   ClearPersistedConversationsOptions,
   LocalStoragePersistenceOptions,
   PersistedChat,
+  StorageArea,
   ThreadSummary,
 } from '../types';
 import {
@@ -11,7 +12,7 @@ import {
   DEFAULT_PERSISTENCE_TTL_MS,
   PERSISTED_CHAT_VERSION,
   getThreadTitle,
-  isInFlight,
+  isThreadStreaming,
   mergeMessages,
 } from './chatThreads';
 import isPersistedChat from './chatRecordValidation';
@@ -54,13 +55,21 @@ async function withStorageLock(name: string, fn: () => void): Promise<void> {
 }
 
 /** The storage to use, or `null` when none is available (server, or access blocked). */
-function resolveStorage(storage?: Storage): Storage | null {
+function resolveStorage(storage: Storage | undefined, area: StorageArea): Storage | null {
   if (storage) return storage;
   try {
-    return typeof window !== 'undefined' ? window.localStorage : null;
+    if (typeof window === 'undefined') return null;
+    return area === 'session' ? window.sessionStorage : window.localStorage;
   } catch {
     return null;
   }
+}
+
+const isGuest = (userId: string | null | undefined) => userId == null || userId === '';
+
+/** Guests live in `sessionStorage`, so their history ends with the tab; shoppers keep theirs in `localStorage`. */
+export function storageAreaFor(userId: string | null | undefined): StorageArea {
+  return isGuest(userId) ? 'session' : 'local';
 }
 
 /** Namespace the provider stores under: api key, domain and, for a signed-in shopper, the user id. */
@@ -69,7 +78,7 @@ export function persistenceNamespace(parts: {
   domain?: string;
   userId?: string | null;
 }): string {
-  const userId = parts.userId == null || parts.userId === '' ? undefined : String(parts.userId);
+  const userId = isGuest(parts.userId) ? undefined : String(parts.userId);
   return [parts.apiKey ?? 'default', parts.domain ?? 'default', userId]
     .filter((part): part is string => part !== undefined)
     .map(encodeURIComponent)
@@ -83,7 +92,7 @@ function storageKeyFor(key: string, namespace?: string): string {
 /** Deletes every stored conversation of one shopper, or of the guest without `userId`; open tabs follow. */
 export function clearPersistedConversations(options: ClearPersistedConversationsOptions): void {
   const { apiKey, domain = 'chatbot', userId, storage: storageOption } = options;
-  const storage = resolveStorage(storageOption);
+  const storage = resolveStorage(storageOption, storageAreaFor(userId));
   if (!storage) return;
   const key = storageKeyFor(
     DEFAULT_PERSISTENCE_KEY,
@@ -113,6 +122,7 @@ export function createLocalStoragePersistence(
     ttlMs = DEFAULT_PERSISTENCE_TTL_MS,
     maxTurns = Infinity,
     maxThreads = Infinity,
+    storageArea = 'local',
     storage: storageOption,
   } = options;
   const storageKey = storageKeyFor(key, namespace);
@@ -149,7 +159,7 @@ export function createLocalStoragePersistence(
   };
 
   const read = (): StoredThreads => {
-    const storage = resolveStorage(storageOption);
+    const storage = resolveStorage(storageOption, storageArea);
     return parse(storage ? readRaw(storage) : null);
   };
 
@@ -176,23 +186,35 @@ export function createLocalStoragePersistence(
   const isEmpty = (data: StoredThreads) =>
     Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0;
 
-  // When storage is full, shed other threads oldest first, then the saved thread's oldest turns, then tombstones.
+  // A tombstone is the only thing stopping another tab from writing a deleted thread back, so it
+  // outranks the thread data it protects: `keepNewest` spares the delete being recorded right now.
+  const tryWriteShedding = (storage: Storage, data: StoredThreads, keepNewest = false): boolean => {
+    if (tryWrite(storage, data)) return true;
+    const oldestFirst = Object.entries(data.deleted ?? {})
+      .sort((a, b) => a[1] - b[1])
+      .map(([id]) => id)
+      .slice(0, keepNewest ? -1 : undefined);
+    let next = data;
+    for (let i = 0; i < oldestFirst.length; i += 1) {
+      const { [oldestFirst[i]]: shed, ...deleted } = next.deleted ?? {};
+      next = { ...next, deleted };
+      if (tryWrite(storage, next)) return true;
+    }
+    return false;
+  };
+
+  // When storage is full, shed stale tombstones, then other threads oldest first, then the saved
+  // thread's oldest turns, and only then the tombstone of the delete being recorded.
   const write = (storage: Storage, data: StoredThreads, priorityThreadId?: string) => {
     if (isEmpty(data)) {
       remove(storage);
       return;
     }
-    if (tryWrite(storage, data)) return;
+    if (tryWriteShedding(storage, data, true)) return;
 
     const priority = priorityThreadId ? data.threads[priorityThreadId] : undefined;
-    if (!priority) {
-      if (Object.keys(data.threads).length === 0) remove(storage);
-      else tryWrite(storage, { ...data, deleted: {} });
-      return;
-    }
-
     const oldestFirst = sortedThreads(data)
-      .filter((chat) => chat.threadId !== priority.threadId)
+      .filter((chat) => chat.threadId !== priority?.threadId)
       .reverse();
     let next = data;
     for (let i = 0; i < oldestFirst.length; i += 1) {
@@ -201,17 +223,24 @@ export function createLocalStoragePersistence(
       if (tryWrite(storage, next)) return;
     }
 
+    if (!priority) {
+      // Nothing left to shed but the tombstones themselves; with no threads to keep, drop the key.
+      if (Object.keys(data.threads).length === 0) remove(storage);
+      else tryWriteShedding(storage, next);
+      return;
+    }
+
     let chat = priority;
     while (chat.messages.length > 2) {
       chat = { ...chat, messages: trimToTurns(chat.messages.slice(2), maxTurns) };
       next = { ...next, threads: { [chat.threadId]: chat } };
       if (tryWrite(storage, next)) return;
     }
-    if (tryWrite(storage, { ...next, deleted: {} })) return;
+    if (tryWriteShedding(storage, next)) return;
 
     const { [priority.threadId]: dropped, ...rest } = data.threads;
     const others: StoredThreads = { ...data, threads: rest };
-    if (!isEmpty(others)) tryWrite(storage, others);
+    if (!isEmpty(others)) tryWriteShedding(storage, others);
   };
 
   // Redo the merge if another tab wrote between our read and this write.
@@ -220,7 +249,7 @@ export function createLocalStoragePersistence(
     mutate: (data: StoredThreads) => StoredThreads | null,
     priorityThreadId?: string,
   ) => {
-    const storage = resolveStorage(storageOption);
+    const storage = resolveStorage(storageOption, storageArea);
     if (!storage) return;
     for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt += 1) {
       const raw = readRaw(storage);
@@ -273,12 +302,13 @@ export function createLocalStoragePersistence(
 
   return {
     async listThreads(): Promise<ThreadSummary[]> {
-      return sortedThreads(read()).map(({ threadId, messages, createdAt, updatedAt }) => ({
-        threadId,
-        title: getThreadTitle(messages),
-        createdAt,
-        updatedAt,
-        inFlight: isInFlight(messages),
+      const now = Date.now();
+      return sortedThreads(read()).map((chat) => ({
+        threadId: chat.threadId,
+        title: getThreadTitle(chat.messages),
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt,
+        inFlight: isThreadStreaming(chat, now),
       }));
     },
 
@@ -288,7 +318,7 @@ export function createLocalStoragePersistence(
 
     async isThreadDeleted(threadId: string): Promise<boolean> {
       // Deletes leave tombstones, so a missing key means the store was cleared from outside.
-      const storage = resolveStorage(storageOption);
+      const storage = resolveStorage(storageOption, storageArea);
       if (!storage || readRaw(storage) === null) return true;
       return read().deleted?.[threadId] !== undefined;
     },
@@ -317,7 +347,7 @@ export function createLocalStoragePersistence(
     subscribe(listener: () => void): () => void {
       if (typeof window === 'undefined') return () => {};
       const onStorage = (event: StorageEvent) => {
-        const area = resolveStorage(storageOption);
+        const area = resolveStorage(storageOption, storageArea);
         if (area && event.storageArea && event.storageArea !== area) return;
         if (event.key === null || event.key === storageKey) listener();
       };

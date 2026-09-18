@@ -6,6 +6,7 @@ import {
   getThreadTitle,
   IN_FLIGHT_GRACE_MS,
   isInFlight,
+  isThreadStreaming,
   isLocalThreadId,
   mergeMessages,
   nextMessageCounter,
@@ -172,6 +173,32 @@ describe('findRekeyedThread', () => {
 
     await expect(findRekeyedThread(store, undefined)).resolves.toBeNull();
     await expect(findRekeyedThread(store, 'nope')).resolves.toBeNull();
+  });
+});
+
+describe('isThreadStreaming', () => {
+  const streaming = (updatedAt: number, owner?: string): PersistedChat => ({
+    ...chat('t', [msg('user', 'q'), msg('assistant', '', 'streaming')], updatedAt),
+    owner,
+  });
+
+  it('is false for a finished answer', () => {
+    expect(isThreadStreaming(chat('t', turns(1)), 5000)).toBe(false);
+  });
+
+  it("is true for this tab's own record however old it is", () => {
+    expect(isThreadStreaming(streaming(1000, getTabId()), 1000 + IN_FLIGHT_GRACE_MS * 10)).toBe(
+      true,
+    );
+  });
+
+  it('is true for another tab within the grace period and false after it', () => {
+    expect(isThreadStreaming(streaming(1000, 'other-tab'), 1000 + 10_000)).toBe(true);
+    expect(isThreadStreaming(streaming(1000, 'other-tab'), 1000 + IN_FLIGHT_GRACE_MS)).toBe(false);
+  });
+
+  it("treats an ownerless record as another tab's", () => {
+    expect(isThreadStreaming(streaming(1000), 1000 + IN_FLIGHT_GRACE_MS)).toBe(false);
   });
 });
 

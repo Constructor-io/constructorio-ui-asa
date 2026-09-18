@@ -7,7 +7,7 @@ import { createMockCioClient } from '../../local_examples/mockCioClient';
 const STORAGE_KEY = 'cio-asa:chat:v1:key_test:chatbot';
 
 function seedStorage() {
-  window.localStorage.setItem(
+  window.sessionStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
       version: 1,
@@ -41,8 +41,8 @@ function renderChat(ref?: React.Ref<ChatHandle>) {
 }
 
 describe('Chat persistence', () => {
-  beforeEach(() => window.localStorage.clear());
-  afterEach(() => window.localStorage.clear());
+  beforeEach(() => window.sessionStorage.clear());
+  afterEach(() => window.sessionStorage.clear());
 
   it('shows the restored conversation instead of the welcome screen', async () => {
     seedStorage();
@@ -72,7 +72,7 @@ describe('Chat persistence', () => {
 
     expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();
     await waitFor(() =>
-      expect(window.localStorage.getItem(STORAGE_KEY)).not.toContain('restored question'),
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).not.toContain('restored question'),
     );
   });
 
@@ -103,7 +103,7 @@ describe('Chat persistence', () => {
     act(() => ref.current!.newThread());
     expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();
     await waitFor(() => expect(onThreadsChange).toHaveBeenLastCalledWith(expect.any(Array), null));
-    expect(window.localStorage.getItem(STORAGE_KEY)).toContain('restored question');
+    expect(window.sessionStorage.getItem(STORAGE_KEY)).toContain('restored question');
 
     await act(() => ref.current!.switchThread('t1'));
     expect(await screen.findByText('restored question')).toBeInTheDocument();

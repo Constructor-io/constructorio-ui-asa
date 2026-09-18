@@ -85,7 +85,7 @@ describe('CioAsaProvider', () => {
   });
 
   it('scopes the built-in store by api key and falls back to a default domain', async () => {
-    window.localStorage.clear();
+    window.sessionStorage.clear();
     let received: AsaContextValue | undefined;
     render(
       <CioAsaProvider
@@ -105,8 +105,8 @@ describe('CioAsaProvider', () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:default')).toContain('t1');
-    window.localStorage.clear();
+    expect(window.sessionStorage.getItem('cio-asa:chat:v1:key_test:default')).toContain('t1');
+    window.sessionStorage.clear();
   });
 
   describe('userId', () => {
@@ -140,9 +140,29 @@ describe('CioAsaProvider', () => {
 
     beforeEach(() => {
       window.localStorage.clear();
+      window.sessionStorage.clear();
       received = undefined;
     });
-    afterEach(() => window.localStorage.clear());
+    afterEach(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+
+    it('keeps a shopper in localStorage and reports the store as theirs', async () => {
+      renderWith({ userId: 'user-0' });
+      expect(received!.persistenceScope).toBe('user');
+      await save('t0');
+      expect(window.localStorage.getItem(`${KEY}:user-0`)).toContain('t0');
+      expect(window.sessionStorage.getItem(`${KEY}:user-0`)).toBeNull();
+    });
+
+    it('keeps the guest in sessionStorage, so the history ends with the tab', async () => {
+      renderWith({ userId: null });
+      expect(received!.persistenceScope).toBe('guest');
+      await save('tg');
+      expect(window.sessionStorage.getItem(KEY)).toContain('tg');
+      expect(window.localStorage.getItem(KEY)).toBeNull();
+    });
 
     it('is set on the client built from an api key, so requests and storage share it', async () => {
       renderWith({ userId: 'user-1' });
@@ -172,7 +192,7 @@ describe('CioAsaProvider', () => {
         cioClient: { agent: {}, options: { apiKey: 'key_test', userId: 'stale' } },
       });
       await save('t4');
-      expect(window.localStorage.getItem(KEY)).toContain('t4');
+      expect(window.sessionStorage.getItem(KEY)).toContain('t4');
       expect(window.localStorage.getItem(`${KEY}:stale`)).toBeNull();
       warn.mockRestore();
     });
@@ -180,14 +200,14 @@ describe('CioAsaProvider', () => {
     it('switches to a separate history on login and back to the guest one on logout', async () => {
       const view = renderWith({ userId: null });
       await save('guest');
-      expect(window.localStorage.getItem(KEY)).toContain('guest');
+      expect(window.sessionStorage.getItem(KEY)).toContain('guest');
 
       view.rerender(element({ userId: 'user-4' }));
       expect(clientUserId()).toBe('user-4');
       expect(await received!.persistence!.listThreads()).toEqual([]);
       await save('signed-in');
       expect(window.localStorage.getItem(`${KEY}:user-4`)).toContain('signed-in');
-      expect(window.localStorage.getItem(KEY)).not.toContain('signed-in');
+      expect(window.sessionStorage.getItem(KEY)).not.toContain('signed-in');
 
       view.rerender(element({ userId: null }));
       expect(clientUserId()).toBeUndefined();

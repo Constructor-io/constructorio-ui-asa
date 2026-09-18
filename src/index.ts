@@ -49,6 +49,8 @@ export type {
   ChatPersistence,
   ClearPersistedConversationsOptions,
   PersistedChat,
+  PersistenceScope,
+  StorageArea,
   ThreadSummary,
   // Behavioral tracking
   AsaCallbacks,

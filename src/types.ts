@@ -34,6 +34,8 @@ export interface AsaContextValue {
   section?: string;
   /** Resolved chat persistence store, or `undefined` when persistence is off. */
   persistence?: ChatPersistence;
+  /** Whose store `persistence` is: the guest's (per tab) or a signed-in shopper's (per browser). */
+  persistenceScope?: PersistenceScope;
 }
 
 export interface RequestConfigs extends IAgentParameters {
@@ -57,18 +59,20 @@ export interface UrlHelpers {
 export interface CioAsaProviderProps
   extends Omit<
     Partial<AsaContextValue>,
-    'setCioClientOptions' | 'cioClientOptions' | 'persistence'
+    'setCioClientOptions' | 'cioClientOptions' | 'persistence' | 'persistenceScope'
   > {
   apiKey?: string;
   /**
-   * Persist the conversation so it survives page loads. Stored in `localStorage`, keyed by
-   * api key + domain + user id, with a 7 day TTL. Off when omitted.
+   * Persist the conversation so it survives page loads. With `userId` it is kept in
+   * `localStorage` for 7 days, keyed by api key + domain + user id; without one (a guest) it is
+   * kept in `sessionStorage` and ends with the tab. Off when omitted.
    */
   persistConversation?: boolean;
   /**
    * The signed-in shopper's id, the same stable non-personal one given to Constructor for
    * personalization. Set it on login and `null` on logout: each shopper only sees their own
-   * history. With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id.
+   * history, and a guest conversation is carried over into the shopper's history on login.
+   * With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id.
    */
   userId?: string | null;
 }
@@ -202,6 +206,11 @@ export interface UseAsaResultsOptions {
 
 // --- Persistence ---
 
+/** Where conversations live: `'session'` ends with the tab, `'local'` survives it. */
+export type StorageArea = 'local' | 'session';
+/** Whose conversations a store holds. */
+export type PersistenceScope = 'guest' | 'user';
+
 /** A stored conversation. `threadId` is the server thread id, or a `local-` id for non-conversational domains. */
 export interface PersistedChat {
   version: 1;
@@ -258,7 +267,7 @@ export interface ClearPersistedConversationsOptions {
   domain?: string;
   /** The shopper whose history to delete. Omit or pass `null` for the guest history. */
   userId?: string | null;
-  /** Storage to clear instead of `window.localStorage`. */
+  /** Storage to clear instead of the default: `localStorage` for a shopper, `sessionStorage` for the guest. */
   storage?: Storage;
 }
 
@@ -273,7 +282,9 @@ export interface LocalStoragePersistenceOptions {
   maxTurns?: number;
   /** Cap on threads kept. Unlimited by default. */
   maxThreads?: number;
-  /** Storage to use instead of `window.localStorage` (e.g. `sessionStorage`). */
+  /** Which browser storage to use. Default `'local'`. */
+  storageArea?: StorageArea;
+  /** Storage to use instead of the browser's; takes precedence over `storageArea`. */
   storage?: Storage;
 }
 

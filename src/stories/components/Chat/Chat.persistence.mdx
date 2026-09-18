@@ -5,7 +5,7 @@ import * as PersistenceStories from './Chat.persistence.stories';
 
 # Persistent Chat
 
-By default a conversation lives only in memory and is lost on page load. Enable `persistConversation` on `CioAsaProvider` and the transcript plus the agent's thread id are kept in the browser, so a shopper who navigates between product pages, reloads, or comes back later continues where they left off.
+By default a conversation lives only in memory and is lost on page load. Enable `persistConversation` on `CioAsaProvider` and the transcript plus the agent's thread id are kept in the browser, so a shopper who navigates between product pages or reloads continues where they left off. A signed-in shopper (one with a `userId`) also comes back to it later and in other tabs; a guest's conversation ends with the tab.
 
 ```jsx
 <CioAsaProvider apiKey="YOUR_API_KEY" persistConversation>
@@ -21,7 +21,7 @@ Everything below is optional and only active when `persistConversation` is set o
 {`
 | Where | Name | What it does |
 |-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in \`localStorage\` |
+| \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in the browser: in \`localStorage\` for a signed-in shopper, in \`sessionStorage\` for a guest |
 | \`CioAsaProvider\` prop | \`userId\` | Whose conversation this is. Pass the signed-in shopper's id on login, \`null\` (or nothing) on logout. See [Login and logout](#login-and-logout) |
 | function | \`clearPersistedConversations({ apiKey, domain, userId })\` | Deletes every stored conversation of that shopper (or of the guest without \`userId\`) in this and every other tab. Optional, for a logout that must leave nothing behind |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | Fires after the initial load and whenever the stored list or the active conversation changes, including changes made in another tab. Use it to render a history list outside \`Chat\` |
@@ -39,7 +39,7 @@ Everything below is optional and only active when `persistConversation` is set o
 
 ## Login and logout
 
-History is stored per shopper, and the shopper is whoever `userId` says. Set it on login, remove it (or pass `null`) on logout. Everything else follows from that: when the id changes the chat switches storage, clears the screen, loads that shopper's own history and never reads a key that belongs to another id. This holds in every open tab. Use the same id you give Constructor for personalization, stable for that person over time and not an email or anything personal, because it becomes part of a `localStorage` key that any script on the page can read.
+History is stored per shopper, and the shopper is whoever `userId` says. Set it on login, remove it (or pass `null`) on logout. Everything else follows from that. On login the conversation on screen, if any, is carried over into the shopper's history and continues without interruption, even mid-answer; the guest copy is removed. When one signed-in id is replaced by another, or on logout, the chat switches storage, clears the screen and loads that shopper's own history, never reading a key that belongs to another id. This holds in every open tab. Use the same id you give Constructor for personalization, stable for that person over time and not an email or anything personal, because it becomes part of a `localStorage` key that any script on the page can read.
 
 ```jsx
 <CioAsaProvider apiKey="YOUR_API_KEY" persistConversation userId={user?.id ?? null}>
@@ -59,7 +59,7 @@ function onLogout(user) {
 }
 ```
 
-Guests share one history per browser, the same way a guest cart works. Someone else using the same browser without signing in sees it, just as they would see the cart. `clearPersistedConversations` without `userId` deletes the guest history.
+A guest's history lives in `sessionStorage`: it survives reloads and navigation within the tab and is gone when the tab is closed, so the next person using the browser never sees it. Each tab is its own guest session, so a product opened in a new tab starts a fresh conversation. Signing in carries the current tab's conversation into the shopper's history. `clearPersistedConversations` without `userId` deletes the guest history of the current tab.
 
 ## How it works
 
@@ -67,7 +67,7 @@ Guests share one history per browser, the same way a guest cart works. Someone e
 {`
 | Aspect | Behaviour |
 |--------|-----------|
-| Storage key | \`cio-asa:chat:v1:<apiKey>:<domain>\`, plus the \`userId\` when one is set, so one shopper's chats follow them across pages of the same site and a login change on a shared browser starts a separate history |
+| Storage | A signed-in shopper's chats live in \`localStorage\` under \`cio-asa:chat:v1:<apiKey>:<domain>:<userId>\`, so they follow them across pages and tabs of the same site and a login change on a shared browser starts a separate history. A guest's chats live in \`sessionStorage\` under \`cio-asa:chat:v1:<apiKey>:<domain>\` and end with the tab |
 | What is stored | Messages, product results as received, and the agent's \`thread_id\`; the next message continues the same server-side conversation |
 | When it saves | When the answer stream starts, when it completes (or fails), and as a settled snapshot on \`pagehide\`, on unmount, and on \`newThread\` / \`switchThread\` while an answer is still in flight. Never per streamed chunk |
 | On load | The most recent thread is restored before anything renders, so there is no welcome-screen flash. \`isHydrating\` is \`true\` meanwhile |
@@ -79,7 +79,7 @@ Guests share one history per browser, the same way a guest cart works. Someone e
 
 Storage stays on the device. Another browser or device starts fresh, and so does the agent's own memory, which is scoped per browser as well.
 
-Two tabs on the same thread merge their turns instead of overwriting each other: writes go through a Web Lock, the merge is redone if another tab committed in between, and an older snapshot can add turns but never regresses a message a newer one already settled. In browsers without Web Locks (Safari before 15.4) the merge is best effort: two tabs writing in the very same instant can still lose the slower turn.
+Two tabs of a signed-in shopper on the same thread merge their turns instead of overwriting each other: writes go through a Web Lock, the merge is redone if another tab committed in between, and an older snapshot can add turns but never regresses a message a newer one already settled. In browsers without Web Locks (Safari before 15.4) the merge is best effort: two tabs writing in the very same instant can still lose the slower turn.
 
 ## Several conversations
 

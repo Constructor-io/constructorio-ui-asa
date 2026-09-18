@@ -137,6 +137,45 @@ function createStartedThenPendingStream(threadId?: string) {
   } as unknown as ReadableStream<StreamEvent>;
 }
 
+/** A stream fed by hand: `push` queues an event, `end` closes it. */
+function createControllableStream() {
+  const queue: StreamEvent[] = [];
+  let ended = false;
+  const waiting: Array<() => void> = [];
+  const notify = () => waiting.splice(0).forEach((wake) => wake());
+  const next = (): Promise<void> =>
+    new Promise((resolve) => {
+      waiting.push(resolve);
+    });
+  const stream = {
+    getReader() {
+      return {
+        read: async () => {
+          while (queue.length === 0 && !ended) {
+            // eslint-disable-next-line no-await-in-loop
+            await next();
+          }
+          if (queue.length > 0) return { done: false, value: queue.shift()! };
+          return { done: true, value: undefined };
+        },
+        cancel: () => Promise.resolve(),
+        releaseLock: () => {},
+      };
+    },
+  } as unknown as ReadableStream<StreamEvent>;
+  return {
+    stream,
+    push(event: StreamEvent) {
+      queue.push(event);
+      notify();
+    },
+    end() {
+      ended = true;
+      notify();
+    },
+  };
+}
+
 const startEvent = (threadId: string): StreamEvent => ({
   type: 'start',
   data: { thread_id: threadId },
@@ -632,8 +671,8 @@ describe('useAsaResults persistence', () => {
     expect(result.current.messages).toEqual([]);
   });
 
-  it('uses window.localStorage keyed by api key and domain when persistence is true', async () => {
-    window.localStorage.clear();
+  it('keeps a guest in window.sessionStorage keyed by api key and domain when persistence is true', async () => {
+    window.sessionStorage.clear();
     const { client } = createMockCioClient({
       events: [startEvent('thread-ls'), { type: 'message', data: { text: 'Hi' } }],
     });
@@ -644,15 +683,16 @@ describe('useAsaResults persistence', () => {
     act(() => result.current.sendMessage('hello'));
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     await waitFor(() =>
-      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toContain(
+      expect(window.sessionStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toContain(
         'thread-ls',
       ),
     );
+    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toBeNull();
 
     const { result: reloaded } = renderWithPersistence(client, true);
     await waitFor(() => expect(reloaded.current.isHydrating).toBe(false));
     expect(reloaded.current.messages.map((m) => m.text)).toEqual(['hello', 'Hi']);
-    window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
   describe('thread switching', () => {
@@ -1307,8 +1347,9 @@ describe('useAsaResults persistence', () => {
     });
   });
 
-  it('starts a separate history on login and returns to the anonymous one on logout', async () => {
-    window.localStorage.clear();
+  describe('login and logout', () => {
+    const GUEST_KEY = 'cio-asa:chat:v1:key_test:chatbot';
+    const userKey = (id: string) => `${GUEST_KEY}:${id}`;
     const events: StreamEvent[] = [
       startEvent('thread-x'),
       { type: 'message', data: { text: 'Hi' } },
@@ -1318,45 +1359,169 @@ describe('useAsaResults persistence', () => {
       (client as unknown as { options: object }).options = { apiKey: 'key_test', userId };
       return client;
     };
-    let client = clientFor();
-    const hook = renderHook(() => useAsaResults(), {
-      wrapper: ({ children }) => (
-        <CioAsaProvider
-          cioClient={client}
-          staticRequestConfigs={{ domain: 'chatbot' }}
-          persistConversation>
-          {children}
-        </CioAsaProvider>
-      ),
+    function renderAs(initialUserId?: string) {
+      let client = clientFor(initialUserId);
+      const hook = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            persistConversation>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+      return {
+        ...hook,
+        become(userId?: string) {
+          client = clientFor(userId);
+          hook.rerender();
+        },
+      };
+    }
+
+    beforeEach(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
     });
-    await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
-    act(() => hook.result.current.sendMessage('as guest'));
-    await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
-    await waitFor(() =>
-      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).toContain('as guest'),
-    );
+    afterEach(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
 
-    client = clientFor('user-1');
-    hook.rerender();
-    await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
-    expect(hook.result.current.messages).toEqual([]);
-    act(() => hook.result.current.sendMessage('as user'));
-    await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
-    await waitFor(() =>
-      expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-1')).toContain(
-        'as user',
-      ),
-    );
-    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot')).not.toContain(
-      'as user',
-    );
+    it('carries the guest conversation into the shopper history on login', async () => {
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as guest'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(window.sessionStorage.getItem(GUEST_KEY)).toContain('as guest'));
 
-    client = clientFor();
-    hook.rerender();
-    await waitFor(() =>
-      expect(hook.result.current.messages.map((m) => m.text)).toEqual(['as guest', 'Hi']),
-    );
-    window.localStorage.clear();
+      hook.become('user-1');
+
+      expect(hook.result.current.isHydrating).toBe(false);
+      expect(hook.result.current.messages.map((m) => m.text)).toEqual(['as guest', 'Hi']);
+      expect(hook.result.current.activeThreadId).toBe('thread-x');
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('as guest'),
+      );
+      await waitFor(() =>
+        expect(window.sessionStorage.getItem(GUEST_KEY)).not.toContain('as guest'),
+      );
+      await waitFor(() =>
+        expect(hook.result.current.threads.map((t) => t.threadId)).toEqual(['thread-x']),
+      );
+
+      act(() => hook.result.current.sendMessage('as user'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('as user'),
+      );
+      expect(window.sessionStorage.getItem(GUEST_KEY)).not.toContain('as user');
+    });
+
+    it('starts an empty guest conversation on logout and keeps the shopper history', async () => {
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as guest'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      hook.become('user-1');
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('as guest'),
+      );
+
+      hook.become();
+
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      expect(hook.result.current.messages).toEqual([]);
+      expect(hook.result.current.threads).toEqual([]);
+      expect(window.localStorage.getItem(userKey('user-1'))).toContain('as guest');
+
+      hook.become('user-1');
+      await waitFor(() =>
+        expect(hook.result.current.messages.map((m) => m.text)).toEqual(['as guest', 'Hi']),
+      );
+    });
+
+    it('does not carry a conversation from one shopper to another', async () => {
+      const hook = renderAs('user-1');
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as user one'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('as user one'),
+      );
+
+      hook.become('user-2');
+
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      expect(hook.result.current.messages).toEqual([]);
+      expect(window.localStorage.getItem(userKey('user-2'))).toBeNull();
+      expect(window.localStorage.getItem(userKey('user-1'))).toContain('as user one');
+    });
+
+    it('does not carry an empty guest conversation and loads the shopper history instead', async () => {
+      window.localStorage.setItem(
+        userKey('user-1'),
+        JSON.stringify({
+          version: 1,
+          threads: {
+            old: {
+              version: 1,
+              threadId: 'old',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              messages: [userMsg('u1', 'earlier'), aiMsg('a1', 'answer')],
+            },
+          },
+        }),
+      );
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      expect(hook.result.current.messages).toEqual([]);
+
+      hook.become('user-1');
+
+      await waitFor(() =>
+        expect(hook.result.current.messages.map((m) => m.text)).toEqual(['earlier', 'answer']),
+      );
+    });
+
+    it('finishes an answer that was streaming at login in the shopper history', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events });
+      (client as unknown as { options: object }).options = { apiKey: 'key_test' };
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      let current = client;
+      const hook = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={current}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            persistConversation>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as guest'));
+      await act(async () => pending.push(startEvent('thread-x')));
+      await waitFor(() => expect(window.sessionStorage.getItem(GUEST_KEY)).toContain('as guest'));
+
+      current = clientFor('user-1');
+      hook.rerender();
+      expect(hook.result.current.isStreaming).toBe(true);
+      expect(hook.result.current.messages[0]?.text).toBe('as guest');
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'late answer' } });
+        pending.end();
+      });
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('late answer'),
+      );
+      expect(window.sessionStorage.getItem(GUEST_KEY)).not.toContain('late answer');
+    });
   });
 
   it('forgets the conversation on screen when clearPersistedConversations runs in this tab', async () => {

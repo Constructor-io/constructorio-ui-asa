@@ -7,6 +7,7 @@ import * as defaultUrlHelpers from '../../utils/urlHelpers';
 import {
   createLocalStoragePersistence,
   persistenceNamespace,
+  storageAreaFor,
 } from '../../utils/localStoragePersistence';
 
 const normalizeUserId = (value: string | number | null | undefined): string | undefined =>
@@ -65,8 +66,10 @@ export default function CioAsaProvider(
     // Per-user namespace so a shared browser never shows the previous shopper's chat.
     return createLocalStoragePersistence({
       namespace: persistenceNamespace({ apiKey: resolvedApiKey, domain, userId }),
+      storageArea: storageAreaFor(userId),
     });
   }, [persistenceEnabled, resolvedApiKey, domain, userId]);
+  const persistenceScope = persistence && (userId === undefined ? 'guest' : 'user');
 
   const contextValue = useMemo(
     (): AsaContextValue => ({
@@ -79,6 +82,7 @@ export default function CioAsaProvider(
       callbacks,
       section,
       persistence,
+      persistenceScope,
     }),
     [
       cioClient,
@@ -89,6 +93,7 @@ export default function CioAsaProvider(
       callbacks,
       section,
       persistence,
+      persistenceScope,
     ],
   );
 
