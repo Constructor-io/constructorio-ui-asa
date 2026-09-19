@@ -102,7 +102,7 @@ function StatusBadge({ isStreaming }: { isStreaming: boolean }) {
 }
 
 function AsaResultsDisplay({ defaultPrompt, initialThreadId }: AsaResultsDisplayProps) {
-  const { messages, sendMessage, isStreaming } = useAsaResults({ initialThreadId });
+  const { messages, sendMessage, isStreaming, abort } = useAsaResults({ initialThreadId });
   const [inputValue, setInputValue] = useState(defaultPrompt || '');
 
   const handleSend = () => {
@@ -151,6 +151,23 @@ function AsaResultsDisplay({ defaultPrompt, initialThreadId }: AsaResultsDisplay
             cursor: isStreaming ? 'not-allowed' : 'pointer',
           }}>
           Send
+        </button>
+        <button
+          type='button'
+          onClick={abort}
+          disabled={!isStreaming}
+          title='Cancel the in-flight response, keeping the conversation and thread'
+          style={{
+            padding: '8px 16px',
+            fontSize: 14,
+            fontWeight: 600,
+            background: '#fff',
+            color: isStreaming ? '#b91c1c' : '#9ca3af',
+            border: `1px solid ${isStreaming ? '#fca5a5' : '#e5e7eb'}`,
+            borderRadius: 6,
+            cursor: isStreaming ? 'pointer' : 'not-allowed',
+          }}>
+          Stop
         </button>
       </div>
 

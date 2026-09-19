@@ -6,6 +6,7 @@ const defaultTranslations: Translations = {
   'CioAsa.input.placeholder': 'Ask a question about this product',
   'CioAsa.input.ariaLabel': 'Type your message',
   'CioAsa.input.sendAriaLabel': 'Send message',
+  'CioAsa.input.stopAriaLabel': 'Stop response',
   'CioAsa.welcome.title': 'Shopping Assistant',
   'CioAsa.welcome.placeholder': 'Ask anything',
   'CioAsa.welcome.sendButton': 'Chat',

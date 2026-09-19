@@ -11,6 +11,13 @@ import ChatMessageList from './ChatMessageList';
 import ChatInput from './ChatInput';
 
 export interface ChatHandle {
+  /**
+   * Cancel the in-flight response, keeping the conversation. The partial reply is kept
+   * and the thread is preserved, so the next message continues where it left off.
+   * No-op when nothing is streaming.
+   */
+  abort: () => void;
+  /** Cancel any active response, then reset the conversation and the thread. */
   clearHistory: () => void;
 }
 
@@ -44,6 +51,12 @@ interface ChatProps {
   translations?: Translations;
   /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
   initialThreadId?: string;
+  /**
+   * Whether the input's send button becomes a stop button while a reply streams.
+   * Defaults to `false`, so the packaged UI is unchanged unless you opt in. While it is
+   * off, cancelling is only reachable via `abort()` on the ref or your own input override.
+   */
+  showStopButton?: boolean;
 }
 
 // a11y: text for the screen-reader live region that voices the conversation
@@ -81,10 +94,11 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       componentOverrides,
       translations,
       initialThreadId,
+      showStopButton = false,
     },
     ref,
   ) => {
-    const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
+    const { messages, sendMessage, isStreaming, abort, clearHistory } = useAsaResults({
       initialThreadId,
     });
     const chatViewRef = useRef<HTMLDivElement>(null);
@@ -95,6 +109,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const announcement = getAnnouncement(messages, translations);
 
     useImperativeHandle(ref, () => ({
+      abort,
       clearHistory,
     }));
 
@@ -166,6 +181,9 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
               <ChatInput
                 onSubmit={sendMessage}
                 isDisabled={isStreaming}
+                isStreaming={isStreaming}
+                onAbort={abort}
+                showStopButton={showStopButton}
                 translations={translations}
                 componentOverrides={componentOverrides?.input}
               />

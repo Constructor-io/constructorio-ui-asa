@@ -25,6 +25,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const readerRef = useRef<ReadableStreamDefaultReader | null>(null);
   const threadIdRef = useRef<string | null>(options?.initialThreadId ?? null);
   const idCounterRef = useRef(0);
+  // The assistant message the in-flight stream is writing into, so `abort` can
+  // settle it without having to guess which message that is.
+  const activeAssistantIdRef = useRef<string | null>(null);
 
   const contextValue = useCioAsaContext();
   if (!contextValue) {
@@ -49,6 +52,22 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   callbacksRef.current = callbacks;
   const staticRequestConfigsRef = useRef(staticRequestConfigs);
   staticRequestConfigsRef.current = staticRequestConfigs;
+
+  /**
+   * Stops the in-flight stream. The kill switch is raised *before* cancelling because
+   * cancelling makes the pending `reader.read()` resolve `{ done: true }` — identical
+   * to a stream that ended on its own. Without the flag already set, the read loop
+   * would take the end-of-stream branch and report a load that never finished.
+   *
+   * Deliberately touches no state, so the unmount cleanup can share it.
+   */
+  const teardownStream = useCallback(() => {
+    killSwitchRef.current = true;
+    if (readerRef.current) {
+      readerRef.current.cancel();
+      readerRef.current = null;
+    }
+  }, []);
 
   const nextMessageId = useCallback(() => {
     idCounterRef.current += 1;
@@ -79,6 +98,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
         intent,
       };
 
+      activeAssistantIdRef.current = assistantMessage.id;
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsStreaming(true);
       isStreamingRef.current = true;
@@ -187,6 +207,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
           if (readerRef.current === reader) {
             reader.cancel();
             readerRef.current = null;
+            activeAssistantIdRef.current = null;
             setIsStreaming(false);
             isStreamingRef.current = false;
           }
@@ -196,28 +217,50 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     [cioClient, domain, nextMessageId],
   );
 
-  useEffect(
-    () => () => {
-      killSwitchRef.current = true;
-      if (readerRef.current) {
-        readerRef.current.cancel();
-        readerRef.current = null;
-      }
-    },
-    [],
-  );
+  useEffect(() => () => teardownStream(), [teardownStream]);
+
+  /**
+   * Cancels the in-flight request while keeping the conversation: the partial reply is
+   * settled as `done` (so the typing indicator stops and streamed text survives) and the
+   * thread id is kept, so the next message continues the same conversation rather than
+   * starting a new one. Use `clearHistory` to reset instead.
+   *
+   * A reply that had streamed nothing yet is dropped rather than settled — it would
+   * otherwise render as a blank bubble, and a cancelled turn would read as a glitch.
+   * "Nothing" means no text, no product groups and no follow-up refinement; any one of
+   * them is content worth keeping. The user's own message always stays.
+   *
+   * No beacon is sent: there is no "aborted" ASA event, and reporting the load as
+   * finished would be false. An aborted turn therefore leaves an
+   * `assistant_result_load_started` with no matching finished event.
+   */
+  const abort = useCallback(() => {
+    if (!isStreamingRef.current) return;
+    teardownStream();
+    setIsStreaming(false);
+    isStreamingRef.current = false;
+
+    const abortedId = activeAssistantIdRef.current;
+    activeAssistantIdRef.current = null;
+    if (abortedId) {
+      setMessages((prev) =>
+        prev.flatMap((msg) => {
+          if (msg.id !== abortedId) return [msg];
+          if (!msg.text && !msg.groups?.length && !msg.refinement) return [];
+          return [{ ...msg, status: 'done' as const }];
+        }),
+      );
+    }
+  }, [teardownStream]);
 
   const clearHistory = useCallback(() => {
-    killSwitchRef.current = true;
-    if (readerRef.current) {
-      readerRef.current.cancel();
-      readerRef.current = null;
-    }
+    teardownStream();
     threadIdRef.current = null;
+    activeAssistantIdRef.current = null;
     setMessages([]);
     setIsStreaming(false);
     isStreamingRef.current = false;
-  }, []);
+  }, [teardownStream]);
 
-  return { messages, sendMessage, isStreaming, clearHistory };
+  return { messages, sendMessage, isStreaming, abort, clearHistory };
 }

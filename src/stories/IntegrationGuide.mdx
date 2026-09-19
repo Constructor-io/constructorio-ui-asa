@@ -516,13 +516,13 @@ Each slot accepts `{ reactNode: ReactNode | (props) => ReactNode }`. Pass a stat
   <h2>Using the Hook Directly</h2>
 </div>
 
-For custom UI implementations, use the `useAsaResults` hook. Configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. The hook takes a single optional argument `{ initialThreadId }` to resume a conversation persisted outside the hook (e.g. reloaded from browser storage); `initialThreadId` is read once on mount. Call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`.
+For custom UI implementations, use the `useAsaResults` hook. Configuration (client, `domain`) comes from the surrounding `CioAsaProvider`, and it must be rendered inside one. The hook takes a single optional argument `{ initialThreadId }` to resume a conversation persisted outside the hook (e.g. reloaded from browser storage); `initialThreadId` is read once on mount. Call `sendMessage(text)` to start a conversation, and the thread id is tracked internally across turns until you call `clearHistory()`. Use `abort()` to cancel an in-flight response without losing the conversation.
 
 ```jsx
 import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
 
 function CustomChat() {
-  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults();
+  const { messages, sendMessage, isStreaming, abort, clearHistory } = useAsaResults();
 
   return (
     <div>
@@ -532,6 +532,7 @@ function CustomChat() {
         </div>
       ))}
       <button onClick={() => sendMessage('Show me running shoes')}>Send</button>
+      <button onClick={abort} disabled={!isStreaming}>Stop</button>
       <button onClick={clearHistory}>Reset</button>
     </div>
   );
@@ -571,7 +572,35 @@ The hook returns exactly:
 | `messages` | `ChatMessage[]` | Full conversation, user and assistant messages in order |
 | `sendMessage` | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement') => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. |
 | `isStreaming` | `boolean` | Whether a response is currently streaming |
+| `abort` | `() => void` | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle. |
 | `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
+
+**Cancelling a response.** `abort()` keeps the partial reply and the thread, so the next message continues the same conversation; `clearHistory()` starts over.
+
+```jsx
+const { isStreaming, abort } = useAsaResults();
+
+// A cancel button
+<button onClick={abort} disabled={!isStreaming}>Stop</button>
+
+// Or a UI-side timeout
+useEffect(() => {
+  if (!isStreaming) return undefined;
+  const timer = setTimeout(abort, 15000);
+  return () => clearTimeout(timer);
+}, [isStreaming, abort]);
+```
+
+No beacon is sent for an aborted turn, so it leaves an `assistant_result_load_started` with no matching `assistant_result_load_finished`.
+
+With `Chat`, pass `showStopButton` to turn the input's send button into a stop button while a reply streams — it is off by default. The same `abort()` is on the ref, for a timeout or a button of your own:
+
+```jsx
+const chatRef = useRef(null);
+
+<Chat ref={chatRef} showStopButton />
+<button onClick={() => chatRef.current?.abort()}>Stop</button>
+```
 
 Each `ChatMessage` has this shape:
 
