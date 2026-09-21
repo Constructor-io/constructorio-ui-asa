@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { ConstructorClientOptions } from '@constructor-io/constructorio-client-javascript/lib/types';
 import useCioClient from '../../hooks/useCioClient';
 import { AsaContextValue, IncludeRenderProps, CioAsaProviderProps } from '../../types';
 import { AsaContext } from '../../hooks/useCioAsaContext';
 import * as defaultFormatters from '../../utils/formatters';
 import * as defaultUrlHelpers from '../../utils/urlHelpers';
+import { readClientOptions } from '../../utils/clientOptions';
 import {
   createLocalStoragePersistence,
   persistenceNamespace,
@@ -30,13 +32,14 @@ export default function CioAsaProvider(
   } = props;
 
   const [cioClientOptions, setCioClientOptions] = useState({});
-  // With `apiKey` the client is built here, so the prop reaches it too and requests and storage agree.
+  // With `apiKey` the client is built here once, with the id it starts with; later ids are set on it below.
+  const initialUserId = useRef(userIdProp).current;
   const clientInit = useMemo(
     () =>
-      userIdProp === undefined
+      initialUserId === undefined
         ? cioClientOptions
-        : { ...cioClientOptions, userId: userIdProp ?? undefined },
-    [cioClientOptions, userIdProp],
+        : { ...cioClientOptions, userId: initialUserId ?? undefined },
+    [cioClientOptions, initialUserId],
   );
   const cioClient = useCioClient({
     apiKey,
@@ -44,22 +47,39 @@ export default function CioAsaProvider(
     cioClientOptions: clientInit,
   });
 
-  const clientOptions = (
-    cioClient as unknown as { options?: { apiKey?: string; userId?: string | number } } | null
-  )?.options;
+  useEffect(() => {
+    if (customCioClient || !cioClient || userIdProp === undefined) return;
+    cioClient.setClientOptions({ userId: userIdProp ?? undefined } as ConstructorClientOptions);
+  }, [cioClient, customCioClient, userIdProp]);
+
+  const clientOptions = readClientOptions(cioClient);
   const resolvedApiKey = apiKey ?? clientOptions?.apiKey;
   const clientUserId = normalizeUserId(clientOptions?.userId);
   const userId = userIdProp === undefined ? clientUserId : normalizeUserId(userIdProp);
   const { domain } = staticRequestConfigs;
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production') return;
+    if (process.env.NODE_ENV === 'production' || !customCioClient) return;
+    if (persistenceEnabled && resolvedApiKey === undefined) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[cio-asa] could not read the api key from cioClient, so stored chats are not scoped to it. Pass apiKey as well.',
+      );
+    }
     if (userIdProp === undefined || !clientOptions || clientUserId === userId) return;
     // eslint-disable-next-line no-console
     console.warn(
       `[cio-asa] userId "${userId ?? 'none'}" differs from the client's "${clientUserId ?? 'none'}". Agent requests use the client's id, stored chats use userId: set both to the same value.`,
     );
-  }, [userIdProp, clientOptions, clientUserId, userId]);
+  }, [
+    customCioClient,
+    persistenceEnabled,
+    resolvedApiKey,
+    userIdProp,
+    clientOptions,
+    clientUserId,
+    userId,
+  ]);
 
   const persistence = useMemo(() => {
     if (!persistenceEnabled) return undefined;

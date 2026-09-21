@@ -1561,6 +1561,46 @@ describe('useAsaResults persistence', () => {
       );
       expect(window.sessionStorage.getItem(GUEST_KEY)).not.toContain('late answer');
     });
+
+    it('keeps the answer that was streaming at logout in the shopper history, settled', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events });
+      (client as unknown as { options: object }).options = { apiKey: 'key_test', userId: 'user-1' };
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      let current = client;
+      const hook = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={current}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            persistConversation>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as user'));
+      await act(async () => {
+        pending.push(startEvent('thread-x'));
+        pending.push({ type: 'message', data: { text: 'partial' } });
+      });
+      await waitFor(() => expect(hook.result.current.messages[1]?.text).toBe('partial'));
+
+      current = clientFor();
+      hook.rerender();
+
+      expect(hook.result.current.isStreaming).toBe(false);
+      expect(hook.result.current.messages).toEqual([]);
+      await waitFor(() => {
+        const stored = JSON.parse(window.localStorage.getItem(userKey('user-1')) ?? '{}');
+        const record = stored.threads?.['thread-x'] as PersistedChat | undefined;
+        expect(record?.messages.map((m) => [m.text, m.status])).toEqual([
+          ['as user', 'done'],
+          ['partial', 'done'],
+        ]);
+      });
+      expect(window.sessionStorage.getItem(GUEST_KEY) ?? '').not.toContain('partial');
+    });
   });
 
   it('forgets the conversation on screen when clearPersistedConversations runs in this tab', async () => {

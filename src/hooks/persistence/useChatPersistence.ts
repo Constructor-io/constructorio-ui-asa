@@ -71,6 +71,9 @@ export default function useChatPersistence(params: Params) {
   // A login keeps the guest conversation on screen instead and moves it into the shopper's store.
   const [rendered, setRendered] = useState({ store, scope });
   const carryOverFromRef = useRef<ChatPersistence | undefined>(undefined);
+  const settleIntoRef = useRef<{ store: ChatPersistence; messages: ChatMessage[] } | undefined>(
+    undefined,
+  );
   if (rendered.store !== store) {
     const carryOver =
       rendered.store &&
@@ -83,6 +86,10 @@ export default function useChatPersistence(params: Params) {
     if (carryOver) {
       carryOverFromRef.current = rendered.store;
     } else {
+      // An unfinished turn still belongs to the previous store; the effect below writes it there.
+      if (rendered.store && messages.length > 0 && (session.isStreaming || session.dirty)) {
+        settleIntoRef.current = { store: rendered.store, messages };
+      }
       setMessages([]);
       setActiveThreadId(null);
       setForeignInFlight(false);
@@ -128,7 +135,7 @@ export default function useChatPersistence(params: Params) {
         current.saveThreadSync(snapshot, staleIds);
         return undefined;
       }
-      setActiveThreadId(snapshot.threadId);
+      if (mountedRef.current) setActiveThreadId(snapshot.threadId);
       return enqueueWrite(async () => {
         const orphans = await saveThreadAndRetireStale(current, snapshot, staleIds);
         // A write that outlived a store switch must not leak its leftovers into the new store.
@@ -137,7 +144,7 @@ export default function useChatPersistence(params: Params) {
         }
       });
     },
-    [session, storeRef, messagesRef, enqueueWrite],
+    [session, storeRef, messagesRef, enqueueWrite, mountedRef],
   );
 
   const settleAndPersist = useCallback(() => {
@@ -194,6 +201,17 @@ export default function useChatPersistence(params: Params) {
       // The store changed (e.g. a logout): start over instead of saving the old conversation into it.
       clearForeignTimer();
       cancelStream();
+      const settleInto = settleIntoRef.current;
+      settleIntoRef.current = undefined;
+      if (settleInto) {
+        const { snapshot, staleIds } = prepareSnapshot(
+          session,
+          normalizeHydratedMessages(settleInto.messages),
+        );
+        enqueueWrite(() =>
+          saveThreadAndRetireStale(settleInto.store, snapshot, staleIds).then(() => {}),
+        );
+      }
       resetConversation(session);
       session.interacted = false;
       invalidateThreads();

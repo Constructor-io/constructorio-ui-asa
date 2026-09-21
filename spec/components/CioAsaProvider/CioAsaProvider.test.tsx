@@ -216,6 +216,28 @@ describe('CioAsaProvider', () => {
       ]);
     });
 
+    it('keeps the same client across login and logout and only updates its user id', () => {
+      const view = renderWith({ userId: null });
+      const client = received!.cioClient;
+      expect(clientUserId()).toBeUndefined();
+
+      view.rerender(element({ userId: 'user-6' }));
+      expect(received!.cioClient).toBe(client);
+      expect(clientUserId()).toBe('user-6');
+
+      view.rerender(element({ userId: null }));
+      expect(received!.cioClient).toBe(client);
+      expect(clientUserId()).toBeUndefined();
+    });
+
+    it('warns in development when a caller-provided client exposes no api key', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      renderWith({ cioClient: { agent: {} } });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('api key');
+      warn.mockRestore();
+    });
+
     it('warns once in development when the prop and a caller-provided client disagree', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const cioClient = { agent: {}, options: { apiKey: 'key_test', userId: 'from-client' } };
