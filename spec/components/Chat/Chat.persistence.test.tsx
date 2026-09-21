@@ -109,6 +109,35 @@ describe('Chat persistence', () => {
     expect(await screen.findByText('restored question')).toBeInTheDocument();
   });
 
+  it('keeps the header and close button on screen while another thread loads', async () => {
+    seedStorage();
+    const ref = createRef<ChatHandle>();
+    const onClose = jest.fn();
+    const { client } = createMockCioClient({ events: [] });
+    (client as unknown as { options: { apiKey: string } }).options = { apiKey: 'key_test' };
+    const { container } = render(
+      <CioAsaProvider
+        cioClient={client}
+        staticRequestConfigs={{ domain: 'chatbot' }}
+        persistConversation>
+        <Chat ref={ref} onClose={onClose} />
+      </CioAsaProvider>,
+    );
+    await screen.findByText('restored question');
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = ref.current!.switchThread('missing');
+    });
+    expect(screen.queryByText('restored question')).not.toBeInTheDocument();
+    expect(container.querySelector('.cio-asa-chat-view--chat')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeDisabled();
+
+    await act(() => pending);
+    expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();
+  });
+
   it('does not fire onThreadsChange when persistence is off', async () => {
     const onThreadsChange = jest.fn();
     const { client } = createMockCioClient({ events: [] });

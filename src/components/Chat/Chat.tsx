@@ -115,8 +115,12 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const isWelcome = messages.length === 0;
+    // While another thread loads, keep the chat frame (header, close button) instead of a blank body.
+    const lastViewRef = useRef<'welcome' | 'chat' | null>(null);
+    if (!isHydrating) lastViewRef.current = isWelcome ? 'welcome' : 'chat';
     const showWelcome = !isHydrating && isWelcome;
     const showChat = !isHydrating && !isWelcome;
+    const showChatFrame = showChat || (isHydrating && lastViewRef.current === 'chat');
     const isModal = typeof onClose === 'function';
     const announcement = getAnnouncement(messages, translations);
 
@@ -176,7 +180,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
               />
             </div>
           )}
-          {showChat && (
+          {showChatFrame && (
             <div className='cio-asa-chat-view cio-asa-chat-view--chat' ref={chatViewRef}>
               <ChatHeader
                 onClose={onClose}
@@ -202,7 +206,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
               />
               <ChatInput
                 onSubmit={sendMessage}
-                isDisabled={isStreaming}
+                isDisabled={isStreaming || isHydrating}
                 translations={translations}
                 componentOverrides={componentOverrides?.input}
               />

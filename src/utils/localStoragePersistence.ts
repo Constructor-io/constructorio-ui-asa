@@ -135,27 +135,44 @@ export function createLocalStoragePersistence(
     }
   };
 
-  const parse = (raw: string | null): StoredThreads => {
-    const empty: StoredThreads = { version: PERSISTED_CHAT_VERSION, threads: {}, deleted: {} };
-    if (!raw) return empty;
+  const empty = (): StoredThreads => ({
+    version: PERSISTED_CHAT_VERSION,
+    threads: {},
+    deleted: {},
+  });
+
+  const parseValidated = (raw: string): StoredThreads => {
     try {
       const parsed = JSON.parse(raw) as Partial<StoredThreads>;
-      if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return empty;
-      const cutoff = Date.now() - ttlMs;
+      if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return empty();
       const threads = Object.fromEntries(
-        Object.entries(parsed.threads).filter(
-          ([, chat]) => isPersistedChat(chat) && chat.updatedAt >= cutoff,
-        ),
+        Object.entries(parsed.threads).filter(([, chat]) => isPersistedChat(chat)),
       );
       const deleted = Object.fromEntries(
-        Object.entries(parsed.deleted ?? {}).filter(
-          ([, at]) => typeof at === 'number' && at >= cutoff,
-        ),
+        Object.entries(parsed.deleted ?? {}).filter(([, at]) => typeof at === 'number'),
       );
       return { version: PERSISTED_CHAT_VERSION, threads, deleted };
     } catch {
-      return empty;
+      return empty();
     }
+  };
+
+  // One sync reads the same key several times; parse and validate the blob once per distinct value.
+  let lastParsed: { raw: string; data: StoredThreads } | null = null;
+  const parse = (raw: string | null): StoredThreads => {
+    if (!raw) return empty();
+    if (lastParsed?.raw !== raw) lastParsed = { raw, data: parseValidated(raw) };
+    const cutoff = Date.now() - ttlMs;
+    const { data } = lastParsed;
+    return {
+      version: PERSISTED_CHAT_VERSION,
+      threads: Object.fromEntries(
+        Object.entries(data.threads).filter(([, chat]) => chat.updatedAt >= cutoff),
+      ),
+      deleted: Object.fromEntries(
+        Object.entries(data.deleted ?? {}).filter(([, at]) => at >= cutoff),
+      ),
+    };
   };
 
   const read = (): StoredThreads => {

@@ -4,7 +4,7 @@ import { AssistantSubmitSource, ChatMessage, UseAsaResultsOptions, UseChatReturn
 import useAsaTracking from './useAsaTracking';
 import useChatPersistence from './persistence/useChatPersistence';
 import { AgentStreamHandle, readAgentStream } from './agentStream';
-import { createChatSession, nextMessageId } from '../utils/chatSession';
+import { ChatSession, createChatSession, nextMessageId } from '../utils/chatSession';
 import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
@@ -23,7 +23,9 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const session = useRef(createChatSession(options?.initialThreadId)).current;
+  const sessionRef = useRef<ChatSession | null>(null);
+  if (!sessionRef.current) sessionRef.current = createChatSession(options?.initialThreadId);
+  const session = sessionRef.current;
   const streamRef = useRef<AgentStreamHandle | null>(null);
 
   const tracking = useAsaTracking({

@@ -106,6 +106,24 @@ describe('createLocalStoragePersistence', () => {
     ]);
   });
 
+  it('parses the stored blob once while its value is unchanged', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const now = Date.now();
+    await store.saveThread(chat('t1', turns(1), now - 1));
+    const parse = jest.spyOn(JSON, 'parse');
+
+    await store.listThreads();
+    await store.getThread('t1');
+    await store.isThreadDeleted('t1');
+    expect(parse).toHaveBeenCalledTimes(1);
+
+    await store.saveThread(chat('t2', turns(1), now));
+    parse.mockClear();
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['t2', 't1']);
+    expect(parse).toHaveBeenCalledTimes(1);
+    parse.mockRestore();
+  });
+
   it('flags threads whose latest answer is still in flight', async () => {
     const store = createLocalStoragePersistence({ storage });
     await store.saveThread(chat('t1', [msg('user', 'q'), msg('assistant', '', 'loading')]));
