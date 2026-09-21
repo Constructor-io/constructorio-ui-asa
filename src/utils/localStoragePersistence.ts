@@ -291,7 +291,15 @@ export function createLocalStoragePersistence(
     const incomingAt = chat.updatedAt ?? now;
     // An older snapshot may add turns but must not regress ones already settled.
     const stale = Boolean(stored) && incomingAt < stored.updatedAt;
-    const messages = stored ? mergeMessages(stored.messages, chat.messages, stale) : chat.messages;
+    // Merging keeps turns other tabs added. The tab that wrote the stored record is instead
+    // writing a newer full view of it, and may have dropped a message (an aborted reply), so
+    // merging its own older copy back would resurrect what it just removed.
+    const ownsStored =
+      stored?.owner !== undefined && chat.owner !== undefined && stored.owner === chat.owner;
+    const messages =
+      !stored || (ownsStored && !stale)
+        ? chat.messages
+        : mergeMessages(stored.messages, chat.messages, stale);
     const merged: PersistedChat = {
       ...(stale ? stored : chat),
       version: PERSISTED_CHAT_VERSION,

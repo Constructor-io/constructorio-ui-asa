@@ -480,6 +480,117 @@ describe('useAsaResults persistence', () => {
     expect(a.result.current.messages[0].id).not.toBe(b.result.current.messages[0].id);
   });
 
+  describe('abort', () => {
+    it('stores the cancelled turn with its partial answer settled', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store } = createMemoryPersistence();
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await act(async () => {
+        pending.push(startEvent('t'));
+        pending.push({ type: 'message', data: { text: 'partial' } });
+      });
+      await waitFor(() => expect(result.current.messages[1]?.text).toBe('partial'));
+
+      act(() => result.current.abort());
+
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.messages.map((m) => [m.text, m.status])).toEqual([
+        ['hello', 'done'],
+        ['partial', 'done'],
+      ]);
+      await waitFor(() =>
+        expect((store.saveThread.mock.calls.at(-1) ?? [])[0].messages.map((m) => m.status)).toEqual(
+          ['done', 'done'],
+        ),
+      );
+      expect((await store.listThreads())[0].inFlight).toBe(false);
+    });
+
+    it('leaves no in-flight record when the cancelled answer had streamed nothing', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store } = createMemoryPersistence();
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await act(async () => pending.push(startEvent('t')));
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+
+      act(() => result.current.abort());
+
+      expect(result.current.messages.map((m) => m.text)).toEqual(['hello']);
+      // The empty reply is dropped on screen, so it must not survive in storage either.
+      await waitFor(() =>
+        expect((store.saveThread.mock.calls.at(-1) ?? [])[0].messages.map((m) => m.role)).toEqual([
+          'user',
+        ]),
+      );
+      expect((await store.getThread('t'))?.messages.map((m) => m.role)).toEqual(['user']);
+      expect((await store.listThreads())[0].inFlight).toBe(false);
+    });
+
+    it('does not leave the dropped reply behind in the real store', async () => {
+      const KEY = 'cio-asa:chat:v1:key_test:chatbot';
+      window.sessionStorage.clear();
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      (client as unknown as { options: object }).options = { apiKey: 'key_test' };
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const hook = renderHook(() => useAsaResults(), {
+        wrapper: ({ children }) => (
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            persistConversation>
+            {children}
+          </CioAsaProvider>
+        ),
+      });
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('hello'));
+      await act(async () => pending.push(startEvent('t')));
+      await waitFor(() => expect(window.sessionStorage.getItem(KEY)).toContain('hello'));
+
+      act(() => hook.result.current.abort());
+
+      // Merging the stored copy back would restore the reply as `loading`, and this tab owns the
+      // record, so the history would show it as still typing for good.
+      await waitFor(() => {
+        const stored = JSON.parse(window.sessionStorage.getItem(KEY) ?? '{}');
+        expect(stored.threads?.t?.messages.map((m: ChatMessage) => m.role)).toEqual(['user']);
+      });
+      await waitFor(() => expect(hook.result.current.threads[0]?.inFlight).toBe(false));
+      window.sessionStorage.clear();
+    });
+
+    it('keeps the thread, so the next message continues the same conversation', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store } = createMemoryPersistence();
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await act(async () => pending.push(startEvent('t')));
+      act(() => result.current.abort());
+
+      act(() => result.current.sendMessage('again'));
+      expect(getAgentResultsStream).toHaveBeenLastCalledWith('again', {
+        domain: 'chatbot',
+        threadId: 't',
+      });
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+  });
+
   it('saves failed turns too, so an error is visible after reload', async () => {
     const { client } = createMockCioClient({ events: [{ type: 'server_error' }] });
     const { store } = createMemoryPersistence();

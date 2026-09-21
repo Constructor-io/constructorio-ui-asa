@@ -37,6 +37,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const callbacksRef = useLatest(callbacks);
   const staticRequestConfigsRef = useLatest(staticRequestConfigs);
 
+  /** Stops this tab's stream, if any. `readAgentStream` settles its `done` without touching state. */
   const cancelStream = useCallback(() => {
     streamRef.current?.cancel();
     streamRef.current = null;
@@ -132,10 +133,45 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     ],
   );
 
+  /**
+   * Cancels the in-flight request while keeping the conversation: the partial reply is
+   * settled as `done` (so the typing indicator stops and streamed text survives) and the
+   * thread id is kept, so the next message continues the same conversation rather than
+   * starting a new one. Use `clearHistory` to reset instead.
+   *
+   * A reply that had streamed nothing yet is dropped rather than settled — it would
+   * otherwise render as a blank bubble, and a cancelled turn would read as a glitch.
+   * "Nothing" means no text, no product groups and no follow-up refinement; any one of
+   * them is content worth keeping. The user's own message always stays.
+   *
+   * No beacon is sent: there is no "aborted" ASA event, and reporting the load as
+   * finished would be false. An aborted turn therefore leaves an
+   * `assistant_result_load_started` with no matching finished event.
+   */
+  const abort = useCallback(() => {
+    if (!session.isStreaming) return;
+    const abortedId = streamRef.current?.assistantId;
+    cancelStream();
+    session.isStreaming = false;
+    setIsStreaming(false);
+    if (abortedId) {
+      setMessages((prev) =>
+        prev.flatMap((msg) => {
+          if (msg.id !== abortedId) return [msg];
+          if (!msg.text && !msg.groups?.length && !msg.refinement) return [];
+          return [{ ...msg, status: 'done' as const }];
+        }),
+      );
+    }
+    // With persistence on, the cancelled turn is stored as it stands.
+    session.dirty = true;
+  }, [session, cancelStream]);
+
   return {
     messages,
     sendMessage,
     isStreaming: isStreaming || store.foreignInFlight,
+    abort,
     clearHistory: store.clearHistory,
     isHydrating: store.isHydrating,
     threads: store.threads,

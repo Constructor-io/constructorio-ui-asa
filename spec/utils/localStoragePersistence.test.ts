@@ -274,6 +274,36 @@ describe('createLocalStoragePersistence', () => {
     expect(saved?.messages.map((m) => m.id)).toEqual([...tabA, ...tabB.slice(2)].map((m) => m.id));
   });
 
+  it('lets the tab that owns a record drop a message from it instead of merging it back', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const [user, assistant] = turns(1);
+    const owner = 'tab-1';
+    const now = Date.now();
+    await store.saveThread({ ...chat('t1', [user, assistant], now - 1000), owner });
+
+    // The same tab, writing a later snapshot without the assistant turn: an aborted reply.
+    await store.saveThread({ ...chat('t1', [user], now), owner });
+
+    expect((await store.getThread('t1'))?.messages.map((m) => m.id)).toEqual([user.id]);
+  });
+
+  it('still merges a turn another tab added to the same thread', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const [user, assistant] = turns(1);
+    const now = Date.now();
+    await store.saveThread({ ...chat('t1', [user, assistant], now - 1000), owner: 'tab-1' });
+
+    const [user2, assistant2] = turns(1);
+    await store.saveThread({ ...chat('t1', [user2, assistant2], now), owner: 'tab-2' });
+
+    expect((await store.getThread('t1'))?.messages.map((m) => m.id)).toEqual([
+      user.id,
+      assistant.id,
+      user2.id,
+      assistant2.id,
+    ]);
+  });
+
   it('prefers the incoming version of a message that already exists', async () => {
     const store = createLocalStoragePersistence({ storage });
     const [user, assistant] = turns(1);

@@ -22,6 +22,8 @@ export interface AgentStreamCallbacks {
 }
 
 export interface AgentStreamHandle {
+  /** The assistant message this stream writes into, so a cancel can settle the right one. */
+  assistantId: string;
   /** Stop reading; the pending `done` settles without touching the assistant message. */
   cancel: () => void;
   done: Promise<void>;
@@ -102,6 +104,7 @@ export function readAgentStream(
   })();
 
   return {
+    assistantId,
     done,
     cancel: () => {
       cancelled = true;

@@ -183,6 +183,12 @@ export interface UseChatReturn {
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
   /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
+  /**
+   * Cancel the in-flight request, keeping the conversation. The partial reply is settled
+   * as `done` and the thread id is kept, so the next message continues the same
+   * conversation. No-op when nothing is streaming. Use `clearHistory` to reset instead.
+   */
+  abort: () => void;
   clearHistory: () => void;
   /** True while a persisted conversation is being loaded. Always `false` when persistence is off. */
   isHydrating: boolean;
@@ -352,6 +358,7 @@ export type Translations = {
   'CioAsa.input.placeholder'?: string;
   'CioAsa.input.ariaLabel'?: string;
   'CioAsa.input.sendAriaLabel'?: string;
+  'CioAsa.input.stopAriaLabel'?: string;
   'CioAsa.welcome.title'?: string;
   'CioAsa.welcome.placeholder'?: string;
   'CioAsa.welcome.sendButton'?: string;
@@ -383,6 +390,14 @@ export interface ChatInputRenderProps {
   onSubmit: () => void;
   placeholder: string;
   isDisabled: boolean;
+  /**
+   * Whether a reply is currently streaming. Pair it with `onAbort` to offer a cancel
+   * control while it is true — the built-in stop button is off by default, so an override
+   * is often the only way a user can cancel.
+   */
+  isStreaming: boolean;
+  /** Cancel the in-flight reply. Keeps the conversation and the thread. */
+  onAbort: () => void;
 }
 
 export interface WelcomeScreenTitleRenderProps {

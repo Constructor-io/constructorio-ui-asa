@@ -325,6 +325,162 @@ describe('useAsaResults', () => {
       expect(result.current.messages).toHaveLength(2);
     });
 
+    describe('abort', () => {
+      /**
+       * A stream that yields `events` and then stays open, so a test can observe the
+       * hook mid-flight the way a real SSE connection would be when a user cancels.
+       */
+      function createHangingStream(events: StreamEvent[]) {
+        const cancel = jest.fn(() => Promise.resolve());
+        let index = 0;
+        const stream = {
+          getReader() {
+            return {
+              read: () => {
+                if (index < events.length) {
+                  const value = events[index];
+                  index += 1;
+                  return Promise.resolve({ done: false, value });
+                }
+                return new Promise<never>(() => {});
+              },
+              cancel,
+              releaseLock: () => {},
+            };
+          },
+        } as unknown as ReadableStream<StreamEvent>;
+        return { stream, cancel };
+      }
+
+      async function renderMidStream() {
+        const { stream, cancel } = createHangingStream([
+          { type: 'start', data: { thread_id: 'thread-abc', intent_result_id: 'intent-1' } },
+          { type: 'message', data: { text: 'Partial ans' } },
+        ]);
+        const { client, tracker } = createMockCioClient({ stream });
+        const view = renderUseAsaResults(client);
+
+        act(() => view.result.current.sendMessage('hello'));
+        await waitFor(() => expect(view.result.current.messages[1].text).toBe('Partial ans'));
+        expect(view.result.current.isStreaming).toBe(true);
+
+        return { ...view, cancel, tracker };
+      }
+
+      it('cancels the in-flight reader and clears the streaming flag', async () => {
+        const { result, cancel } = await renderMidStream();
+
+        act(() => result.current.abort());
+
+        expect(cancel).toHaveBeenCalled();
+        expect(result.current.isStreaming).toBe(false);
+      });
+
+      it('keeps the conversation and settles the partial reply instead of dropping it', async () => {
+        const { result } = await renderMidStream();
+
+        act(() => result.current.abort());
+
+        expect(result.current.messages).toHaveLength(2);
+        expect(result.current.messages[0]).toMatchObject({ role: 'user', text: 'hello' });
+        expect(result.current.messages[1]).toMatchObject({
+          role: 'assistant',
+          text: 'Partial ans',
+          status: 'done',
+        });
+      });
+
+      it('drops a reply that streamed nothing, keeping the user message', async () => {
+        const { stream } = createHangingStream([]);
+        const { client } = createMockCioClient({ stream });
+        const { result } = renderUseAsaResults(client);
+
+        act(() => result.current.sendMessage('hello'));
+        await waitFor(() => expect(result.current.messages).toHaveLength(2));
+
+        act(() => result.current.abort());
+
+        // An empty assistant bubble would read as a rendering glitch, not a cancellation.
+        expect(result.current.messages).toHaveLength(1);
+        expect(result.current.messages[0]).toMatchObject({ role: 'user', text: 'hello' });
+      });
+
+      it('keeps a reply that had streamed product groups but no text', async () => {
+        const { stream } = createHangingStream([
+          {
+            type: 'search_result',
+            data: {
+              result_id: 'res-1',
+              response: { results: [{ value: 'A', data: { id: '1' } }] },
+            },
+          },
+        ]);
+        const { client } = createMockCioClient({ stream });
+        const { result } = renderUseAsaResults(client);
+
+        act(() => result.current.sendMessage('hello'));
+        await waitFor(() => expect(result.current.messages[1].groups).toHaveLength(1));
+
+        act(() => result.current.abort());
+
+        expect(result.current.messages).toHaveLength(2);
+        expect(result.current.messages[1]).toMatchObject({ status: 'done', text: '' });
+        expect(result.current.messages[1].groups).toHaveLength(1);
+      });
+
+      it('keeps a reply whose only content is a follow-up refinement', async () => {
+        const { stream } = createHangingStream([
+          {
+            type: 'follow_up_refinement',
+            data: { question: 'Who are you shopping for?', options: ['Women', 'Men'] },
+          },
+        ] as StreamEvent[]);
+        const { client } = createMockCioClient({ stream });
+        const { result } = renderUseAsaResults(client);
+
+        act(() => result.current.sendMessage('shoes'));
+        await waitFor(() => expect(result.current.messages[1].refinement).toBeDefined());
+
+        act(() => result.current.abort());
+
+        // The narrowing question is content — dropping it would lose the agent's follow-up.
+        expect(result.current.messages).toHaveLength(2);
+        expect(result.current.messages[1]).toMatchObject({ status: 'done', text: '' });
+        expect(result.current.messages[1].refinement).toEqual({
+          question: 'Who are you shopping for?',
+          options: ['Women', 'Men'],
+        });
+      });
+
+      it('does not report the load as finished, because it never was', async () => {
+        const { result, tracker } = await renderMidStream();
+
+        act(() => result.current.abort());
+
+        expect(tracker.trackAssistantResultLoadStarted).toHaveBeenCalled();
+        expect(tracker.trackAssistantResultLoadFinished).not.toHaveBeenCalled();
+      });
+
+      it('keeps the thread, so the next message continues the same conversation', async () => {
+        const { result } = await renderMidStream();
+
+        act(() => result.current.abort());
+        act(() => result.current.sendMessage('second'));
+
+        await waitFor(() => expect(result.current.messages).toHaveLength(4));
+        expect(result.current.messages[3]).toMatchObject({ role: 'assistant' });
+      });
+
+      it('is a no-op when nothing is in flight', () => {
+        const { client } = createMockCioClient({ events: [] });
+        const { result } = renderUseAsaResults(client);
+
+        expect(() => act(() => result.current.abort())).not.toThrow();
+        expect(result.current.messages).toHaveLength(0);
+        expect(result.current.isStreaming).toBe(false);
+      });
+    });
+
     it('sets an error state on a server_error event', async () => {
       const { client } = createMockCioClient({
         events: [{ type: 'server_error', data: {} }],
