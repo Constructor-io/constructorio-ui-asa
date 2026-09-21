@@ -1,5 +1,6 @@
-import { act } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import CioAsa from '../src/bundled';
+import { createMockCioClient } from './local_examples/mockCioClient';
 
 const SELECTOR = '#cio-asa-root';
 
@@ -15,6 +16,17 @@ function mountStylesheet() {
   style.id = 'cio-asa-styles';
   document.head.appendChild(style);
   return style;
+}
+
+/** The bundle needs a client; a mock keeps these tests off the network. */
+function mount(options = {}) {
+  const { client } = createMockCioClient({
+    events: [{ type: 'message', data: { text: 'An answer' } }],
+  });
+
+  act(() => {
+    CioAsa({ selector: SELECTOR, cioClient: client, ...options });
+  });
 }
 
 describe('bundled entry (standalone browser build)', () => {
@@ -33,39 +45,55 @@ describe('bundled entry (standalone browser build)', () => {
     expect(window.CioAsa).toBe(CioAsa);
   });
 
-  it('renders into the element matched by the selector', () => {
-    const container = mountTarget();
+  it('renders the chat UI into the element matched by the selector', async () => {
+    mountTarget();
 
-    act(() => {
-      CioAsa({ selector: SELECTOR });
+    mount();
+
+    await waitFor(() => {
+      expect(screen.getByText('Shopping Assistant')).toBeInTheDocument();
     });
-
-    expect(container).not.toBeEmptyDOMElement();
-    expect(container.querySelector('div')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask anything')).toBeInTheDocument();
   });
 
-  it('forwards the remaining props onto the rendered element', () => {
+  /**
+   * Regression: the bundle shipped a placeholder that rendered `<div {...rest} />`,
+   * so a script-tag consumer got an empty div carrying the API key as an attribute
+   * and no UI at all.
+   */
+  // cspell:ignore apikey
+  it('renders the agent, not a bare div carrying the options as attributes', async () => {
     const container = mountTarget();
 
-    act(() => {
-      CioAsa({ selector: SELECTOR, id: 'my-widget', className: 'my-class' });
-    });
+    mount({ apiKey: 'key_test' });
 
-    const rendered = container.querySelector('#my-widget');
-    expect(rendered).toBeInTheDocument();
-    expect(rendered).toHaveClass('my-class');
+    await waitFor(() => {
+      expect(screen.getByText('Shopping Assistant')).toBeInTheDocument();
+    });
+    expect(container.querySelector('[apikey]')).not.toBeInTheDocument();
+    expect(container.textContent).not.toBe('');
   });
 
-  it('does not treat `selector` or `includeCSS` as element props', () => {
+  it('forwards chat options through to the Chat component', async () => {
+    mountTarget();
+
+    mount({ initialSuggestions: ['Show me winter boots'] });
+
+    await waitFor(() => {
+      expect(screen.getByText('Show me winter boots')).toBeInTheDocument();
+    });
+  });
+
+  it('does not treat `selector` or `includeCSS` as component props', async () => {
     const container = mountTarget();
 
-    act(() => {
-      CioAsa({ selector: SELECTOR, includeCSS: true });
-    });
+    mount({ includeCSS: true });
 
-    const rendered = container.querySelector('div');
-    expect(rendered).not.toHaveAttribute('selector');
-    expect(rendered).not.toHaveAttribute('includeCSS');
+    await waitFor(() => {
+      expect(screen.getByText('Shopping Assistant')).toBeInTheDocument();
+    });
+    expect(container.querySelector('[selector]')).not.toBeInTheDocument();
+    expect(container.querySelector('[includeCSS]')).not.toBeInTheDocument();
   });
 
   it('logs an error and renders nothing when the selector matches no element', () => {
@@ -83,9 +111,7 @@ describe('bundled entry (standalone browser build)', () => {
     mountTarget();
     const stylesheet = mountStylesheet();
 
-    act(() => {
-      CioAsa({ selector: SELECTOR, includeCSS: false });
-    });
+    mount({ includeCSS: false });
 
     expect(stylesheet.disabled).toBe(true);
   });
@@ -95,21 +121,18 @@ describe('bundled entry (standalone browser build)', () => {
     const stylesheet = mountStylesheet();
     stylesheet.disabled = true;
 
-    act(() => {
-      CioAsa({ selector: SELECTOR });
-    });
+    mount();
 
     expect(stylesheet.disabled).toBe(false);
   });
 
-  it('renders even when the bundled stylesheet is absent', () => {
-    const container = mountTarget();
+  it('renders even when the bundled stylesheet is absent', async () => {
+    mountTarget();
 
-    expect(() =>
-      act(() => {
-        CioAsa({ selector: SELECTOR, includeCSS: false });
-      }),
-    ).not.toThrow();
-    expect(container.querySelector('div')).toBeInTheDocument();
+    expect(() => mount({ includeCSS: false })).not.toThrow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Shopping Assistant')).toBeInTheDocument();
+    });
   });
 });

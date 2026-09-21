@@ -21,7 +21,7 @@ export interface ChatHandle {
   clearHistory: () => void;
 }
 
-interface ChatProps {
+export interface ChatProps {
   /** Called when the close button (✕) is clicked. The consumer controls visibility. */
   onClose?: () => void;
   /** Additional CSS class name for the root container */
