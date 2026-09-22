@@ -63,7 +63,7 @@ export default function CioAsaProvider(
     if (persistenceEnabled && resolvedApiKey === undefined) {
       // eslint-disable-next-line no-console
       console.warn(
-        '[cio-asa] could not read the api key from cioClient, so stored chats are not scoped to it. Pass apiKey as well.',
+        '[cio-asa] could not read the api key from cioClient, so the conversation is not persisted. Pass apiKey as well.',
       );
     }
     if (userIdProp === undefined || !clientOptions || clientUserId === userId) return;
@@ -82,7 +82,8 @@ export default function CioAsaProvider(
   ]);
 
   const persistence = useMemo(() => {
-    if (!persistenceEnabled) return undefined;
+    // Without an api key the store could not be scoped to this index, so there is none.
+    if (!persistenceEnabled || resolvedApiKey === undefined) return undefined;
     // Per-user namespace so a shared browser never shows the previous shopper's chat.
     return createLocalStoragePersistence({
       namespace: persistenceNamespace({ apiKey: resolvedApiKey, domain, userId }),

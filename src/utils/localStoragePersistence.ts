@@ -74,12 +74,12 @@ export function storageAreaFor(userId: string | null | undefined): StorageArea {
 
 /** Namespace the provider stores under: api key, domain and, for a signed-in shopper, the user id. */
 export function persistenceNamespace(parts: {
-  apiKey?: string;
+  apiKey: string;
   domain?: string;
   userId?: string | null;
 }): string {
   const userId = isGuest(parts.userId) ? undefined : String(parts.userId);
-  return [parts.apiKey ?? 'default', parts.domain ?? 'default', userId]
+  return [parts.apiKey, parts.domain ?? 'default', userId]
     .filter((part): part is string => part !== undefined)
     .map(encodeURIComponent)
     .join(':');

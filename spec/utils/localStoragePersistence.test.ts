@@ -20,8 +20,8 @@ describe('persistenceNamespace', () => {
     expect(persistenceNamespace({ apiKey: 'k', domain: 'd', userId: '' })).toBe('k:d');
   });
 
-  it('falls back to a default api key and domain', () => {
-    expect(persistenceNamespace({})).toBe('default:default');
+  it('falls back to a default domain only', () => {
+    expect(persistenceNamespace({ apiKey: 'k' })).toBe('k:default');
   });
 });
 

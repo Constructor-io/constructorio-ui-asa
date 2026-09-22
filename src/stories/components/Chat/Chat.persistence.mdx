@@ -47,7 +47,7 @@ History is stored per shopper, and the shopper is whoever `userId` says. Set it 
 </CioAsaProvider>
 ```
 
-With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set `userId` on the client as well; a mismatch is reported in development.
+With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set `userId` on the client as well; a mismatch is reported in development. Storage is scoped by the client's api key; if it cannot be read from the client, nothing is stored until you pass `apiKey` too.
 
 By default nothing is deleted on logout. The history stays on the device under the old id for 7 days and comes back if the same shopper signs in again there. It cannot be shown to anyone else through the chat, but it is plain data in `localStorage`, readable from DevTools and by other scripts on the page. When that is not acceptable, delete it on logout:
 

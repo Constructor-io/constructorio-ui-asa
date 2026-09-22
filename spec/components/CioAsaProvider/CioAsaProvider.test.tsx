@@ -230,9 +230,11 @@ describe('CioAsaProvider', () => {
       expect(clientUserId()).toBeUndefined();
     });
 
-    it('warns in development when a caller-provided client exposes no api key', () => {
+    it('has no store, and warns in development, when a caller-provided client exposes no api key', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      renderWith({ cioClient: { agent: {} } });
+      renderWith({ userId: 'user-7', cioClient: { agent: {} } });
+      expect(received!.persistence).toBeUndefined();
+      expect(received!.persistenceScope).toBeUndefined();
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn.mock.calls[0][0]).toContain('api key');
       warn.mockRestore();
