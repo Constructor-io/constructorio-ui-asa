@@ -504,9 +504,10 @@ describe('useAsaResults persistence', () => {
         ['partial', 'done'],
       ]);
       await waitFor(() =>
-        expect((store.saveThread.mock.calls.at(-1) ?? [])[0].messages.map((m) => m.status)).toEqual(
-          ['done', 'done'],
-        ),
+        expect(store.saveThread.mock.calls.at(-1)?.[0].messages.map((m) => m.status)).toEqual([
+          'done',
+          'done',
+        ]),
       );
       expect((await store.listThreads())[0].inFlight).toBe(false);
     });
@@ -528,7 +529,7 @@ describe('useAsaResults persistence', () => {
       expect(result.current.messages.map((m) => m.text)).toEqual(['hello']);
       // The empty reply is dropped on screen, so it must not survive in storage either.
       await waitFor(() =>
-        expect((store.saveThread.mock.calls.at(-1) ?? [])[0].messages.map((m) => m.role)).toEqual([
+        expect(store.saveThread.mock.calls.at(-1)?.[0].messages.map((m) => m.role)).toEqual([
           'user',
         ]),
       );

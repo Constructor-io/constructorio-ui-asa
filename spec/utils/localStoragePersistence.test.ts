@@ -114,7 +114,7 @@ describe('createLocalStoragePersistence', () => {
 
     await store.listThreads();
     await store.getThread('t1');
-    await store.isThreadDeleted('t1');
+    await store.isThreadDeleted!('t1');
     expect(parse).toHaveBeenCalledTimes(1);
 
     await store.saveThread(chat('t2', turns(1), now));
