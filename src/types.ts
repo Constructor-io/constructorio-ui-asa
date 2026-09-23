@@ -57,7 +57,9 @@ export interface CioAsaProviderProps
   apiKey?: string;
   /**
    * A/B test cells to attach to tracking events, as `{ [testName]: cellName }`. Each entry is
-   * sent as an `ef-<testName>` parameter.
+   * sent as an `ef-<testName>` parameter. Constructor's docs have the page set
+   * `window.cnstrc.testCell` to a bare cell name, so label it with your test name:
+   * `{ constructorio: window.cnstrc.testCell }`.
    *
    * Ignored when you supply your own `cioClient`: that client owns its own options, so set
    * `testCells` there instead, as a `ConstructorIOClient` constructor option. Passing both

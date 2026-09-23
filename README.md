@@ -102,8 +102,17 @@ own `ef-<testName>` parameter, so a shopper in several concurrent tests carries 
 />
 ```
 
-The keys are your own test names, not values Constructor defines. Empty and non-string values are
-dropped, so a cell read from a global that resolves to `undefined` is simply not sent.
+The keys are your own test names, not values Constructor defines. Constructor's docs have the page
+set `window.cnstrc.testCell` to a bare cell name, which carries no test name of its own, so label
+it with yours:
+
+```jsx
+<CioAsa apiKey='YOUR_API_KEY' testCells={{ constructorio: window.cnstrc.testCell }} />
+```
+
+Some integrations expose a `window.cnstrc.testCells` map instead, which you can pass straight
+through. Empty and non-string values are dropped, so a cell read from a global that resolves to
+`undefined` is simply not sent.
 
 If you supply your own `cioClient`, that client owns its own options: set `testCells` there
 instead, as a `ConstructorIOClient` constructor option. `testCells` is ignored in that case, and
