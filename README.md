@@ -105,9 +105,6 @@ own `ef-<testName>` parameter, so a shopper in several concurrent tests carries 
 The keys are your own test names, not values Constructor defines. Empty and non-string values are
 dropped, so a cell read from a global that resolves to `undefined` is simply not sent.
 
-If you omit `testCells`, the library falls back to `window.cnstrc.testCells`. The same applies to
-`userId` and `segments`, which fall back to their own `window.cnstrc` globals.
-
 If you supply your own `cioClient`, that client owns its own options: set `testCells` there
 instead, as a `ConstructorIOClient` constructor option. `testCells` is ignored in that case, and
 passing both logs a warning rather than dropping the value silently.

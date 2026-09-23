@@ -59,8 +59,6 @@ export interface CioAsaProviderProps
    * A/B test cells to attach to tracking events, as `{ [testName]: cellName }`. Each entry is
    * sent as an `ef-<testName>` parameter.
    *
-   * When omitted, falls back to `window.cnstrc.testCells`, as do `userId` and `segments`.
-   *
    * Ignored when you supply your own `cioClient`: that client owns its own options, so set
    * `testCells` there instead, as a `ConstructorIOClient` constructor option. Passing both
    * logs a warning.

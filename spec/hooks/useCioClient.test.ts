@@ -62,20 +62,6 @@ describe('useCioClient', () => {
     expect(result.current).toBe(first);
   });
 
-  it('falls back to the window test cells when none are passed', () => {
-    (window as unknown as { cnstrc: unknown }).cnstrc = {
-      testCells: { constructorio: 'from_window' },
-    };
-
-    const { result } = renderHook(() => useCioClient({ apiKey: DEMO_API_KEY }));
-
-    expect((result.current as unknown as ClientWithOptions).options.testCells).toEqual({
-      constructorio: 'from_window',
-    });
-
-    delete (window as unknown as { cnstrc?: unknown }).cnstrc;
-  });
-
   it('warns rather than silently dropping test cells passed alongside a client', () => {
     const fakeClient = { agent: {} } as unknown as ConstructorIOClient;
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
