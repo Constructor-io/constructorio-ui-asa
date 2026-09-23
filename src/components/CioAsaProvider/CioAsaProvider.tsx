@@ -47,15 +47,20 @@ export default function CioAsaProvider(
     cioClientOptions: clientInit,
   });
 
+  // Once the prop has been given, dropping it means a logout, not "read the id from the client".
+  const controlledRef = useRef(userIdProp !== undefined);
+  if (userIdProp !== undefined) controlledRef.current = true;
+  const controlled = controlledRef.current;
+
   useEffect(() => {
-    if (customCioClient || !cioClient || userIdProp === undefined) return;
+    if (customCioClient || !cioClient || !controlled) return;
     cioClient.setClientOptions({ userId: userIdProp ?? undefined } as ConstructorClientOptions);
-  }, [cioClient, customCioClient, userIdProp]);
+  }, [cioClient, customCioClient, controlled, userIdProp]);
 
   const clientOptions = readClientOptions(cioClient);
   const resolvedApiKey = apiKey ?? clientOptions?.apiKey;
   const clientUserId = normalizeUserId(clientOptions?.userId);
-  const userId = userIdProp === undefined ? clientUserId : normalizeUserId(userIdProp);
+  const userId = controlled ? normalizeUserId(userIdProp) : clientUserId;
   const { domain } = staticRequestConfigs;
 
   useEffect(() => {
@@ -66,7 +71,7 @@ export default function CioAsaProvider(
         '[cio-asa] could not read the api key from cioClient, so the conversation is not persisted. Pass apiKey as well.',
       );
     }
-    if (userIdProp === undefined || !clientOptions || clientUserId === userId) return;
+    if (!controlled || !clientOptions || clientUserId === userId) return;
     // eslint-disable-next-line no-console
     console.warn(
       `[cio-asa] userId "${userId ?? 'none'}" differs from the client's "${clientUserId ?? 'none'}". Agent requests use the client's id, stored chats use userId: set both to the same value.`,
@@ -75,7 +80,7 @@ export default function CioAsaProvider(
     customCioClient,
     persistenceEnabled,
     resolvedApiKey,
-    userIdProp,
+    controlled,
     clientOptions,
     clientUserId,
     userId,

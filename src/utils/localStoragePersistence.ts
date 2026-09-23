@@ -89,8 +89,44 @@ function storageKeyFor(key: string, namespace?: string): string {
   return [key, `v${PERSISTED_CHAT_VERSION}`, namespace].filter(Boolean).join(':');
 }
 
-/** Deletes every stored conversation of one shopper, or of the guest without `userId`; open tabs follow. */
-export function clearPersistedConversations(options: ClearPersistedConversationsOptions): void {
+const emptyStored = (): StoredThreads => ({
+  version: PERSISTED_CHAT_VERSION,
+  threads: {},
+  deleted: {},
+});
+
+function parseStored(raw: string | null): StoredThreads {
+  if (!raw) return emptyStored();
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredThreads>;
+    if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return emptyStored();
+    const threads = Object.fromEntries(
+      Object.entries(parsed.threads).filter(([, chat]) => isPersistedChat(chat)),
+    );
+    const deleted = Object.fromEntries(
+      Object.entries(parsed.deleted ?? {}).filter(([, at]) => typeof at === 'number'),
+    );
+    return { version: PERSISTED_CHAT_VERSION, threads, deleted };
+  } catch {
+    return emptyStored();
+  }
+}
+
+function readItem(storage: Storage, key: string): string | null {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deletes every stored conversation of one shopper, or of the guest without `userId`; open tabs
+ * follow. Resolves once the deletion is recorded.
+ */
+export async function clearPersistedConversations(
+  options: ClearPersistedConversationsOptions,
+): Promise<void> {
   const { apiKey, domain = 'chatbot', userId, storage: storageOption } = options;
   const storage = resolveStorage(storageOption, storageAreaFor(userId));
   if (!storage) return;
@@ -98,11 +134,30 @@ export function clearPersistedConversations(options: ClearPersistedConversations
     DEFAULT_PERSISTENCE_KEY,
     persistenceNamespace({ apiKey, domain, userId }),
   );
-  try {
-    storage.removeItem(key);
-  } catch {
-    return;
-  }
+  let cleared = false;
+  // Under the store's lock, and as tombstones rather than a bare removal: a save still queued in
+  // some tab, holding a copy of a thread, must find it deleted instead of writing it back.
+  await withStorageLock(key, () => {
+    try {
+      const raw = readItem(storage, key);
+      if (raw === null) {
+        cleared = true;
+        return;
+      }
+      const current = parseStored(raw);
+      const now = Date.now();
+      const deleted = Object.keys(current.threads).reduce(
+        (all, threadId) => ({ ...all, [threadId]: now }),
+        current.deleted ?? {},
+      );
+      if (Object.keys(deleted).length === 0) storage.removeItem(key);
+      else storage.setItem(key, JSON.stringify({ ...emptyStored(), deleted }));
+      cleared = true;
+    } catch {
+      /* storage unavailable */
+    }
+  });
+  if (!cleared) return;
   // Other tabs get a native storage event; this tab does not, so dispatch one for a mounted chat.
   if (typeof window === 'undefined' || typeof StorageEvent === 'undefined') return;
   try {
@@ -127,41 +182,14 @@ export function createLocalStoragePersistence(
   } = options;
   const storageKey = storageKeyFor(key, namespace);
 
-  const readRaw = (storage: Storage): string | null => {
-    try {
-      return storage.getItem(storageKey);
-    } catch {
-      return null;
-    }
-  };
-
-  const empty = (): StoredThreads => ({
-    version: PERSISTED_CHAT_VERSION,
-    threads: {},
-    deleted: {},
-  });
-
-  const parseValidated = (raw: string): StoredThreads => {
-    try {
-      const parsed = JSON.parse(raw) as Partial<StoredThreads>;
-      if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return empty();
-      const threads = Object.fromEntries(
-        Object.entries(parsed.threads).filter(([, chat]) => isPersistedChat(chat)),
-      );
-      const deleted = Object.fromEntries(
-        Object.entries(parsed.deleted ?? {}).filter(([, at]) => typeof at === 'number'),
-      );
-      return { version: PERSISTED_CHAT_VERSION, threads, deleted };
-    } catch {
-      return empty();
-    }
-  };
+  const readRaw = (storage: Storage): string | null => readItem(storage, storageKey);
+  const empty = emptyStored;
 
   // One sync reads the same key several times; parse and validate the blob once per distinct value.
   let lastParsed: { raw: string; data: StoredThreads } | null = null;
   const parse = (raw: string | null): StoredThreads => {
     if (!raw) return empty();
-    if (lastParsed?.raw !== raw) lastParsed = { raw, data: parseValidated(raw) };
+    if (lastParsed?.raw !== raw) lastParsed = { raw, data: parseStored(raw) };
     const cutoff = Date.now() - ttlMs;
     const { data } = lastParsed;
     return {

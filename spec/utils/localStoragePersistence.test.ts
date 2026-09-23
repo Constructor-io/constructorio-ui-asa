@@ -47,23 +47,65 @@ describe('clearPersistedConversations', () => {
     await user.saveThread(chat('u', turns(1)));
   });
 
-  it('deletes one shopper and leaves the guest alone', () => {
-    clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
-    expect(storage.getItem(keyFor('u1'))).toBeNull();
+  const threadsIn = (key: string) =>
+    Object.keys(JSON.parse(storage.getItem(key) ?? '{"threads":{}}').threads);
+
+  it('deletes one shopper and leaves the guest alone', async () => {
+    await clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    expect(threadsIn(keyFor('u1'))).toEqual([]);
     expect(storage.getItem(keyFor())).toContain('g');
   });
 
-  it('deletes the guest history without a user id and leaves shoppers alone', () => {
-    clearPersistedConversations({ apiKey: 'k', userId: null, storage });
-    expect(storage.getItem(keyFor())).toBeNull();
+  it('deletes the guest history without a user id and leaves shoppers alone', async () => {
+    await clearPersistedConversations({ apiKey: 'k', userId: null, storage });
+    expect(threadsIn(keyFor())).toEqual([]);
     expect(storage.getItem(keyFor('u1'))).toContain('u');
   });
 
-  it('defaults the domain to the provider default', () => {
-    clearPersistedConversations({ apiKey: 'k', domain: 'other', userId: 'u1', storage });
+  it('defaults the domain to the provider default', async () => {
+    await clearPersistedConversations({ apiKey: 'k', domain: 'other', userId: 'u1', storage });
     expect(storage.getItem(keyFor('u1'))).toContain('u');
-    clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    await clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    expect(threadsIn(keyFor('u1'))).toEqual([]);
+  });
+
+  it('leaves tombstones so a copy still held by a tab cannot write the thread back', async () => {
+    const user = createLocalStoragePersistence({ storage, namespace: 'k:chatbot:u1' });
+    const held = (await user.getThread('u'))!;
+    await clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    expect(await user.isThreadDeleted!('u')).toBe(true);
+
+    await user.saveThread({ ...held, updatedAt: Date.now() + 1 });
+    expect(await user.getThread('u')).toBeNull();
+    expect(await user.listThreads()).toEqual([]);
+
+    const fresh = chat('n', turns(1), Date.now() + 10);
+    await user.saveThread({ ...fresh, createdAt: Date.now() + 10 });
+    expect((await user.listThreads()).map((t) => t.threadId)).toEqual(['n']);
+  });
+
+  it('removes the key outright when nothing was stored under it', async () => {
+    storage.removeItem(keyFor('u1'));
+    storage.setItem(keyFor('u1'), JSON.stringify({ version: PERSISTED_CHAT_VERSION, threads: {} }));
+    await clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
     expect(storage.getItem(keyFor('u1'))).toBeNull();
+  });
+
+  it('takes the store lock so a save in another tab cannot interleave with the clear', async () => {
+    const order: string[] = [];
+    const request = jest.fn(async (_name: string, callback: () => void | Promise<void>) => {
+      order.push('lock');
+      await callback();
+    });
+    Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
+    try {
+      await clearPersistedConversations({ apiKey: 'k', userId: 'u1', storage });
+    } finally {
+      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+    }
+    expect(request).toHaveBeenCalledWith(keyFor('u1'), expect.any(Function));
+    expect(order).toEqual(['lock']);
+    expect(threadsIn(keyFor('u1'))).toEqual([]);
   });
 
   it('clears a shopper from localStorage and the guest from sessionStorage by default', async () => {
@@ -77,12 +119,13 @@ describe('clearPersistedConversations', () => {
       storageArea: 'session',
     }).saveThread(chat('g', turns(1)));
 
-    clearPersistedConversations({ apiKey: 'k', userId: 'u1' });
-    expect(window.localStorage.getItem(keyFor('u1'))).toBeNull();
+    const threadsOf = (raw: string | null) => Object.keys(JSON.parse(raw ?? '{}').threads ?? {});
+    await clearPersistedConversations({ apiKey: 'k', userId: 'u1' });
+    expect(threadsOf(window.localStorage.getItem(keyFor('u1')))).toEqual([]);
     expect(window.sessionStorage.getItem(keyFor())).toContain('g');
 
-    clearPersistedConversations({ apiKey: 'k' });
-    expect(window.sessionStorage.getItem(keyFor())).toBeNull();
+    await clearPersistedConversations({ apiKey: 'k' });
+    expect(threadsOf(window.sessionStorage.getItem(keyFor()))).toEqual([]);
     window.localStorage.clear();
     window.sessionStorage.clear();
   });

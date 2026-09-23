@@ -5,6 +5,7 @@ import {
   foreignStreamRemainingMs,
   isInFlight,
   isLocalThreadId,
+  moveThreads,
   normalizeHydratedMessages,
   saveThreadAndRetireStale,
 } from '../../utils/chatThreads';
@@ -71,18 +72,17 @@ export default function useChatPersistence(params: Params) {
   // A login keeps the guest conversation on screen instead and moves it into the shopper's store.
   const [rendered, setRendered] = useState({ store, scope });
   const carryOverFromRef = useRef<ChatPersistence | undefined>(undefined);
+  // Every guest thread moves into the shopper's store on login, so none is left for the next guest.
+  const migrateFromRef = useRef<ChatPersistence | undefined>(undefined);
   const settleIntoRef = useRef<{ store: ChatPersistence; messages: ChatMessage[] } | undefined>(
     undefined,
   );
   if (rendered.store !== store) {
-    const carryOver =
-      rendered.store &&
-      store &&
-      rendered.scope === 'guest' &&
-      scope === 'user' &&
-      messages.length > 0;
+    const login = rendered.store && store && rendered.scope === 'guest' && scope === 'user';
+    const carryOver = login && messages.length > 0;
     setRendered({ store, scope });
     setThreads([]);
+    if (login) migrateFromRef.current = rendered.store;
     if (carryOver) {
       carryOverFromRef.current = rendered.store;
     } else {
@@ -176,13 +176,23 @@ export default function useChatPersistence(params: Params) {
   useEffect(() => {
     const carryOverFrom = carryOverFromRef.current;
     carryOverFromRef.current = undefined;
+    const migrateFrom = migrateFromRef.current;
+    migrateFromRef.current = undefined;
+    // Behind the guest store's pending writes, so none of them can recreate a moved record.
+    const migrate = (onScreen?: Parameters<typeof moveThreads>[2]) =>
+      migrateFrom && store
+        ? enqueueWrite(() => moveThreads(migrateFrom, store, onScreen).catch(() => {}))
+        : undefined;
     if (carryOverFrom && store) {
       // A login mid-conversation: the guest conversation continues as the shopper's own.
       stopForeign();
       invalidateThreads();
-      const guestId = session.storageThreadId;
-      // Behind the guest store's pending writes, so none of them can recreate the record.
-      if (guestId) enqueueWrite(() => carryOverFrom.deleteThread(guestId).catch(() => {}));
+      const guestIds = [session.storageThreadId, ...session.orphanIds].filter(
+        (id): id is string => id !== null,
+      );
+      migrate({ threadIds: guestIds, firstMessageId: messagesRef.current[0]?.id })?.then(
+        refreshThreads,
+      );
       resetWrites();
       session.orphanIds = [];
       session.lastSyncedAt = 0;
@@ -212,6 +222,7 @@ export default function useChatPersistence(params: Params) {
           saveThreadAndRetireStale(settleInto.store, snapshot, staleIds).then(() => {}),
         );
       }
+      migrate()?.then(refreshThreads);
       resetConversation(session);
       session.interacted = false;
       invalidateThreads();

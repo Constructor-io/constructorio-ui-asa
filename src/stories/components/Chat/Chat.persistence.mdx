@@ -39,7 +39,7 @@ Everything below is optional and only active when `persistConversation` is set o
 
 ## Login and logout
 
-History is stored per shopper, and the shopper is whoever `userId` says. Set it on login, remove it (or pass `null`) on logout. Everything else follows from that. On login the conversation on screen, if any, is carried over into the shopper's history and continues without interruption, even mid-answer; the guest copy is removed. When one signed-in id is replaced by another, or on logout, the chat switches storage, clears the screen and loads that shopper's own history, never reading a key that belongs to another id. This holds in every open tab. Use the same id you give Constructor for personalization, stable for that person over time and not an email or anything personal, because it becomes part of a `localStorage` key that any script on the page can read.
+History is stored per shopper, and the shopper is whoever `userId` says. Set it on login, remove it (or pass `null`) on logout. Everything else follows from that. On login every guest thread moves into the shopper's history, and the conversation on screen, if any, continues without interruption, even mid-answer; nothing stays in the guest history for the next person using the tab. When one signed-in id is replaced by another, or on logout, the chat switches storage, clears the screen and loads that shopper's own history, never reading a key that belongs to another id. This holds in every open tab. Use the same id you give Constructor for personalization, stable for that person over time and not an email or anything personal, because it becomes part of a `localStorage` key that any script on the page can read.
 
 ```jsx
 <CioAsaProvider apiKey="YOUR_API_KEY" persistConversation userId={user?.id ?? null}>
@@ -54,12 +54,14 @@ By default nothing is deleted on logout. The history stays on the device under t
 ```js
 import { clearPersistedConversations } from '@constructor-io/constructorio-ui-asa';
 
-function onLogout(user) {
-  clearPersistedConversations({ apiKey: 'YOUR_API_KEY', domain: 'chatbot', userId: user.id });
+async function onLogout(user) {
+  await clearPersistedConversations({ apiKey: 'YOUR_API_KEY', domain: 'chatbot', userId: user.id });
 }
 ```
 
-A guest's history lives in `sessionStorage`: it survives reloads and navigation within the tab and is gone when the tab is closed, so the next person using the browser never sees it. Each tab is its own guest session, so a product opened in a new tab starts a fresh conversation. Signing in carries the current tab's conversation into the shopper's history. `clearPersistedConversations` without `userId` deletes the guest history of the current tab.
+It resolves once the deletion is recorded. Only the ids of the deleted threads stay behind, for 7 days, so a tab still holding a copy cannot write one back.
+
+A guest's history lives in `sessionStorage`: it survives reloads and navigation within the tab and is gone when the tab is closed, so the next person using the browser never sees it. Each tab is its own guest session, so a product opened in a new tab starts a fresh conversation. Signing in moves the current tab's guest history into the shopper's history. `clearPersistedConversations` without `userId` deletes the guest history of the current tab.
 
 ## How it works
 

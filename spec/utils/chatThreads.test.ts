@@ -9,6 +9,7 @@ import {
   isThreadStreaming,
   isLocalThreadId,
   mergeMessages,
+  moveThreads,
   nextMessageCounter,
   normalizeHydratedMessages,
   saveThreadAndRetireStale,
@@ -173,6 +174,35 @@ describe('findRekeyedThread', () => {
 
     await expect(findRekeyedThread(store, undefined)).resolves.toBeNull();
     await expect(findRekeyedThread(store, 'nope')).resolves.toBeNull();
+  });
+});
+
+describe('moveThreads', () => {
+  it('moves every thread and only deletes the copies of the conversation on screen', async () => {
+    const from = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const to = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const shown = msg('user', 'on screen');
+    await from.saveThread(chat('earlier', turns(1)));
+    await from.saveThread(chat('local-1', [shown]));
+    await from.saveThread(chat('srv-1', [shown, msg('assistant', 'a')]));
+    await from.saveThread(chat('orphan', turns(1)));
+
+    await moveThreads(from, to, { threadIds: ['srv-1', 'orphan'], firstMessageId: shown.id });
+
+    expect(await from.listThreads()).toEqual([]);
+    expect((await to.listThreads()).map((t) => t.threadId)).toEqual(['earlier']);
+  });
+
+  it('moves everything when nothing is on screen', async () => {
+    const from = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const to = createLocalStoragePersistence({ storage: new FakeStorage() });
+    await from.saveThread(chat('a', turns(1)));
+    await from.saveThread(chat('b', turns(1)));
+
+    await moveThreads(from, to);
+
+    expect(await from.listThreads()).toEqual([]);
+    expect((await to.listThreads()).map((t) => t.threadId).sort()).toEqual(['a', 'b']);
   });
 });
 

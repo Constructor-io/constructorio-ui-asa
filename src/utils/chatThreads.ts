@@ -133,3 +133,23 @@ export function foreignStreamRemainingMs(chat: PersistedChat, now = Date.now()):
   if (chat.owner !== undefined && chat.owner === getTabId()) return 0;
   return Math.max(0, IN_FLIGHT_GRACE_MS - (now - chat.updatedAt));
 }
+
+/** Moves every thread of `from` into `to`; copies of the chat on screen are only deleted, its owner saves it. */
+export async function moveThreads(
+  from: ChatPersistence,
+  to: ChatPersistence,
+  onScreen: { threadIds?: string[]; firstMessageId?: string } = {},
+): Promise<void> {
+  const { threadIds = [], firstMessageId } = onScreen;
+  const summaries = await from.listThreads();
+  await Promise.all(
+    summaries.map(async ({ threadId }) => {
+      const chat = await from.getThread(threadId);
+      const shown =
+        threadIds.includes(threadId) ||
+        (firstMessageId !== undefined && chat?.messages[0]?.id === firstMessageId);
+      if (chat && !shown) await to.saveThread(chat);
+      await from.deleteThread(threadId);
+    }),
+  );
+}

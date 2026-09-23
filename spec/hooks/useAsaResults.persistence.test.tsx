@@ -1554,6 +1554,66 @@ describe('useAsaResults persistence', () => {
       );
     });
 
+    it('moves every guest thread into the shopper history on login, not only the one on screen', async () => {
+      window.sessionStorage.setItem(
+        GUEST_KEY,
+        JSON.stringify({
+          version: 1,
+          threads: {
+            earlier: {
+              version: 1,
+              threadId: 'earlier',
+              createdAt: Date.now() - 1000,
+              updatedAt: Date.now() - 1000,
+              messages: [userMsg('u1', 'first as guest'), aiMsg('a1', 'answer')],
+            },
+          },
+        }),
+      );
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.activeThreadId).toBe('earlier'));
+      act(() => hook.result.current.newThread());
+      act(() => hook.result.current.sendMessage('second as guest'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(hook.result.current.threads).toHaveLength(2));
+
+      hook.become('user-1');
+
+      expect(hook.result.current.messages.map((m) => m.text)).toEqual(['second as guest', 'Hi']);
+      await waitFor(() => expect(hook.result.current.threads).toHaveLength(2));
+      const stored = window.localStorage.getItem(userKey('user-1'));
+      expect(stored).toContain('first as guest');
+      expect(stored).toContain('second as guest');
+      const guest = window.sessionStorage.getItem(GUEST_KEY) ?? '';
+      expect(guest).not.toContain('first as guest');
+      expect(guest).not.toContain('second as guest');
+
+      hook.become();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      expect(hook.result.current.messages).toEqual([]);
+      expect(hook.result.current.threads).toEqual([]);
+    });
+
+    it('moves the guest threads on login even when nothing is on screen', async () => {
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as guest'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(window.sessionStorage.getItem(GUEST_KEY)).toContain('as guest'));
+      act(() => hook.result.current.newThread());
+      expect(hook.result.current.messages).toEqual([]);
+
+      hook.become('user-1');
+
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('as guest'),
+      );
+      await waitFor(() =>
+        expect(window.sessionStorage.getItem(GUEST_KEY) ?? '').not.toContain('as guest'),
+      );
+      await waitFor(() => expect(hook.result.current.threads).toHaveLength(1));
+    });
+
     it('does not carry a conversation from one shopper to another', async () => {
       const hook = renderAs('user-1');
       await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
@@ -1741,9 +1801,13 @@ describe('useAsaResults persistence', () => {
       ),
     );
 
-    act(() => clearPersistedConversations({ apiKey: 'key_test', userId: 'user-c' }));
+    await act(async () => {
+      await clearPersistedConversations({ apiKey: 'key_test', userId: 'user-c' });
+    });
 
-    expect(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-c')).toBeNull();
+    expect(
+      JSON.parse(window.localStorage.getItem('cio-asa:chat:v1:key_test:chatbot:user-c')!).threads,
+    ).toEqual({});
     await waitFor(() => expect(result.current.messages).toEqual([]));
     expect(result.current.threads).toEqual([]);
     expect(result.current.activeThreadId).toBeNull();

@@ -216,6 +216,33 @@ describe('CioAsaProvider', () => {
       ]);
     });
 
+    it('treats a removed userId prop as a logout instead of keeping the previous shopper', async () => {
+      const view = renderWith({ userId: 'user-8' });
+      expect(clientUserId()).toBe('user-8');
+      expect(received!.persistenceScope).toBe('user');
+      await save('signed-in');
+
+      view.rerender(element({}));
+
+      expect(clientUserId()).toBeUndefined();
+      expect(received!.persistenceScope).toBe('guest');
+      expect(await received!.persistence!.listThreads()).toEqual([]);
+      expect(window.localStorage.getItem(`${KEY}:user-8`)).toContain('signed-in');
+    });
+
+    it('treats a removed userId prop as a logout for a caller-provided client too', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const cioClient = { agent: {}, options: { apiKey: 'key_test', userId: 'user-9' } };
+      const view = renderWith({ userId: 'user-9', cioClient });
+      expect(received!.persistenceScope).toBe('user');
+
+      view.rerender(element({ cioClient }));
+
+      expect(received!.persistenceScope).toBe('guest');
+      expect(warn).toHaveBeenCalledTimes(1);
+      warn.mockRestore();
+    });
+
     it('keeps the same client across login and logout and only updates its user id', () => {
       const view = renderWith({ userId: null });
       const client = received!.cioClient;
