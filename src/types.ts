@@ -36,6 +36,8 @@ export interface AsaContextValue {
   persistence?: ChatPersistence;
   /** Whose store `persistence` is: the guest's (per tab) or a signed-in shopper's (per browser). */
   persistenceScope?: PersistenceScope;
+  /** Api key and domain `persistence` is scoped to; a login carries a conversation over only within one. */
+  persistenceIndex?: string;
 }
 
 export interface RequestConfigs extends IAgentParameters {
@@ -59,7 +61,11 @@ export interface UrlHelpers {
 export interface CioAsaProviderProps
   extends Omit<
     Partial<AsaContextValue>,
-    'setCioClientOptions' | 'cioClientOptions' | 'persistence' | 'persistenceScope'
+    | 'setCioClientOptions'
+    | 'cioClientOptions'
+    | 'persistence'
+    | 'persistenceScope'
+    | 'persistenceIndex'
   > {
   apiKey?: string;
   /**

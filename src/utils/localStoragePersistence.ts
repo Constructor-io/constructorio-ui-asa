@@ -324,12 +324,14 @@ export function createLocalStoragePersistence(
     // merging its own older copy back would resurrect what it just removed.
     const ownsStored =
       stored?.owner !== undefined && chat.owner !== undefined && stored.owner === chat.owner;
-    const messages =
-      !stored || (ownsStored && !stale)
-        ? chat.messages
-        : mergeMessages(stored.messages, chat.messages, stale);
+    const replace = !stored || (ownsStored && !stale);
+    const messages = replace ? chat.messages : mergeMessages(stored.messages, chat.messages, stale);
+    const base = stale ? stored : chat;
+    // A record holding turns its owner has not seen is nobody's full view, so the next save merges too.
+    const absorbed = !replace && messages.length > base.messages.length;
     const merged: PersistedChat = {
-      ...(stale ? stored : chat),
+      ...base,
+      owner: absorbed ? undefined : base.owner,
       version: PERSISTED_CHAT_VERSION,
       threadId: chat.threadId,
       messages: trimToTurns(messages, maxTurns),

@@ -72,6 +72,11 @@ export function nextMessageId(session: ChatSession): string {
   return `msg-${session.idCounter}-${Date.now()}-${session.idSuffix}`;
 }
 
+/** Whether `messageId` was minted by this session rather than by another tab. */
+export function isOwnMessage(session: ChatSession, messageId: string): boolean {
+  return messageId.endsWith(`-${session.idSuffix}`);
+}
+
 /** Makes a stored conversation the one this session continues. */
 export function adoptStoredChat(session: ChatSession, chat: PersistedChat): void {
   session.storageThreadId = chat.threadId;

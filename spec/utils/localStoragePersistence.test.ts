@@ -330,6 +330,35 @@ describe('createLocalStoragePersistence', () => {
     expect((await store.getThread('t1'))?.messages.map((m) => m.id)).toEqual([user.id]);
   });
 
+  it('keeps a turn merged in from another tab when the owner saves again', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const [user, assistant] = turns(1);
+    const [otherUser, otherAssistant] = turns(1);
+    const [nextUser, nextAssistant] = turns(1);
+    const now = Date.now();
+    await store.saveThread({ ...chat('t1', [user], now - 3000), owner: 'tab-1' });
+    await store.saveThread({
+      ...chat('t1', [otherUser, otherAssistant], now - 2000),
+      owner: 'tab-2',
+    });
+
+    // Tab 1 never saw tab 2's turn: neither of its later full views may drop it.
+    await store.saveThread({ ...chat('t1', [user, assistant], now - 1000), owner: 'tab-1' });
+    await store.saveThread({
+      ...chat('t1', [user, assistant, nextUser, nextAssistant], now),
+      owner: 'tab-1',
+    });
+
+    expect((await store.getThread('t1'))?.messages.map((m) => m.id)).toEqual([
+      user.id,
+      otherUser.id,
+      otherAssistant.id,
+      assistant.id,
+      nextUser.id,
+      nextAssistant.id,
+    ]);
+  });
+
   it('still merges a turn another tab added to the same thread', async () => {
     const store = createLocalStoragePersistence({ storage });
     const [user, assistant] = turns(1);

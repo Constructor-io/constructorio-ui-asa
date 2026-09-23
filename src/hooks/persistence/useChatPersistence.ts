@@ -4,6 +4,7 @@ import {
   findRekeyedThread,
   foreignStreamRemainingMs,
   isInFlight,
+  mergeMessages,
   isLocalThreadId,
   moveThreads,
   normalizeHydratedMessages,
@@ -12,6 +13,7 @@ import {
 import {
   ChatSession,
   adoptStoredChat,
+  isOwnMessage,
   prepareSnapshot,
   resetConversation,
 } from '../../utils/chatSession';
@@ -25,6 +27,8 @@ interface Params {
   store: ChatPersistence | undefined;
   /** Whose store it is; a switch from `'guest'` to `'user'` carries the conversation over. */
   scope?: PersistenceScope;
+  /** Api key and domain of `store`; a login into another index does not carry anything over. */
+  index?: string;
   session: ChatSession;
   initialThreadId?: string;
   messages: ChatMessage[];
@@ -44,6 +48,7 @@ export default function useChatPersistence(params: Params) {
   const {
     store,
     scope,
+    index,
     session,
     initialThreadId,
     messages,
@@ -58,6 +63,10 @@ export default function useChatPersistence(params: Params) {
   const messagesRef = useLatest(messages);
   const mountedRef = useIsMounted();
   const { enqueue: enqueueWrite, reset: resetWrites } = useWriteQueue();
+  // Async writes not yet committed; the page may go away before a queued one gets its lock.
+  const pendingWritesRef = useRef(0);
+  // Another tab changed the thread while this one streamed; looked at again once the turn is saved.
+  const missedSyncRef = useRef(false);
   const {
     threads,
     setThreads,
@@ -74,7 +83,7 @@ export default function useChatPersistence(params: Params) {
 
   // Reset during render so the previous store's conversation never paints under the new one.
   // A login keeps the guest conversation on screen instead and moves it into the shopper's store.
-  const [rendered, setRendered] = useState({ store, scope });
+  const [rendered, setRendered] = useState({ store, scope, index });
   const carryOverFromRef = useRef<ChatPersistence | undefined>(undefined);
   // Every guest thread moves into the shopper's store on login, so none is left for the next guest.
   const migrateFromRef = useRef<ChatPersistence | undefined>(undefined);
@@ -82,9 +91,14 @@ export default function useChatPersistence(params: Params) {
     undefined,
   );
   if (rendered.store !== store) {
-    const login = rendered.store && store && rendered.scope === 'guest' && scope === 'user';
+    const login =
+      rendered.store &&
+      store &&
+      rendered.index === index &&
+      rendered.scope === 'guest' &&
+      scope === 'user';
     const carryOver = login && messages.length > 0;
-    setRendered({ store, scope });
+    setRendered({ store, scope, index });
     setThreads([]);
     if (login) migrateFromRef.current = rendered.store;
     if (carryOver) {
@@ -140,8 +154,11 @@ export default function useChatPersistence(params: Params) {
         return undefined;
       }
       if (mountedRef.current) setActiveThreadId(snapshot.threadId);
+      pendingWritesRef.current += 1;
       return enqueueWrite(async () => {
-        const orphans = await saveThreadAndRetireStale(current, snapshot, staleIds);
+        const orphans = await saveThreadAndRetireStale(current, snapshot, staleIds).finally(() => {
+          pendingWritesRef.current -= 1;
+        });
         // Leftovers of a conversation the user has since left stay stored: they may be its only copy.
         const sameConversation =
           storeRef.current === current && session.storageThreadId === snapshot.threadId;
@@ -160,7 +177,7 @@ export default function useChatPersistence(params: Params) {
 
   /** Write the settled conversation without awaiting anything: the page is going away. */
   const flushBeforeUnload = useCallback(() => {
-    if (!session.isStreaming && !session.dirty) return;
+    if (!hasUnsavedWork(session) && pendingWritesRef.current === 0) return;
     if (storeRef.current?.saveThreadSync) session.dirty = false;
     persistNow({ settle: true, sync: true });
   }, [session, storeRef, persistNow]);
@@ -193,27 +210,29 @@ export default function useChatPersistence(params: Params) {
       migrateFrom && store
         ? enqueueWrite(() => moveThreads(migrateFrom, store, onScreen).catch(() => {}))
         : undefined;
-    if (carryOverFrom && store) {
+    if (carryOverFrom && store && migrateFrom) {
       // A login mid-conversation: the guest conversation continues as the shopper's own.
       stopForeign();
       invalidateThreads();
-      const guestIds = [session.storageThreadId, ...session.orphanIds].filter(
-        (id): id is string => id !== null,
-      );
-      migrate({ threadIds: guestIds, firstMessageId: messagesRef.current[0]?.id })?.then(
-        refreshThreads,
-      );
+      const onScreen = {
+        threadIds: [session.storageThreadId, ...session.orphanIds].filter(
+          (id): id is string => id !== null,
+        ),
+        firstMessageId: messagesRef.current[0]?.id,
+      };
+      const guestWritesDone = enqueueWrite(async () => {});
       resetWrites();
       session.orphanIds = [];
       session.lastSyncedAt = 0;
       session.loadRequest += 1;
       session.interacted = true;
-      if (session.isStreaming) {
-        session.dirty = true;
-      } else {
-        session.dirty = false;
-        persistNow()?.then(refreshThreads);
-      }
+      // Saved into the shopper's store first: the guest copies are deleted only once it is there.
+      session.dirty = session.isStreaming;
+      const saved = persistNow();
+      Promise.all([guestWritesDone, saved])
+        .then(() => moveThreads(migrateFrom, store, onScreen))
+        .catch(() => {})
+        .then(refreshThreads);
       setIsHydrating(false);
       return undefined;
     }
@@ -275,14 +294,6 @@ export default function useChatPersistence(params: Params) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store]);
 
-  // Save once a turn has settled.
-  useEffect(() => {
-    if (!storeRef.current || messages.length === 0) return;
-    if (isStreaming || !session.dirty) return;
-    session.dirty = false;
-    persistNow()?.then(refreshThreads);
-  }, [messages, isStreaming, session, storeRef, persistNow, refreshThreads]);
-
   // Leaving the page or unmounting mid-answer keeps the turn, settled.
   useEffect(() => {
     if (!store || typeof window === 'undefined') return undefined;
@@ -323,8 +334,20 @@ export default function useChatPersistence(params: Params) {
         else session.dirty = true;
         return;
       }
-      if (session.isStreaming) return;
-      if (chat.updatedAt > session.lastSyncedAt) showStoredChat(chat);
+      if (session.isStreaming) {
+        missedSyncRef.current = true;
+        return;
+      }
+      if (chat.updatedAt > session.lastSyncedAt) {
+        showStoredChat(chat);
+        return;
+      }
+      // Turns another tab merged in while this one streamed: add them, and store the full view.
+      const shown = new Set(messagesRef.current.map((m) => m.id));
+      if (chat.messages.some((m) => !shown.has(m.id) && !isOwnMessage(session, m.id))) {
+        session.dirty = true;
+        setMessages((prev) => mergeMessages(chat.messages, prev));
+      }
     } catch {
       /* ignore */
     }
@@ -336,7 +359,23 @@ export default function useChatPersistence(params: Params) {
     showStoredChat,
     forgetConversation,
     mountedRef,
+    setMessages,
   ]);
+
+  // Save once a turn has settled.
+  useEffect(() => {
+    if (!storeRef.current || messages.length === 0) return;
+    if (isStreaming || !session.dirty) return;
+    session.dirty = false;
+    persistNow()?.then(() => {
+      if (!missedSyncRef.current) {
+        refreshThreads();
+        return;
+      }
+      missedSyncRef.current = false;
+      syncFromStore();
+    });
+  }, [messages, isStreaming, session, storeRef, persistNow, refreshThreads, syncFromStore]);
 
   useEffect(() => {
     if (!store?.subscribe) return undefined;

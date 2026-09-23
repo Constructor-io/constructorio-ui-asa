@@ -28,10 +28,20 @@ export function createLocalThreadId(): string {
 const TAB_ID_KEY = 'cio-asa:tab';
 let tabId: string | undefined;
 
+/** Whether this page load is a reload, as opposed to a new, duplicated or restored tab. */
+function isReload(): boolean {
+  try {
+    const [entry] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    return entry?.type === 'reload';
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Per-tab id: survives a reload, differs between tabs, `undefined` on the server. It is kept in
- * `sessionStorage` only while the page is hidden, so a duplicated tab, which copies
- * `sessionStorage`, mints its own.
+ * Per-tab id: survives a reload, differs between tabs, `undefined` on the server. A duplicated tab
+ * copies `sessionStorage`, so the id is read back on a reload only, and is kept there only while
+ * the page is hidden.
  */
 export function getTabId(): string | undefined {
   if (tabId) return tabId;
@@ -40,7 +50,7 @@ export function getTabId(): string | undefined {
   tabId = id;
   try {
     const { sessionStorage } = window;
-    tabId = sessionStorage.getItem(TAB_ID_KEY) ?? id;
+    tabId = (isReload() && sessionStorage.getItem(TAB_ID_KEY)) || id;
     sessionStorage.removeItem(TAB_ID_KEY);
     const claimed = tabId;
     window.addEventListener('pagehide', () => {
@@ -157,8 +167,9 @@ export function foreignStreamRemainingMs(chat: PersistedChat, now = Date.now()):
 }
 
 /**
- * Moves every thread of `from` into `to`; copies of the chat on screen are only deleted, its owner
- * saves it. A thread whose copy cannot be read back from `to` stays in `from`.
+ * Moves every thread of `from` into `to`; copies of the chat on screen are not copied, its owner
+ * saves it. A source record is deleted only once `to` holds it after every copy was made, so one
+ * copy evicting another, or a save that did not land, leaves the source in place.
  */
 export async function moveThreads(
   from: ChatPersistence,
@@ -167,18 +178,26 @@ export async function moveThreads(
 ): Promise<void> {
   const { threadIds = [], firstMessageId } = onScreen;
   const summaries = await from.listThreads();
-  await Promise.all(
-    summaries.map(async ({ threadId }) => {
-      const chat = await from.getThread(threadId);
-      const shown =
-        threadIds.includes(threadId) ||
-        (firstMessageId !== undefined && chat?.messages[0]?.id === firstMessageId);
-      if (chat && !shown) {
-        await to.saveThread(chat);
-        const moved = await to.getThread(threadId);
-        if (!moved || moved.updatedAt < chat.updatedAt) return;
-      }
-      await from.deleteThread(threadId);
-    }),
+  const chats = (await Promise.all(summaries.map((t) => from.getThread(t.threadId)))).filter(
+    (chat): chat is PersistedChat => chat !== null,
   );
+  const isShown = (chat: PersistedChat) =>
+    threadIds.includes(chat.threadId) ||
+    (firstMessageId !== undefined && chat.messages[0]?.id === firstMessageId);
+  const toCopy = chats.filter((chat) => !isShown(chat));
+  await Promise.all(toCopy.map((chat) => to.saveThread(chat)));
+
+  const targetList = await to.listThreads();
+  const target = new Map(
+    (await Promise.all(targetList.map((t) => to.getThread(t.threadId))))
+      .filter((chat): chat is PersistedChat => chat !== null)
+      .map((chat) => [chat.threadId, chat]),
+  );
+  const shownSaved = Array.from(target.values()).some(isShown);
+  const moved = chats.filter((chat) => {
+    if (isShown(chat)) return shownSaved;
+    const copy = target.get(chat.threadId);
+    return copy !== undefined && copy.updatedAt >= chat.updatedAt;
+  });
+  await Promise.all(moved.map((chat) => from.deleteThread(chat.threadId)));
 }

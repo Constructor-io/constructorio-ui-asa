@@ -12,8 +12,15 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   if (!contextValue) {
     throw new Error('useAsaResults must be used within a CioAsaProvider.');
   }
-  const { cioClient, staticRequestConfigs, callbacks, section, persistence, persistenceScope } =
-    contextValue;
+  const {
+    cioClient,
+    staticRequestConfigs,
+    callbacks,
+    section,
+    persistence,
+    persistenceScope,
+    persistenceIndex,
+  } = contextValue;
   const { domain } = staticRequestConfigs || {};
   if (!cioClient || !domain) {
     throw new Error(
@@ -46,6 +53,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
   const store = useChatPersistence({
     store: persistence,
     scope: persistenceScope,
+    index: persistenceIndex,
     session,
     initialThreadId: options?.initialThreadId,
     messages,

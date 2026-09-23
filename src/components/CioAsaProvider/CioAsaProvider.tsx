@@ -97,6 +97,10 @@ export default function CioAsaProvider(
     });
   }, [persistenceEnabled, resolvedApiKey, domain, userId]);
   const persistenceScope = persistence && (userId === undefined ? 'guest' : 'user');
+  const persistenceIndex =
+    persistence && resolvedApiKey !== undefined
+      ? persistenceNamespace({ apiKey: resolvedApiKey, domain })
+      : undefined;
 
   const contextValue = useMemo(
     (): AsaContextValue => ({
@@ -110,6 +114,7 @@ export default function CioAsaProvider(
       section,
       persistence,
       persistenceScope,
+      persistenceIndex,
     }),
     [
       cioClient,
@@ -121,6 +126,7 @@ export default function CioAsaProvider(
       section,
       persistence,
       persistenceScope,
+      persistenceIndex,
     ],
   );
 

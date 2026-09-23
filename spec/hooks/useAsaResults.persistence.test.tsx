@@ -3,7 +3,11 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import useAsaResults from '../../src/hooks/useAsaResults';
 import CioAsaProvider from '../../src/components/CioAsaProvider/CioAsaProvider';
-import { clearPersistedConversations } from '../../src/utils/localStoragePersistence';
+import {
+  clearPersistedConversations,
+  createLocalStoragePersistence,
+} from '../../src/utils/localStoragePersistence';
+import { FakeStorage } from '../utils/chatFixtures';
 import { AsaContext } from '../../src/hooks/useCioAsaContext';
 import * as formatters from '../../src/utils/formatters';
 import * as urlHelpers from '../../src/utils/urlHelpers';
@@ -466,6 +470,27 @@ describe('useAsaResults persistence', () => {
     await act(async () => {});
 
     expect(store.saveThread).not.toHaveBeenCalled();
+  });
+
+  it('writes synchronously on pagehide when a settled turn is still waiting for its write', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('t'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store } = createMemoryPersistence();
+    store.saveThread.mockImplementation(() => new Promise<void>(() => {}));
+    const saveThreadSync = jest.fn();
+    store.saveThreadSync = saveThreadSync;
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(saveThreadSync).toHaveBeenCalledTimes(1);
+    expect(saveThreadSync.mock.calls[0][0].messages.map((m) => m.text)).toEqual(['hello', 'Hi']);
   });
 
   it('saves the partial answer on pagehide while streaming', async () => {
@@ -1091,6 +1116,49 @@ describe('useAsaResults persistence', () => {
       await waitFor(() => expect(threads.has('active')).toBe(true));
     });
 
+    it('keeps and shows a turn another tab added while this one was streaming', async () => {
+      const storage = new FakeStorage();
+      const store = createLocalStoragePersistence({ storage, namespace: 'x' });
+      const otherTab = createLocalStoragePersistence({ storage, namespace: 'x' });
+      const pending = createControllableStream();
+      const { client, getAgentResultsStream } = createMockCioClient({ stream: pending.stream });
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('mine'));
+      act(() => pending.push(startEvent('t')));
+      await waitFor(() => expect(storage.getItem('cio-asa:chat:v1:x')).toContain('mine'));
+
+      await otherTab.saveThread({
+        ...persisted('t', [userMsg('o1', 'theirs'), aiMsg('o2', 'their answer')]),
+        updatedAt: Date.now(),
+        owner: 'tab-2',
+      });
+      act(() => {
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cio-asa:chat:v1:x' }));
+      });
+      act(() => pending.push({ type: 'message', data: { text: 'Hi' } }));
+      act(() => pending.end());
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      await waitFor(() =>
+        expect(result.current.messages.map((m) => m.text)).toEqual(
+          expect.arrayContaining(['theirs', 'their answer', 'mine', 'Hi']),
+        ),
+      );
+
+      getAgentResultsStream.mockReturnValueOnce(
+        createEventStream([startEvent('t'), { type: 'message', data: { text: 'Again' } }]),
+      );
+      act(() => result.current.sendMessage('next'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      await waitFor(async () =>
+        expect((await store.getThread('t'))?.messages.map((m) => m.text)).toEqual(
+          expect.arrayContaining(['theirs', 'their answer', 'mine', 'Hi', 'next', 'Again']),
+        ),
+      );
+    });
+
     it('picks up turns added to the active thread by another tab', async () => {
       const { client } = createMockCioClient({ events: [] });
       const { store, threads, notify } = createMemoryPersistence(seed(), true);
@@ -1538,9 +1606,9 @@ describe('useAsaResults persistence', () => {
       startEvent('thread-x'),
       { type: 'message', data: { text: 'Hi' } },
     ];
-    const clientFor = (userId?: string) => {
+    const clientFor = (userId?: string, apiKey = 'key_test') => {
       const { client } = createMockCioClient({ events });
-      (client as unknown as { options: object }).options = { apiKey: 'key_test', userId };
+      (client as unknown as { options: object }).options = { apiKey, userId };
       return client;
     };
     function renderAs(initialUserId?: string) {
@@ -1557,8 +1625,8 @@ describe('useAsaResults persistence', () => {
       });
       return {
         ...hook,
-        become(userId?: string) {
-          client = clientFor(userId);
+        become(userId?: string, apiKey?: string) {
+          client = clientFor(userId, apiKey);
           hook.rerender();
         },
       };
@@ -1571,6 +1639,22 @@ describe('useAsaResults persistence', () => {
     afterEach(() => {
       window.localStorage.clear();
       window.sessionStorage.clear();
+    });
+
+    it('does not carry a guest conversation into another index on login', async () => {
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      act(() => hook.result.current.sendMessage('as guest'));
+      await waitFor(() => expect(hook.result.current.isStreaming).toBe(false));
+      await waitFor(() => expect(window.sessionStorage.getItem(GUEST_KEY)).toContain('as guest'));
+
+      hook.become('user-1', 'key_other');
+
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      expect(hook.result.current.messages).toEqual([]);
+      await act(async () => {});
+      expect(window.localStorage.getItem('cio-asa:chat:v1:key_other:chatbot:user-1')).toBeNull();
+      expect(window.sessionStorage.getItem(GUEST_KEY)).toContain('as guest');
     });
 
     it('carries the guest conversation into the shopper history on login', async () => {

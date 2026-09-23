@@ -35,14 +35,35 @@ describe('thread and message helpers', () => {
     expect(window.sessionStorage.getItem('cio-asa:tab')).toBeNull();
   });
 
-  it('reads the tab id back after a reload of the same tab', () => {
-    window.sessionStorage.setItem('cio-asa:tab', 'from-before-reload');
-    jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-      const fresh = require('../../src/utils/chatThreads');
-      expect(fresh.getTabId()).toBe('from-before-reload');
+  describe('on a fresh page load', () => {
+    const loadAs = (type: NavigationTimingType) => {
+      Object.defineProperty(performance, 'getEntriesByType', {
+        value: () => [{ type }],
+        configurable: true,
+      });
+      let id: string | undefined;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+        id = require('../../src/utils/chatThreads').getTabId();
+      });
+      return id;
+    };
+    afterEach(() => {
+      delete (performance as { getEntriesByType?: unknown }).getEntriesByType;
     });
-    expect(window.sessionStorage.getItem('cio-asa:tab')).toBeNull();
+
+    it('reads the tab id back after a reload of the same tab', () => {
+      window.sessionStorage.setItem('cio-asa:tab', 'from-before-reload');
+      expect(loadAs('reload')).toBe('from-before-reload');
+      expect(window.sessionStorage.getItem('cio-asa:tab')).toBeNull();
+    });
+
+    it('mints a new tab id in a tab that copied the id, e.g. a duplicated one', () => {
+      window.sessionStorage.setItem('cio-asa:tab', 'copied-from-the-original');
+      expect(loadAs('back_forward')).not.toBe('copied-from-the-original');
+      window.sessionStorage.setItem('cio-asa:tab', 'copied-from-the-original');
+      expect(loadAs('navigate')).not.toBe('copied-from-the-original');
+    });
   });
 
   it('creates local thread ids that are recognized as local', () => {
@@ -201,15 +222,40 @@ describe('moveThreads', () => {
     const from = createLocalStoragePersistence({ storage: new FakeStorage() });
     const to = createLocalStoragePersistence({ storage: new FakeStorage() });
     const shown = msg('user', 'on screen');
-    await from.saveThread(chat('earlier', turns(1)));
+    await from.saveThread(chat('earlier', turns(1), Date.now() - 1000));
     await from.saveThread(chat('local-1', [shown]));
     await from.saveThread(chat('srv-1', [shown, msg('assistant', 'a')]));
     await from.saveThread(chat('orphan', turns(1)));
+    // What the tab showing it has already saved into the target.
+    await to.saveThread(chat('srv-1', [shown, msg('assistant', 'a')]));
 
     await moveThreads(from, to, { threadIds: ['srv-1', 'orphan'], firstMessageId: shown.id });
 
     expect(await from.listThreads()).toEqual([]);
-    expect((await to.listThreads()).map((t) => t.threadId)).toEqual(['earlier']);
+    expect((await to.listThreads()).map((t) => t.threadId)).toEqual(['srv-1', 'earlier']);
+  });
+
+  it('keeps the copies of the conversation on screen until the target holds it', async () => {
+    const from = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const to = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const shown = msg('user', 'on screen');
+    await from.saveThread(chat('srv-1', [shown, msg('assistant', 'a')]));
+
+    await moveThreads(from, to, { threadIds: ['srv-1'], firstMessageId: shown.id });
+
+    expect((await from.listThreads()).map((t) => t.threadId)).toEqual(['srv-1']);
+  });
+
+  it('keeps a source record whose copy a later copy evicted from the target', async () => {
+    const from = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const to = createLocalStoragePersistence({ storage: new FakeStorage(), maxThreads: 1 });
+    await from.saveThread(chat('older', turns(1), Date.now() - 1000));
+    await from.saveThread(chat('newer', turns(1)));
+
+    await moveThreads(from, to);
+
+    expect((await to.listThreads()).map((t) => t.threadId)).toEqual(['newer']);
+    expect((await from.listThreads()).map((t) => t.threadId)).toEqual(['older']);
   });
 
   it('keeps a thread in the source store when its copy did not land in the target', async () => {
