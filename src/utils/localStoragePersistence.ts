@@ -65,7 +65,9 @@ function resolveStorage(storage: Storage | undefined, area: StorageArea): Storag
   }
 }
 
-const isGuest = (userId: string | null | undefined) => userId == null || userId === '';
+/** No user id, or an empty one: the conversation belongs to a guest. */
+export const isGuest = (userId: string | number | null | undefined): boolean =>
+  userId == null || userId === '';
 
 /** Guests live in `sessionStorage`, so their history ends with the tab; shoppers keep theirs in `localStorage`. */
 export function storageAreaFor(userId: string | null | undefined): StorageArea {
@@ -183,12 +185,11 @@ export function createLocalStoragePersistence(
   const storageKey = storageKeyFor(key, namespace);
 
   const readRaw = (storage: Storage): string | null => readItem(storage, storageKey);
-  const empty = emptyStored;
 
   // One sync reads the same key several times; parse and validate the blob once per distinct value.
   let lastParsed: { raw: string; data: StoredThreads } | null = null;
   const parse = (raw: string | null): StoredThreads => {
-    if (!raw) return empty();
+    if (!raw) return emptyStored();
     if (lastParsed?.raw !== raw) lastParsed = { raw, data: parseStored(raw) };
     const cutoff = Date.now() - ttlMs;
     const { data } = lastParsed;
@@ -231,14 +232,12 @@ export function createLocalStoragePersistence(
   const isEmpty = (data: StoredThreads) =>
     Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0;
 
-  // A tombstone is the only thing stopping another tab from writing a deleted thread back, so it
-  // outranks the thread data it protects: `keepNewest` spares the delete being recorded right now.
-  const tryWriteShedding = (storage: Storage, data: StoredThreads, keepNewest = false): boolean => {
+  // Retries without tombstones, oldest first: the last thing to shed, see `write`.
+  const tryWriteShedding = (storage: Storage, data: StoredThreads): boolean => {
     if (tryWrite(storage, data)) return true;
     const oldestFirst = Object.entries(data.deleted ?? {})
       .sort((a, b) => a[1] - b[1])
-      .map(([id]) => id)
-      .slice(0, keepNewest ? -1 : undefined);
+      .map(([id]) => id);
     let next = data;
     for (let i = 0; i < oldestFirst.length; i += 1) {
       const { [oldestFirst[i]]: shed, ...deleted } = next.deleted ?? {};
@@ -248,14 +247,15 @@ export function createLocalStoragePersistence(
     return false;
   };
 
-  // When storage is full, shed stale tombstones, then other threads oldest first, then the saved
-  // thread's oldest turns, and only then the tombstone of the delete being recorded.
+  // A tombstone is the only thing stopping another tab from writing a deleted thread back, while an
+  // evicted thread is written back by the tab holding it. So when storage is full, shed other
+  // threads oldest first, then the saved thread's oldest turns, and only then tombstones.
   const write = (storage: Storage, data: StoredThreads, priorityThreadId?: string) => {
     if (isEmpty(data)) {
       remove(storage);
       return;
     }
-    if (tryWriteShedding(storage, data, true)) return;
+    if (tryWrite(storage, data)) return;
 
     const priority = priorityThreadId ? data.threads[priorityThreadId] : undefined;
     const oldestFirst = sortedThreads(data)
@@ -269,9 +269,9 @@ export function createLocalStoragePersistence(
     }
 
     if (!priority) {
-      // Nothing left to shed but the tombstones themselves; with no threads to keep, drop the key.
+      // Not even the tombstones fit without the threads; keep the threads rather than wipe them.
       if (Object.keys(data.threads).length === 0) remove(storage);
-      else tryWriteShedding(storage, next);
+      else tryWriteShedding(storage, data);
       return;
     }
 

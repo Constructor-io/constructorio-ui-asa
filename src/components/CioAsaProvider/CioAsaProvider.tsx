@@ -8,12 +8,13 @@ import * as defaultUrlHelpers from '../../utils/urlHelpers';
 import { readClientOptions } from '../../utils/clientOptions';
 import {
   createLocalStoragePersistence,
+  isGuest,
   persistenceNamespace,
   storageAreaFor,
 } from '../../utils/localStoragePersistence';
 
 const normalizeUserId = (value: string | number | null | undefined): string | undefined =>
-  value == null || value === '' ? undefined : String(value);
+  isGuest(value) ? undefined : String(value);
 
 export default function CioAsaProvider(
   props: IncludeRenderProps<CioAsaProviderProps, AsaContextValue>,

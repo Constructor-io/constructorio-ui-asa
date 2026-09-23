@@ -171,6 +171,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     messages,
     sendMessage,
     isStreaming: isStreaming || store.foreignInFlight,
+    canAbort: isStreaming,
     abort,
     clearHistory: store.clearHistory,
     isHydrating: store.isHydrating,

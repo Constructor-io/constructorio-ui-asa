@@ -72,7 +72,9 @@ export interface CioAsaProviderProps
    * The signed-in shopper's id, the same stable non-personal one given to Constructor for
    * personalization. Set it on login and `null` on logout: each shopper only sees their own
    * history, and a guest conversation is carried over into the shopper's history on login.
-   * With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id.
+   * With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id. That
+   * fallback is read when the provider renders, so a `cioClient.setClientOptions({ userId })` login
+   * takes effect on its next render only: pass `userId` to switch right away.
    */
   userId?: string | null;
 }
@@ -183,6 +185,8 @@ export interface UseChatReturn {
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
   /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
+  /** True while this tab's own answer is streaming, the one `abort` can stop. */
+  canAbort: boolean;
   /**
    * Cancel the in-flight request, keeping the conversation. The partial reply is settled
    * as `done` and the thread id is kept, so the next message continues the same
@@ -196,7 +200,7 @@ export interface UseChatReturn {
   threads: ThreadSummary[];
   /** Id of the stored conversation currently shown, or `null` for an unsaved one. */
   activeThreadId: string | null;
-  /** Start an empty conversation, keeping the current one in storage. */
+  /** Start an empty conversation, keeping the current one in storage when persistence is on. */
   newThread: () => void;
   /** Load a stored conversation and continue it. No-op when persistence is off. */
   switchThread: (threadId: string) => Promise<void>;

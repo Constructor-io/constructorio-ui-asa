@@ -34,6 +34,8 @@ export interface ChatSession {
 }
 
 export function createChatSession(initialThreadId?: string): ChatSession {
+  // Claimed at once, before a duplicate of this tab could copy it.
+  getTabId();
   return {
     serverThreadId: initialThreadId && !isLocalThreadId(initialThreadId) ? initialThreadId : null,
     storageThreadId: null,

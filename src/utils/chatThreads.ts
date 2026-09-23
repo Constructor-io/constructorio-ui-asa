@@ -28,16 +28,38 @@ export function createLocalThreadId(): string {
 const TAB_ID_KEY = 'cio-asa:tab';
 let tabId: string | undefined;
 
-/** Per-tab id from `sessionStorage`: survives a reload, differs between tabs, `undefined` on the server. */
+/**
+ * Per-tab id: survives a reload, differs between tabs, `undefined` on the server. It is kept in
+ * `sessionStorage` only while the page is hidden, so a duplicated tab, which copies
+ * `sessionStorage`, mints its own.
+ */
 export function getTabId(): string | undefined {
   if (tabId) return tabId;
   if (typeof window === 'undefined') return undefined;
-  const random = randomId();
+  const id = randomId();
+  tabId = id;
   try {
-    tabId = window.sessionStorage.getItem(TAB_ID_KEY) ?? random;
-    window.sessionStorage.setItem(TAB_ID_KEY, tabId);
+    const { sessionStorage } = window;
+    tabId = sessionStorage.getItem(TAB_ID_KEY) ?? id;
+    sessionStorage.removeItem(TAB_ID_KEY);
+    const claimed = tabId;
+    window.addEventListener('pagehide', () => {
+      try {
+        sessionStorage.setItem(TAB_ID_KEY, claimed);
+      } catch {
+        /* ignore */
+      }
+    });
+    window.addEventListener('pageshow', (event) => {
+      if (!event.persisted) return;
+      try {
+        sessionStorage.removeItem(TAB_ID_KEY);
+      } catch {
+        /* ignore */
+      }
+    });
   } catch {
-    tabId = random;
+    /* sessionStorage blocked: the id lasts for this page only */
   }
   return tabId;
 }
@@ -134,7 +156,10 @@ export function foreignStreamRemainingMs(chat: PersistedChat, now = Date.now()):
   return Math.max(0, IN_FLIGHT_GRACE_MS - (now - chat.updatedAt));
 }
 
-/** Moves every thread of `from` into `to`; copies of the chat on screen are only deleted, its owner saves it. */
+/**
+ * Moves every thread of `from` into `to`; copies of the chat on screen are only deleted, its owner
+ * saves it. A thread whose copy cannot be read back from `to` stays in `from`.
+ */
 export async function moveThreads(
   from: ChatPersistence,
   to: ChatPersistence,
@@ -148,7 +173,11 @@ export async function moveThreads(
       const shown =
         threadIds.includes(threadId) ||
         (firstMessageId !== undefined && chat?.messages[0]?.id === firstMessageId);
-      if (chat && !shown) await to.saveThread(chat);
+      if (chat && !shown) {
+        await to.saveThread(chat);
+        const moved = await to.getThread(threadId);
+        if (!moved || moved.updatedAt < chat.updatedAt) return;
+      }
       await from.deleteThread(threadId);
     }),
   );

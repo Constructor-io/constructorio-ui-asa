@@ -19,11 +19,30 @@ import { createLocalStoragePersistence } from '../../src/utils/localStoragePersi
 import { FakeStorage, chat, msg, turns } from './chatFixtures';
 
 describe('thread and message helpers', () => {
-  it('keeps one tab id per tab, backed by sessionStorage', () => {
+  it('keeps one tab id per tab, in sessionStorage only while the page is hidden', () => {
     const id = getTabId();
     expect(id).toEqual(expect.any(String));
     expect(getTabId()).toBe(id);
+    // A duplicated tab copies sessionStorage, so the id is not there while this page is open.
+    expect(window.sessionStorage.getItem('cio-asa:tab')).toBeNull();
+
+    window.dispatchEvent(new Event('pagehide'));
     expect(window.sessionStorage.getItem('cio-asa:tab')).toBe(id);
+
+    const restored = new Event('pageshow') as PageTransitionEvent;
+    Object.defineProperty(restored, 'persisted', { value: true });
+    window.dispatchEvent(restored);
+    expect(window.sessionStorage.getItem('cio-asa:tab')).toBeNull();
+  });
+
+  it('reads the tab id back after a reload of the same tab', () => {
+    window.sessionStorage.setItem('cio-asa:tab', 'from-before-reload');
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+      const fresh = require('../../src/utils/chatThreads');
+      expect(fresh.getTabId()).toBe('from-before-reload');
+    });
+    expect(window.sessionStorage.getItem('cio-asa:tab')).toBeNull();
   });
 
   it('creates local thread ids that are recognized as local', () => {
@@ -191,6 +210,19 @@ describe('moveThreads', () => {
 
     expect(await from.listThreads()).toEqual([]);
     expect((await to.listThreads()).map((t) => t.threadId)).toEqual(['earlier']);
+  });
+
+  it('keeps a thread in the source store when its copy did not land in the target', async () => {
+    const from = createLocalStoragePersistence({ storage: new FakeStorage() });
+    const full = new FakeStorage();
+    full.quotaBytes = 10;
+    const to = createLocalStoragePersistence({ storage: full });
+    await from.saveThread(chat('a', turns(1)));
+
+    await moveThreads(from, to);
+
+    expect((await from.listThreads()).map((t) => t.threadId)).toEqual(['a']);
+    expect(await to.listThreads()).toEqual([]);
   });
 
   it('moves everything when nothing is on screen', async () => {

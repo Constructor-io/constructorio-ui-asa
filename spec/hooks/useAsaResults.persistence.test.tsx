@@ -182,6 +182,26 @@ const startEvent = (threadId: string): StreamEvent => ({
 });
 
 describe('useAsaResults persistence', () => {
+  it('keeps the initialThreadId seed under StrictMode when persistence is off', async () => {
+    const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+    const { result } = renderHook(() => useAsaResults({ initialThreadId: 'thread-seed' }), {
+      wrapper: ({ children }) => (
+        <React.StrictMode>
+          <Wrapper cioClient={client} persistence={undefined}>
+            {children}
+          </Wrapper>
+        </React.StrictMode>
+      ),
+    });
+
+    act(() => result.current.sendMessage('hello'));
+    expect(getAgentResultsStream).toHaveBeenCalledWith('hello', {
+      domain: 'chatbot',
+      threadId: 'thread-seed',
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
   it('reports no hydration and touches no storage when persistence is off', () => {
     const { client } = createMockCioClient({ events: [] });
     const { result } = renderWithPersistence(client, undefined);
@@ -362,6 +382,56 @@ describe('useAsaResults persistence', () => {
     await act(async () => {});
 
     expect(store.getThread).toHaveBeenCalledWith('srv');
+    expect(store.deleteThread).not.toHaveBeenCalled();
+  });
+
+  it('clearHistory also deletes the local record a re-keyed save could not retire', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('srv'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store, threads } = createMemoryPersistence([
+      persisted('local-old', [userMsg('u1', 'q'), aiMsg('a1', 'a')]),
+    ]);
+    store.getThread.mockImplementation(async (id: string) =>
+      id === 'srv' ? null : threads.get(id) ?? null,
+    );
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('next'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(store.deleteThread).not.toHaveBeenCalled();
+
+    act(() => result.current.clearHistory());
+
+    await waitFor(() => expect(store.deleteThread).toHaveBeenCalledWith('local-old'));
+    expect(store.deleteThread).toHaveBeenCalledWith('srv');
+  });
+
+  it('keeps the local record of a conversation the user has left when it could not be retired', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('srv'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store } = createMemoryPersistence([
+      persisted('local-old', [userMsg('u1', 'q'), aiMsg('a1', 'a')]),
+    ]);
+    store.saveThread.mockImplementation(async () => {});
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('next'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+
+    act(() => result.current.newThread());
+    act(() => result.current.sendMessage('another'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(5));
+    await act(async () => {});
+
     expect(store.deleteThread).not.toHaveBeenCalled();
   });
 
@@ -970,7 +1040,7 @@ describe('useAsaResults persistence', () => {
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
       act(() => result.current.newThread());
-      expect(result.current.messages).toHaveLength(2);
+      expect(result.current.messages).toEqual([]);
       await act(() => result.current.switchThread('anything'));
 
       expect(result.current.threads).toEqual([]);
@@ -1172,6 +1242,8 @@ describe('useAsaResults persistence', () => {
       const { result } = renderWithPersistence(client, store);
       await waitFor(() => expect(result.current.isHydrating).toBe(false));
       expect(result.current.isStreaming).toBe(true);
+
+      expect(result.current.canAbort).toBe(false);
 
       act(() => result.current.sendMessage('mine'));
 

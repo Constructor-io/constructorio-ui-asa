@@ -35,6 +35,10 @@ interface Params {
   cancelStream: () => void;
 }
 
+/** Whether the conversation has something storage does not have yet: a turn, or ids to retire. */
+const hasUnsavedWork = (session: ChatSession) =>
+  session.isStreaming || session.dirty || session.orphanIds.length > 0;
+
 /** Restores, saves and syncs the conversation with `store`; inert when `store` is undefined. */
 export default function useChatPersistence(params: Params) {
   const {
@@ -87,7 +91,7 @@ export default function useChatPersistence(params: Params) {
       carryOverFromRef.current = rendered.store;
     } else {
       // An unfinished turn still belongs to the previous store; the effect below writes it there.
-      if (rendered.store && messages.length > 0 && (session.isStreaming || session.dirty)) {
+      if (rendered.store && messages.length > 0 && hasUnsavedWork(session)) {
         settleIntoRef.current = { store: rendered.store, messages };
       }
       setMessages([]);
@@ -138,8 +142,10 @@ export default function useChatPersistence(params: Params) {
       if (mountedRef.current) setActiveThreadId(snapshot.threadId);
       return enqueueWrite(async () => {
         const orphans = await saveThreadAndRetireStale(current, snapshot, staleIds);
-        // A write that outlived a store switch must not leak its leftovers into the new store.
-        if (orphans.length > 0 && storeRef.current === current) {
+        // Leftovers of a conversation the user has since left stay stored: they may be its only copy.
+        const sameConversation =
+          storeRef.current === current && session.storageThreadId === snapshot.threadId;
+        if (orphans.length > 0 && sameConversation) {
           session.orphanIds = Array.from(new Set([...session.orphanIds, ...orphans]));
         }
       });
@@ -148,7 +154,7 @@ export default function useChatPersistence(params: Params) {
   );
 
   const settleAndPersist = useCallback(() => {
-    if (session.isStreaming || session.dirty) return persistNow({ settle: true });
+    if (hasUnsavedWork(session)) return persistNow({ settle: true });
     return undefined;
   }, [session, persistNow]);
 
@@ -159,21 +165,25 @@ export default function useChatPersistence(params: Params) {
     persistNow({ settle: true, sync: true });
   }, [session, storeRef, persistNow]);
 
-  /** Forget the conversation on screen; returns the id it was stored under. */
+  /** Forget the conversation on screen; returns every id it is stored under. */
   const forgetConversation = useCallback(() => {
     stopForeign();
     cancelStream();
+    const { orphanIds } = session;
     const storedId = resetConversation(session);
     session.interacted = true;
     setActiveThreadId(null);
     setMessages([]);
     setIsStreaming(false);
-    return storedId;
+    return storedId ? [storedId, ...orphanIds] : orphanIds;
   }, [session, stopForeign, cancelStream, setMessages, setIsStreaming]);
 
-  // Restore on mount, and again from scratch whenever the store changes.
-  const storeInitializedRef = useRef(false);
+  // Restore on mount, and again from scratch whenever the store changes. Compared by store, not
+  // by a first-run flag, so StrictMode re-running the mount effect is not taken for a switch.
+  const effectStoreRef = useRef<{ store: ChatPersistence | undefined } | null>(null);
   useEffect(() => {
+    const previous = effectStoreRef.current;
+    effectStoreRef.current = { store };
     const carryOverFrom = carryOverFromRef.current;
     carryOverFromRef.current = undefined;
     const migrateFrom = migrateFromRef.current;
@@ -207,7 +217,7 @@ export default function useChatPersistence(params: Params) {
       setIsHydrating(false);
       return undefined;
     }
-    if (storeInitializedRef.current) {
+    if (previous && previous.store !== store) {
       // The store changed (e.g. a logout): start over instead of saving the old conversation into it.
       clearForeignTimer();
       cancelStream();
@@ -228,7 +238,6 @@ export default function useChatPersistence(params: Params) {
       invalidateThreads();
       resetWrites();
     }
-    storeInitializedRef.current = true;
 
     if (!store) {
       setIsHydrating(false);
@@ -348,11 +357,13 @@ export default function useChatPersistence(params: Params) {
   }, [persistNow, refreshThreads]);
 
   const clearHistory = useCallback(() => {
-    const storedId = forgetConversation();
+    const storedIds = forgetConversation();
     const { current } = storeRef;
-    if (!storedId || !current) return;
+    if (storedIds.length === 0 || !current) return;
     // Queued behind pending saves so one of them cannot recreate the deleted thread.
-    enqueueWrite(() => current.deleteThread(storedId).catch(() => {})).then(refreshThreads);
+    enqueueWrite(() =>
+      Promise.all(storedIds.map((id) => current.deleteThread(id).catch(() => {}))).then(() => {}),
+    ).then(refreshThreads);
   }, [forgetConversation, storeRef, enqueueWrite, refreshThreads]);
 
   const leaveConversation = useCallback(() => {
@@ -360,9 +371,7 @@ export default function useChatPersistence(params: Params) {
     forgetConversation();
   }, [settleAndPersist, refreshThreads, forgetConversation]);
 
-  const newThread = useCallback(() => {
-    if (storeRef.current) leaveConversation();
-  }, [storeRef, leaveConversation]);
+  const newThread = leaveConversation;
 
   const switchThread = useCallback(
     async (threadId: string) => {

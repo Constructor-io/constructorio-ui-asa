@@ -117,6 +117,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       messages,
       sendMessage,
       isStreaming,
+      canAbort,
       abort,
       clearHistory,
       isHydrating,
@@ -223,7 +224,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 onSubmit={sendMessage}
                 isDisabled={isStreaming || isHydrating}
                 isStreaming={isStreaming}
-                onAbort={abort}
+                onAbort={canAbort ? abort : undefined}
                 showStopButton={showStopButton}
                 translations={translations}
                 componentOverrides={componentOverrides?.input}

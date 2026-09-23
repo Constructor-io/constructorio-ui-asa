@@ -653,7 +653,32 @@ describe('createLocalStoragePersistence', () => {
     expect(await store.isThreadDeleted!('b')).toBe(false);
   });
 
-  it('sheds the oldest tombstones before evicting any thread', async () => {
+  it('evicts other threads before shedding any tombstone', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const kept = chat('c', turns(1));
+    await store.saveThread(chat('a', turns(1), Date.now() - 4000));
+    await store.saveThread(chat('b', turns(1), Date.now() - 3000));
+    await store.saveThread(chat('old', turns(1), Date.now() - 2000));
+    await store.saveThread(kept);
+    await store.deleteThread('a');
+    await store.deleteThread('b');
+
+    // Room for every thread and one tombstone, or for the saved thread and both tombstones.
+    const stored = JSON.parse(storage.getItem(key)!);
+    storage.quotaBytes = JSON.stringify({
+      version: PERSISTED_CHAT_VERSION,
+      threads: stored.threads,
+      deleted: { b: stored.deleted.b },
+    }).length;
+    await store.saveThread(kept);
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['c']);
+    expect(await store.isThreadDeleted!('a')).toBe(true);
+    expect(await store.isThreadDeleted!('b')).toBe(true);
+  });
+
+  it('sheds the oldest tombstones only when the saved thread alone does not fit', async () => {
     const store = createLocalStoragePersistence({ storage });
     const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
     const kept = chat('c', turns(1));
