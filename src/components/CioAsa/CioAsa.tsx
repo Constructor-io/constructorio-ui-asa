@@ -18,6 +18,7 @@ const CioAsa = React.forwardRef<ChatHandle, CioAsaProps>((props, ref) => {
     // Provider configuration — everything else belongs to Chat.
     apiKey,
     cioClient,
+    testCells,
     staticRequestConfigs,
     formatters,
     urlHelpers,
@@ -30,6 +31,7 @@ const CioAsa = React.forwardRef<ChatHandle, CioAsaProps>((props, ref) => {
     <CioAsaProvider
       apiKey={apiKey}
       cioClient={cioClient}
+      testCells={testCells}
       staticRequestConfigs={staticRequestConfigs}
       formatters={formatters}
       urlHelpers={urlHelpers}

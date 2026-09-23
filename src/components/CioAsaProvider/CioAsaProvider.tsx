@@ -14,13 +14,19 @@ export default function CioAsaProvider(
     urlHelpers,
     staticRequestConfigs = { domain: 'chatbot' },
     cioClient: customCioClient,
+    testCells,
     callbacks,
     section = 'Products',
     children,
   } = props;
 
   const [cioClientOptions, setCioClientOptions] = useState({});
-  const cioClient = useCioClient({ apiKey, cioClient: customCioClient, cioClientOptions });
+  const cioClient = useCioClient({
+    apiKey,
+    cioClient: customCioClient,
+    cioClientOptions,
+    testCells,
+  });
 
   const contextValue = useMemo(
     (): AsaContextValue => ({
