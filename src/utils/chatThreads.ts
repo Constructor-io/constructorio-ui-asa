@@ -122,22 +122,32 @@ export function mergeMessages(
   ];
 }
 
-/** Saves `snapshot`, then deletes `staleIds` once the new record is confirmed; returns the ids still to delete. */
+/**
+ * Saves `snapshot`, then deletes `staleIds` once the new record is read back. Stores may fail
+ * without throwing, so both steps are checked by reading: `saved` is whether the snapshot landed,
+ * `leftover` the stale ids still stored.
+ */
 export async function saveThreadAndRetireStale(
   store: ChatPersistence,
   snapshot: PersistedChat,
   staleIds: string[],
-): Promise<string[]> {
+): Promise<{ saved: boolean; leftover: string[] }> {
   try {
     await store.saveThread(snapshot);
   } catch {
-    return staleIds;
+    return { saved: false, leftover: staleIds };
   }
-  if (staleIds.length === 0) return [];
   const persisted = await store.getThread(snapshot.threadId).catch(() => null);
-  if (!persisted || persisted.updatedAt < snapshot.updatedAt) return staleIds;
-  await Promise.all(staleIds.map((id) => store.deleteThread(id).catch(() => {})));
-  return [];
+  if (!persisted || persisted.updatedAt < snapshot.updatedAt) {
+    return { saved: false, leftover: staleIds };
+  }
+  const retired = await Promise.all(
+    staleIds.map(async (id) => {
+      await store.deleteThread(id).catch(() => {});
+      return (await store.getThread(id).catch(() => null)) === null;
+    }),
+  );
+  return { saved: true, leftover: staleIds.filter((_, i) => !retired[i]) };
 }
 
 /** Finds the server-keyed record another tab re-keyed a local thread into, by its first message. */

@@ -493,6 +493,28 @@ describe('useAsaResults persistence', () => {
     expect(saveThreadSync.mock.calls[0][0].messages.map((m) => m.text)).toEqual(['hello', 'Hi']);
   });
 
+  it('writes synchronously on pagehide when the last save did not land', async () => {
+    const { client } = createMockCioClient({
+      events: [startEvent('t'), { type: 'message', data: { text: 'Hi' } }],
+    });
+    const { store } = createMemoryPersistence();
+    store.saveThread.mockImplementation(async () => {});
+    const saveThreadSync = jest.fn();
+    store.saveThreadSync = saveThreadSync;
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(saveThreadSync).toHaveBeenCalledTimes(1);
+  });
+
   it('saves the partial answer on pagehide while streaming', async () => {
     const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
     const { store } = createMemoryPersistence();

@@ -156,15 +156,22 @@ export default function useChatPersistence(params: Params) {
       if (mountedRef.current) setActiveThreadId(snapshot.threadId);
       pendingWritesRef.current += 1;
       return enqueueWrite(async () => {
-        const orphans = await saveThreadAndRetireStale(current, snapshot, staleIds).finally(() => {
+        const { saved, leftover } = await saveThreadAndRetireStale(
+          current,
+          snapshot,
+          staleIds,
+        ).finally(() => {
           pendingWritesRef.current -= 1;
         });
         // Leftovers of a conversation the user has since left stay stored: they may be its only copy.
         const sameConversation =
           storeRef.current === current && session.storageThreadId === snapshot.threadId;
-        if (orphans.length > 0 && sameConversation) {
-          session.orphanIds = Array.from(new Set([...session.orphanIds, ...orphans]));
+        if (!sameConversation) return;
+        if (leftover.length > 0) {
+          session.orphanIds = Array.from(new Set([...session.orphanIds, ...leftover]));
         }
+        // Not stored and no newer snapshot on its way: pagehide or the next save must write it.
+        if (!saved && session.lastSyncedAt === snapshot.updatedAt) session.dirty = true;
       });
     },
     [session, storeRef, messagesRef, enqueueWrite, mountedRef],
