@@ -1,7 +1,9 @@
 // Components
+export { default as CioAsa } from './components/CioAsa/CioAsa';
+export type { CioAsaProps } from './components/CioAsa/CioAsa';
 export { default as CioAsaProvider } from './components/CioAsaProvider/CioAsaProvider';
 export { default as Chat } from './components/Chat/Chat';
-export type { ChatHandle } from './components/Chat/Chat';
+export type { ChatHandle, ChatProps } from './components/Chat/Chat';
 export { default as ResultsBlock } from './components/ResultsBlock/ResultsBlock';
 export type { AspectRatio } from './components/ResultsBlock/ResultsBlock';
 export { default as Button } from './components/Button/Button';

@@ -25,6 +25,7 @@ export default function CioAsaProvider(
     urlHelpers,
     staticRequestConfigs = { domain: 'chatbot' },
     cioClient: customCioClient,
+    testCells,
     callbacks,
     section = 'Products',
     persistConversation: persistenceEnabled,
@@ -46,6 +47,7 @@ export default function CioAsaProvider(
     apiKey,
     cioClient: customCioClient,
     cioClientOptions: clientInit,
+    testCells,
   });
 
   // Once the prop has been given, dropping it means a logout, not "read the id from the client".
