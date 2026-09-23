@@ -3,6 +3,8 @@ import type ConstructorIOClient from '@constructor-io/constructorio-client-javas
 import useCioClient from '../../src/hooks/useCioClient';
 import { DEMO_API_KEY } from '../../src/constants';
 
+type ClientWithOptions = { options: { testCells?: Record<string, string> } };
+
 describe('useCioClient', () => {
   it('throws when neither apiKey nor cioClient is provided', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -37,5 +39,53 @@ describe('useCioClient', () => {
       useCioClient({ apiKey: DEMO_API_KEY, cioClient: fakeClient }),
     );
     expect(result.current).toBe(fakeClient);
+  });
+
+  it('forwards test cells to the client it builds', () => {
+    const { result } = renderHook(() =>
+      useCioClient({ apiKey: DEMO_API_KEY, testCells: { constructorio: 'variant_a' } }),
+    );
+
+    expect((result.current as unknown as ClientWithOptions).options.testCells).toEqual({
+      constructorio: 'variant_a',
+    });
+  });
+
+  it('keeps the same client when test cells are rebuilt with equal contents', () => {
+    const { result, rerender } = renderHook((props) => useCioClient(props), {
+      initialProps: { apiKey: DEMO_API_KEY, testCells: { constructorio: 'variant_a' } },
+    });
+    const first = result.current;
+
+    rerender({ apiKey: DEMO_API_KEY, testCells: { constructorio: 'variant_a' } });
+
+    expect(result.current).toBe(first);
+  });
+
+  it('falls back to the window test cells when none are passed', () => {
+    (window as unknown as { cnstrc: unknown }).cnstrc = {
+      testCells: { constructorio: 'from_window' },
+    };
+
+    const { result } = renderHook(() => useCioClient({ apiKey: DEMO_API_KEY }));
+
+    expect((result.current as unknown as ClientWithOptions).options.testCells).toEqual({
+      constructorio: 'from_window',
+    });
+
+    delete (window as unknown as { cnstrc?: unknown }).cnstrc;
+  });
+
+  it('warns rather than silently dropping test cells passed alongside a client', () => {
+    const fakeClient = { agent: {} } as unknown as ConstructorIOClient;
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    renderHook(() =>
+      useCioClient({ cioClient: fakeClient, testCells: { constructorio: 'variant_a' } }),
+    );
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('testCells is ignored'));
+
+    warn.mockRestore();
   });
 });
