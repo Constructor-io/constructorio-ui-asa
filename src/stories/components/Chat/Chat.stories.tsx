@@ -73,6 +73,13 @@ const meta: Meta<typeof Chat> = {
         'Called when the close button (✕) is clicked. The consumer controls component visibility.',
       table: { category: 'Callbacks' },
     },
+    onThreadsChange: {
+      description:
+        'Fires with the stored conversations (`ThreadSummary[]`) and the active thread id whenever ' +
+        'either changes, including changes made in another tab. Requires `persistConversation` on the ' +
+        'provider. See Components/Chat/Persistent Chat.',
+      table: { category: 'Callbacks' },
+    },
     onProductClick: {
       description: 'Called when a product card is clicked in results.',
       table: { category: 'Callbacks' },
@@ -124,9 +131,10 @@ const meta: Meta<typeof Chat> = {
     },
     initialThreadId: {
       description:
-        'Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. ' +
-        'Read once on mount; the thread id is then tracked internally across turns. `abort()` on the ' +
-        'chat handle keeps it; `clearHistory()` resets it.',
+        'Resume a specific agent thread. Read once on mount; the thread id is then tracked ' +
+        'internally across turns. `abort()` on the chat handle keeps it; `clearHistory()` resets ' +
+        'it. With `persistConversation` enabled on the provider, the stored transcript of that ' +
+        'thread is restored too.',
       control: 'text',
       table: {
         category: 'Content',

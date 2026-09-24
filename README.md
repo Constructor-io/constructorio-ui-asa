@@ -85,6 +85,10 @@ function ShoppingAgent() {
 | `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
+| `persistConversation` | `boolean` | Keep the conversation across page loads: in `localStorage` for a signed-in shopper (keyed by api key, domain and user id), in `sessionStorage` for a guest, so it ends with the tab. Off when omitted, and off when no api key can be read from a custom `cioClient`. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants). |
+| `userId` | `string` or `null` | Whose conversation this is. Pass the signed-in shopper's id on login and `null` (or nothing) on logout, so each shopper only ever sees their own history. Use the same stable, non-personal id you give Constructor for personalization. With `apiKey` it is also set on the client. |
+
+> **Login and logout.** History is stored per `userId`. Signing in moves the guest history into the shopper's history, and the conversation on screen continues; changing to another id or logging out switches the chat to that history in every open tab. Nothing is deleted on logout by default: the old history stays on the device for 7 days and returns when that shopper signs in again. To delete it on logout, call `clearPersistedConversations({ apiKey, domain, userId })`. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants).
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. The AI Shopping Agent must be enabled for your account — contact your Constructor representative if agent requests return errors.
 
@@ -120,7 +124,7 @@ passing both logs a warning rather than dropping the value silently.
 
 ### Using the Hook Directly
 
-For custom UI implementations, use the `useAsaResults` hook. It takes no arguments — all configuration comes from the surrounding `CioAsaProvider`.
+For custom UI implementations, use the `useAsaResults` hook. All configuration comes from the surrounding `CioAsaProvider`; the only option is `{ initialThreadId }` to resume a specific thread.
 
 ```jsx
 import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
@@ -144,7 +148,7 @@ function CustomChat() {
 }
 ```
 
-The hook returns `messages` (the full conversation), `sendMessage(text)`, `isStreaming`, and `clearHistory()`. Product results arrive on assistant messages in `msg.groups` and can be rendered with the exported `ResultsBlock` component.
+The hook returns `messages` (the full conversation), `sendMessage(text)`, `isStreaming`, and `clearHistory()`. With `persistConversation` on it also returns `isHydrating`, `threads`, `activeThreadId`, `newThread()` and `switchThread(threadId)` for building a chat history UI. Product results arrive on assistant messages in `msg.groups` and can be rendered with the exported `ResultsBlock` component.
 
 ## Customization
 

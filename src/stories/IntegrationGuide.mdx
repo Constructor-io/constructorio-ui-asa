@@ -166,6 +166,10 @@ The provider accepts the following props:
 | `staticRequestConfigs` | `RequestConfigs` | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`. |
 | `formatters` | `Formatters` | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults. |
 | `urlHelpers` | `UrlHelpers` | Override built-in URL read/write helpers. Merged over the defaults. |
+| `persistConversation` | `boolean` | Keep the conversation across page loads: in `localStorage` for a signed-in shopper (keyed by api key, domain and user id), in `sessionStorage` for a guest, so it ends with the tab. Off when omitted, and off when no api key can be read from a custom `cioClient`. See the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page. |
+| `userId` | `string` or `null` | Whose conversation this is. Pass the signed-in shopper's id on login and `null` (or nothing) on logout, so each shopper only ever sees their own history. Use the same stable, non-personal id you give Constructor for personalization. With `apiKey` it is also set on the client. |
+
+> **Login and logout.** History is stored per `userId`. Signing in moves the guest history into the shopper's history, and the conversation on screen continues; changing to another id or logging out switches the chat to that shopper's own history in every open tab. Nothing is deleted on logout by default: the old history stays on the device for 7 days and returns when that shopper signs in again. To delete it on logout, call `clearPersistedConversations({ apiKey, domain, userId })`. See the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page.
 
 > **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. AI Shopping Assistant must be enabled for your account — contact your Constructor representative if agent requests return errors. If you already instantiate a `ConstructorIOClient` elsewhere in your app, pass it via `cioClient` instead of `apiKey`.
 
@@ -238,6 +242,16 @@ The `Chat` component accepts:
 | `normalizeItem` | `(item, options?) => Product` | Map a raw search-result item to the product-card shape. Override when your index metadata uses non-default field names (see Mapping Product Data). |
 | `translations` | `Translations` | Override UI strings (see Translations section) |
 | `componentOverrides` | `ChatComponentOverrides` | Override any sub-component (see Component Overrides section) |
+| `initialThreadId` | `string` | Resume a specific agent thread. With `persistConversation` on, its stored transcript is restored too (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
+| `onThreadsChange` | `(threads, activeThreadId) => void` | Fires when the list of stored conversations or the active one changes. Requires `persistConversation` (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
+
+`Chat` also exposes methods through a `ref` (`ChatHandle`):
+
+| Method | Description |
+|--------|-------------|
+| `clearHistory()` | Reset the conversation and, with `persistConversation` on, delete it from storage |
+| `newThread()` | Start an empty conversation and keep the current one in storage. Requires `persistConversation` |
+| `switchThread(threadId)` | Load a stored conversation and continue it. Requires `persistConversation` |
 
 ### Follow-up refinements
 
@@ -539,33 +553,7 @@ function CustomChat() {
 }
 ```
 
-**Resuming a conversation from browser storage.** Pass `initialThreadId` to seed the hook's thread id at mount. Combine it with your own persistence of `messages` (e.g. `localStorage`) to survive page reloads on the same server-side thread:
-
-```jsx
-import { useEffect } from 'react';
-import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
-
-function CustomChat() {
-  const savedThreadId = typeof window !== 'undefined'
-    ? window.localStorage.getItem('cio-asa-thread-id') ?? undefined
-    : undefined;
-
-  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults({
-    initialThreadId: savedThreadId,
-  });
-
-  useEffect(() => {
-    const latest = messages.findLast?.((m) => m.threadId)?.threadId;
-    if (latest) window.localStorage.setItem('cio-asa-thread-id', latest);
-  }, [messages]);
-
-  // ...
-}
-```
-
-`Chat` accepts the same prop — pass `initialThreadId` to resume without touching the hook directly.
-
-The hook returns exactly:
+The hook returns:
 
 | Return value | Type | Description |
 |--------------|------|-------------|
@@ -574,6 +562,11 @@ The hook returns exactly:
 | `isStreaming` | `boolean` | Whether a response is currently streaming |
 | `abort` | `() => void` | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle. |
 | `clearHistory` | `() => void` | Cancel any active stream, reset messages and the thread |
+| `isHydrating` | `boolean` | Whether a stored conversation is still being loaded. Always `false` when persistence is off |
+| `threads` | `ThreadSummary[]` | Stored conversations, most recent first. Empty when persistence is off |
+| `activeThreadId` | `string \| null` | Id of the stored conversation on screen, `null` for an unsaved one |
+| `newThread` | `() => void` | Start an empty conversation and keep the current one in storage. No-op when persistence is off |
+| `switchThread` | `(threadId: string) => Promise<void>` | Load a stored conversation and continue it. No-op when persistence is off |
 
 **Cancelling a response.** `abort()` keeps the partial reply and the thread, so the next message continues the same conversation; `clearHistory()` starts over.
 

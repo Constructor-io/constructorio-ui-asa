@@ -32,6 +32,12 @@ export interface AsaContextValue {
   urlHelpers: UrlHelpers;
   callbacks?: AsaCallbacks;
   section?: string;
+  /** Resolved chat persistence store, or `undefined` when persistence is off. */
+  persistence?: ChatPersistence;
+  /** Whose store `persistence` is: the guest's (per tab) or a signed-in shopper's (per browser). */
+  persistenceScope?: PersistenceScope;
+  /** Api key and domain `persistence` is scoped to; a login carries a conversation over only within one. */
+  persistenceIndex?: string;
 }
 
 export interface RequestConfigs extends IAgentParameters {
@@ -53,8 +59,30 @@ export interface UrlHelpers {
 // `setCioClientOptions`, not a provider input. Configure the client with `apiKey`
 // (optionally after instantiating your own `cioClient`).
 export interface CioAsaProviderProps
-  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions' | 'cioClientOptions'> {
+  extends Omit<
+    Partial<AsaContextValue>,
+    | 'setCioClientOptions'
+    | 'cioClientOptions'
+    | 'persistence'
+    | 'persistenceScope'
+    | 'persistenceIndex'
+  > {
   apiKey?: string;
+  /**
+   * Persist the conversation so it survives page loads. With `userId` it is kept in
+   * `localStorage` for 7 days, keyed by api key + domain + user id; without one (a guest) it is
+   * kept in `sessionStorage` and ends with the tab. Off when omitted.
+   */
+  persistConversation?: boolean;
+  /**
+   * The signed-in shopper's id, the same stable non-personal one given to Constructor for
+   * personalization. Set it on login and `null` on logout: each shopper only sees their own
+   * history, and a guest conversation is carried over into the shopper's history on login.
+   * With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id. That
+   * fallback is read when the provider renders, so a `cioClient.setClientOptions({ userId })` login
+   * takes effect on its next render only: pass `userId` to switch right away.
+   */
+  userId?: string | null;
   /**
    * A/B test cells to attach to tracking events, as `{ [testName]: cellName }`. Each entry is
    * sent as an `ef-<testName>` parameter. Constructor's docs have the page set
@@ -173,7 +201,10 @@ export interface ResultGroup {
 export interface UseChatReturn {
   messages: ChatMessage[];
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
+  /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
+  /** True while this tab's own answer is streaming, the one `abort` can stop. */
+  canAbort: boolean;
   /**
    * Cancel the in-flight request, keeping the conversation. The partial reply is settled
    * as `done` and the thread id is kept, so the next message continues the same
@@ -181,11 +212,108 @@ export interface UseChatReturn {
    */
   abort: () => void;
   clearHistory: () => void;
+  /** True while a persisted conversation is being loaded. Always `false` when persistence is off. */
+  isHydrating: boolean;
+  /** Stored conversations, most recent first. Empty when persistence is off. */
+  threads: ThreadSummary[];
+  /** Id of the stored conversation currently shown, or `null` for an unsaved one. */
+  activeThreadId: string | null;
+  /** Start an empty conversation, keeping the current one in storage when persistence is on. */
+  newThread: () => void;
+  /** Load a stored conversation and continue it. No-op when persistence is off. */
+  switchThread: (threadId: string) => Promise<void>;
 }
 
 export interface UseAsaResultsOptions {
-  /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
+  /**
+   * Seed the thread id to resume a prior conversation. Read once on mount. With persistence
+   * enabled, the matching stored transcript is restored too when one exists.
+   */
   initialThreadId?: string;
+}
+
+// --- Persistence ---
+
+/** Where conversations live: `'session'` ends with the tab, `'local'` survives it. */
+export type StorageArea = 'local' | 'session';
+/** Whose conversations a store holds. */
+export type PersistenceScope = 'guest' | 'user';
+
+/** A stored conversation. `threadId` is the server thread id, or a `local-` id for non-conversational domains. */
+export interface PersistedChat {
+  version: 1;
+  threadId: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+  /**
+   * Id of the browser tab that last wrote the record. Lets a reloaded tab tell its own
+   * interrupted answer (settled at once) from one still streaming in another tab.
+   */
+  owner?: string;
+}
+
+export interface ThreadSummary {
+  threadId: string;
+  /** First user message, truncated. */
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  /** True while the latest answer is still streaming (possibly in another tab). */
+  inFlight: boolean;
+}
+
+/** Storage contract the chat hook talks to; implemented by `createLocalStoragePersistence`. */
+export interface ChatPersistence {
+  /** Most recently updated first. */
+  listThreads(): Promise<ThreadSummary[]>;
+  getThread(threadId: string): Promise<PersistedChat | null>;
+  saveThread(chat: PersistedChat): Promise<void>;
+  deleteThread(threadId: string): Promise<void>;
+  /**
+   * Optional. Whether `threadId` was explicitly deleted (or the whole store was cleared), as
+   * opposed to expired or evicted. Without it, a thread that has gone missing is treated as deleted.
+   */
+  isThreadDeleted?(threadId: string): Promise<boolean>;
+  /**
+   * Optional. Write `chat` synchronously, retiring `staleIds` in the same step, for use while the
+   * page is unloading: an async write cannot finish there. Falls back to `saveThread` when absent.
+   */
+  saveThreadSync?(chat: PersistedChat, staleIds?: string[]): void;
+  /**
+   * Optional. Notify when stored threads change outside this hook instance (another tab).
+   * Returns an unsubscribe function.
+   */
+  subscribe?(listener: () => void): () => void;
+}
+
+/** Which stored history `clearPersistedConversations` deletes; mirror what the provider was given. */
+export interface ClearPersistedConversationsOptions {
+  /** The provider's `apiKey`, or the api key of the `cioClient` given to it. */
+  apiKey: string;
+  /** The `domain` from `staticRequestConfigs`. Default `'chatbot'`, the provider's default. */
+  domain?: string;
+  /** The shopper whose history to delete. Omit or pass `null` for the guest history. */
+  userId?: string | null;
+  /** Storage to clear instead of the default: `localStorage` for a shopper, `sessionStorage` for the guest. */
+  storage?: Storage;
+}
+
+export interface LocalStoragePersistenceOptions {
+  /** Storage key prefix. Default `'cio-asa:chat'`. */
+  key?: string;
+  /** Appended to the key to isolate conversations, e.g. per api key + domain. */
+  namespace?: string;
+  /** Threads idle longer than this are dropped on read. Default 7 days, matching server retention. */
+  ttlMs?: number;
+  /** Cap on user/assistant turns kept per thread. Unlimited by default. */
+  maxTurns?: number;
+  /** Cap on threads kept. Unlimited by default. */
+  maxThreads?: number;
+  /** Which browser storage to use. Default `'local'`. */
+  storageArea?: StorageArea;
+  /** Storage to use instead of the browser's; takes precedence over `storageArea`. */
+  storage?: Storage;
 }
 
 // --- Behavioral tracking ---

@@ -80,20 +80,16 @@ export function createEventStream(events: StreamEvent[]): ReadableStream<StreamE
 }
 
 /**
- * Builds a stream that throws when read — used to exercise the catch/handleStreamError path.
+ * Builds a stream that errors when read — used to exercise the catch/handleStreamError path.
+ * A real errored stream, so that `cancel()` rejects with the stored error the way it does in a
+ * browser: the consumer has to swallow that rejection.
  */
 export function createErroringStream(): ReadableStream<StreamEvent> {
-  // A minimal stream-like object whose reader rejects on read. Using a real
-  // errored ReadableStream would surface an unhandled rejection during cancel().
-  return {
-    getReader() {
-      return {
-        read: () => Promise.reject(new Error('stream boom')),
-        cancel: () => Promise.resolve(),
-        releaseLock: () => {},
-      };
+  return new ReadableStream<StreamEvent>({
+    pull() {
+      throw new Error('stream boom');
     },
-  } as unknown as ReadableStream<StreamEvent>;
+  });
 }
 
 /**

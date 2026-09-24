@@ -24,6 +24,8 @@ const CioAsa = React.forwardRef<ChatHandle, CioAsaProps>((props, ref) => {
     urlHelpers,
     callbacks,
     section,
+    persistConversation,
+    userId,
     ...chatProps
   } = props;
 
@@ -36,7 +38,9 @@ const CioAsa = React.forwardRef<ChatHandle, CioAsaProps>((props, ref) => {
       formatters={formatters}
       urlHelpers={urlHelpers}
       callbacks={callbacks}
-      section={section}>
+      section={section}
+      persistConversation={persistConversation}
+      userId={userId}>
       <Chat {...chatProps} ref={ref} />
     </CioAsaProvider>
   );

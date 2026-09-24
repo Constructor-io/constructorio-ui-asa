@@ -84,6 +84,32 @@ describe('bundled entry (standalone browser build)', () => {
     });
   });
 
+  it('forwards persistConversation to the provider and restores the stored conversation', async () => {
+    const now = Date.now();
+    const thread = {
+      version: 1,
+      threadId: 't',
+      messages: [
+        { id: 'u1', role: 'user', text: 'Stored question', status: 'done' },
+        { id: 'a1', role: 'assistant', text: 'Stored answer', status: 'done' },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    };
+    window.sessionStorage.setItem(
+      'cio-asa:chat:v1:key_test:chatbot',
+      JSON.stringify({ version: 1, threads: { t: thread }, deleted: {} }),
+    );
+    mountTarget();
+
+    mount({ apiKey: 'key_test', persistConversation: true });
+
+    await waitFor(() => {
+      expect(screen.getByText('Stored question')).toBeInTheDocument();
+    });
+    window.sessionStorage.clear();
+  });
+
   it('does not treat `selector` or `includeCSS` as component props', async () => {
     const container = mountTarget();
 
