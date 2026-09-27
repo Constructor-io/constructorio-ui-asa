@@ -3,8 +3,9 @@ import { useCioAsaContext } from './useCioAsaContext';
 import { AssistantSubmitSource, ChatMessage, UseAsaResultsOptions, UseChatReturn } from '../types';
 import useAsaTracking from './useAsaTracking';
 import useChatPersistence from './persistence/useChatPersistence';
-import { AgentStreamHandle, readAgentStream } from './agentStream';
+import { LiveTurn, startTurn } from './agentStream';
 import { ChatSession, createChatSession, nextMessageId } from '../utils/chatSession';
+import { normalizeItemToProduct } from '../utils/productNormalizer';
 import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
@@ -30,10 +31,15 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const normalizeItemRef = useLatest(options?.normalizeItem);
   const sessionRef = useRef<ChatSession | null>(null);
-  if (!sessionRef.current) sessionRef.current = createChatSession(options?.initialThreadId);
+  if (!sessionRef.current) {
+    sessionRef.current = createChatSession(options?.initialThreadId, (item) =>
+      (normalizeItemRef.current ?? normalizeItemToProduct)(item),
+    );
+  }
   const session = sessionRef.current;
-  const streamRef = useRef<AgentStreamHandle | null>(null);
+  const turnRef = useRef<LiveTurn | null>(null);
 
   const tracking = useAsaTracking({
     tracker: cioClient.tracker,
@@ -46,8 +52,8 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
   /** Stops this tab's stream, if any. `readAgentStream` settles its `done` without touching state. */
   const cancelStream = useCallback(() => {
-    streamRef.current?.cancel();
-    streamRef.current = null;
+    turnRef.current?.cancel();
+    turnRef.current = null;
   }, []);
 
   const store = useChatPersistence({
@@ -60,10 +66,11 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     setMessages,
     isStreaming,
     setIsStreaming,
+    turnRef,
     cancelStream,
   });
 
-  const { beginTurn, onStreamStart } = store;
+  const { beginTurn, screenOwner } = store;
 
   useEffect(() => cancelStream, [cancelStream]);
 
@@ -103,30 +110,18 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
         ...(session.serverThreadId && { threadId: session.serverThreadId }),
       });
 
-      const handle = readAgentStream(stream, assistantMessage.id, setMessages, {
-        onStart: (threadId) => {
-          if (threadId) session.serverThreadId = threadId;
-          onStreamStart();
-        },
+      turnRef.current = startTurn(stream, assistantMessage, screenOwner, {
         onLoadStart: (intentResultId) => {
           const args = { intent, intentResultId };
           trackingRef.current.trackResultLoadStarted(args);
           callbacksRef.current?.onResultLoadStart?.(args);
         },
-        onFinish: (result) => {
+        onFinish: ({ threadId, ...result }) => {
           const args = { intent, ...result };
-          trackingRef.current.trackResultLoadFinished(args);
+          // The turn may have finished in the background, after the chat moved to another thread.
+          trackingRef.current.trackResultLoadFinished({ ...args, threadId });
           callbacksRef.current?.onResultLoadFinish?.(args);
         },
-      });
-      streamRef.current = handle;
-      handle.done.then(() => {
-        // A stream cancelled by a reset has already been accounted for.
-        if (streamRef.current !== handle) return;
-        streamRef.current = null;
-        session.dirty = true;
-        session.isStreaming = false;
-        setIsStreaming(false);
       });
     },
     [
@@ -134,7 +129,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       domain,
       session,
       beginTurn,
-      onStreamStart,
+      screenOwner,
       trackingRef,
       callbacksRef,
       staticRequestConfigsRef,
@@ -158,7 +153,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
    */
   const abort = useCallback(() => {
     if (!session.isStreaming) return;
-    const abortedId = streamRef.current?.assistantId;
+    const abortedId = turnRef.current?.assistantId;
     cancelStream();
     session.isStreaming = false;
     setIsStreaming(false);

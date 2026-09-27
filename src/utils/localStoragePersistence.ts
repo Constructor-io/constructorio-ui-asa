@@ -283,9 +283,11 @@ export function createLocalStoragePersistence(
     }
     if (tryWriteShedding(storage, next)) return;
 
+    // Nothing fits: drop the stored copy too, so no in-flight record is left behind.
     const { [priority.threadId]: dropped, ...rest } = data.threads;
     const others: StoredThreads = { ...data, threads: rest };
-    if (!isEmpty(others)) tryWriteShedding(storage, others);
+    if (isEmpty(others)) remove(storage);
+    else tryWriteShedding(storage, others);
   };
 
   // Redo the merge if another tab wrote between our read and this write.

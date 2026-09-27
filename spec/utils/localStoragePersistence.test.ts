@@ -644,6 +644,51 @@ describe('createLocalStoragePersistence', () => {
     expect(await store.getThread('huge')).toBeNull();
   });
 
+  it('never stores a turn without its product cards: the thread is dropped instead', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const results = [
+      { group: { display_name: 'Picks' }, searchResults: [{ value: 'x'.repeat(2000), data: {} }] },
+    ];
+    const withResults = chat('current', [
+      msg('user', 'more?'),
+      { ...msg('assistant', 'Here are more.'), groups: results },
+    ]);
+    storage.quotaBytes = JSON.stringify(withResults).length - 100;
+
+    await store.saveThread(withResults);
+
+    expect(await store.getThread('current')).toBeNull();
+    expect(storage.length).toBe(0);
+  });
+
+  it('drops the stored copy of a thread whose new turn does not fit at all', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    const other = chat('other', turns(1), Date.now() - 2000);
+    await store.saveThread(other);
+    const question = chat('current', [msg('user', 'q'), msg('assistant', '', 'loading')]);
+    await store.saveThread(question);
+    storage.quotaBytes = storage.getItem(`cio-asa:chat:v${PERSISTED_CHAT_VERSION}`)!.length + 4;
+
+    await store.saveThread(
+      chat('current', [msg('user', 'q'), msg('assistant', 'a'.repeat(400))], Date.now() + 1),
+    );
+
+    expect(await store.getThread('current')).toBeNull();
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['other']);
+  });
+
+  it('removes the key when the only thread no longer fits', async () => {
+    const store = createLocalStoragePersistence({ storage });
+    await store.saveThread(chat('current', [msg('user', 'q'), msg('assistant', '', 'loading')]));
+    storage.quotaBytes = storage.getItem(`cio-asa:chat:v${PERSISTED_CHAT_VERSION}`)!.length + 4;
+
+    await store.saveThread(
+      chat('current', [msg('user', 'q'), msg('assistant', 'a'.repeat(400))], Date.now() + 1),
+    );
+
+    expect(storage.length).toBe(0);
+  });
+
   it('gives up silently when even a single turn does not fit', async () => {
     const store = createLocalStoragePersistence({ storage });
     storage.quotaBytes = 10;

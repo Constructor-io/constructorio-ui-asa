@@ -1,12 +1,15 @@
 import { ChatMessage, PersistedChat } from '../types';
 import {
+  ItemNormalizer,
   PERSISTED_CHAT_VERSION,
+  compactMessages,
   createLocalThreadId,
   getTabId,
   isLocalThreadId,
   nextMessageCounter,
   randomId,
 } from './chatThreads';
+import { normalizeItemToProduct } from './productNormalizer';
 
 /** Conversation state that async work must always see current; one object so a reset is one call. */
 export interface ChatSession {
@@ -31,12 +34,18 @@ export interface ChatSession {
   idCounter: number;
   /** Per-instance suffix so two tabs cannot mint the same message id in the same millisecond. */
   idSuffix: string;
+  /** Makes the card stored for a raw item: the one the conversation is rendered with. */
+  normalizeItem: ItemNormalizer;
 }
 
-export function createChatSession(initialThreadId?: string): ChatSession {
+export function createChatSession(
+  initialThreadId?: string,
+  normalizeItem: ItemNormalizer = normalizeItemToProduct,
+): ChatSession {
   // Claimed at once, before a duplicate of this tab could copy it.
   getTabId();
   return {
+    normalizeItem,
     serverThreadId: initialThreadId && !isLocalThreadId(initialThreadId) ? initialThreadId : null,
     storageThreadId: null,
     orphanIds: [],
@@ -86,6 +95,25 @@ export function adoptStoredChat(session: ChatSession, chat: PersistedChat): void
   session.lastSyncedAt = chat.updatedAt;
 }
 
+/** A copy that keeps the conversation `session` holds while `session` itself moves on. */
+export function forkSession(session: ChatSession): ChatSession {
+  return { ...session, orphanIds: [...session.orphanIds] };
+}
+
+/** Makes `session` continue the conversation `from` kept, showing `messages`. */
+export function adoptSession(
+  session: ChatSession,
+  from: ChatSession,
+  messages: ChatMessage[],
+): void {
+  session.serverThreadId = from.serverThreadId;
+  session.storageThreadId = from.storageThreadId;
+  session.orphanIds = [...from.orphanIds];
+  session.createdAt = from.createdAt;
+  session.lastSyncedAt = from.lastSyncedAt;
+  session.idCounter = nextMessageCounter(messages);
+}
+
 /** Builds the record to write and moves the session onto its key; `staleIds` are the records to retire once stored. */
 export function prepareSnapshot(
   session: ChatSession,
@@ -109,7 +137,7 @@ export function prepareSnapshot(
     snapshot: {
       version: PERSISTED_CHAT_VERSION,
       threadId,
-      messages,
+      messages: compactMessages(messages, session.normalizeItem),
       createdAt,
       updatedAt,
       owner: getTabId(),

@@ -10,7 +10,7 @@ import {
   ThreadSummary,
   Translations,
 } from '../../types';
-import { Product, NormalizeOptions } from '../../utils/productNormalizer';
+import { Product, NormalizeOptions, normalizeItemToProduct } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import ChatHeader from './ChatHeader';
@@ -125,7 +125,13 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       activeThreadId,
       newThread,
       switchThread,
-    } = useAsaResults({ initialThreadId });
+    } = useAsaResults({
+      initialThreadId,
+      normalizeItem: (item) =>
+        (normalizeItem ?? normalizeItemToProduct)(item, {
+          saleBadgeText: translate('CioAsa.results.saleBadge', translations),
+        }),
+    });
     const chatViewRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 

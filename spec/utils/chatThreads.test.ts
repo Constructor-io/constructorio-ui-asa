@@ -1,4 +1,5 @@
 import {
+  compactMessages,
   createLocalThreadId,
   findRekeyedThread,
   foreignStreamRemainingMs,
@@ -14,8 +15,9 @@ import {
   normalizeHydratedMessages,
   saveThreadAndRetireStale,
 } from '../../src/utils/chatThreads';
-import type { PersistedChat } from '../../src/types';
+import type { ChatMessage, PersistedChat } from '../../src/types';
 import { createLocalStoragePersistence } from '../../src/utils/localStoragePersistence';
+import { normalizeItemToProduct } from '../../src/utils/productNormalizer';
 import { FakeStorage, chat, msg, turns } from './chatFixtures';
 
 describe('thread and message helpers', () => {
@@ -97,7 +99,8 @@ describe('thread and message helpers', () => {
       },
     ]);
     expect(streamingWithText.status).toBe('done');
-    expect(loadingEmpty.status).toBe('error');
+    expect(streamingWithText.interrupted).toBeUndefined();
+    expect(loadingEmpty).toMatchObject({ status: 'error', interrupted: true });
     expect(done.status).toBe('done');
     expect(refinementOnly.status).toBe('done');
   });
@@ -135,6 +138,84 @@ describe('mergeMessages', () => {
       [a.id, 'done'],
       [b.id, 'done'],
     ]);
+  });
+});
+
+describe('compactMessages', () => {
+  const fullItem = {
+    value: 'Trail running shoe',
+    matched_terms: [],
+    data: {
+      id: 'item-1',
+      variation_id: 'item-1-blue',
+      url: 'https://example.com/p/1',
+      image_url: 'https://example.com/p/1.png',
+      price: 120,
+      sale_price: 99,
+      facets: [{ name: 'Color', values: ['Blue'] }],
+      variations: [{ color: 'Blue' }],
+    },
+  };
+  const answer = (searchResults: Record<string, unknown>[] = [fullItem]): ChatMessage => ({
+    ...msg('assistant', 'Here you go'),
+    intentResultId: 'ir-1',
+    groups: [
+      {
+        group: { display_name: 'Shoes', value: 'shoes', data: { request: { term: 'shoes' } } },
+        searchResults,
+        searchResultId: 'sr-1',
+        intentResultId: 'ir-1',
+      },
+    ],
+  });
+
+  it('stores the cards made from the items and none of the raw items', () => {
+    const [stored] = compactMessages([answer()], normalizeItemToProduct);
+    expect(stored.groups?.[0].products).toEqual([normalizeItemToProduct(fullItem)]);
+    expect(stored.groups?.[0].searchResults).toEqual([]);
+  });
+
+  it('stores whatever a custom normalizer returns, extra fields included', () => {
+    const normalize = (i: any) => ({
+      id: i.data.id,
+      name: i.value,
+      imageUrl: i.data.image_url,
+      swatches: i.data.variations.map((v: { color: string }) => v.color),
+    });
+    const [stored] = compactMessages([answer()], normalize);
+    expect(stored.groups?.[0].products).toEqual([
+      {
+        id: 'item-1',
+        name: 'Trail running shoe',
+        imageUrl: 'https://example.com/p/1.png',
+        swatches: ['Blue'],
+      },
+    ]);
+  });
+
+  it('keeps the cards of a restored group instead of normalizing again', () => {
+    const products = [{ id: 'item-1', name: 'Restored' }];
+    const restored = {
+      ...answer([]),
+      groups: [{ ...answer().groups![0], searchResults: [], products }],
+    };
+    const normalize = jest.fn(normalizeItemToProduct);
+    const [stored] = compactMessages([restored], normalize);
+    expect(stored.groups?.[0].products).toBe(products);
+    expect(normalize).not.toHaveBeenCalled();
+  });
+
+  it('keeps the group, its tracking ids and messages without results as they are', () => {
+    const question = msg('user', 'shoes');
+    const original = answer();
+    const [storedQuestion, stored] = compactMessages([question, original], normalizeItemToProduct);
+    const { searchResults, products, ...group } = stored.groups![0];
+    const { searchResults: originalResults, ...originalGroup } = original.groups![0];
+
+    expect(storedQuestion).toBe(question);
+    expect(group).toEqual(originalGroup);
+    expect(stored.intentResultId).toBe('ir-1');
+    expect(originalResults[0]).toBe(fullItem);
   });
 });
 

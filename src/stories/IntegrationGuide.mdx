@@ -443,6 +443,7 @@ Available translation keys:
 | `CioAsa.results.saleBadge` | Sale |
 | `CioAsa.refinement.ariaLabel` | Refine your results |
 | `CioAsa.error.message` | I can't assist you with that request. |
+| `CioAsa.error.interrupted` | The answer was interrupted. Please send your question again. |
 
 <div className="step-heading">
   <span className="step-number">6</span>
@@ -777,12 +778,14 @@ If the agent returns a server error, or the response stream fails, the in-progre
 
 - If the agent had already streamed partial text before failing, that text is kept.
 - Otherwise the bubble shows the `CioAsa.error.message` string, which you can localize via `translations` (default: *"I can't assist you with that request."*).
+- An answer cut off before anything arrived, because the page was left or the shopper logged out mid-answer with `persistConversation` on, is marked `interrupted: true` as well and shows `CioAsa.error.interrupted` instead (default: *"The answer was interrupted. Please send your question again."*).
 - The bubble also gets the `cio-asa-ai-message__bubble--error` class, so you can style the error state distinctly.
 
 ```jsx
 <Chat
   translations={{
     'CioAsa.error.message': 'Sorry, something went wrong. Please try again.',
+    'CioAsa.error.interrupted': 'That answer got cut off. Please ask again.',
   }}
 />
 ```

@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConstructorClientOptions } from '@constructor-io/constructorio-client-javascript/lib/types';
 import useCioClient from '../../hooks/useCioClient';
-import { AsaContextValue, IncludeRenderProps, CioAsaProviderProps } from '../../types';
+import {
+  AsaContextValue,
+  ChatPersistence,
+  IncludeRenderProps,
+  CioAsaProviderProps,
+  StorageArea,
+} from '../../types';
 import { AsaContext } from '../../hooks/useCioAsaContext';
 import * as defaultFormatters from '../../utils/formatters';
 import * as defaultUrlHelpers from '../../utils/urlHelpers';
@@ -15,6 +21,20 @@ import {
 
 const normalizeUserId = (value: string | number | null | undefined): string | undefined =>
   isGuest(value) ? undefined : String(value);
+
+// One store per key for the page, so a chat mounted again finds the answers still streaming into it.
+// Not on the server, where the map would outlive the request and grow with every shopper.
+const sharedStores = new Map<string, ChatPersistence>();
+function sharedStore(namespace: string, storageArea: StorageArea): ChatPersistence {
+  if (typeof window === 'undefined')
+    return createLocalStoragePersistence({ namespace, storageArea });
+  const id = `${storageArea}:${namespace}`;
+  const existing = sharedStores.get(id);
+  if (existing) return existing;
+  const store = createLocalStoragePersistence({ namespace, storageArea });
+  sharedStores.set(id, store);
+  return store;
+}
 
 export default function CioAsaProvider(
   props: IncludeRenderProps<CioAsaProviderProps, AsaContextValue>,
@@ -93,10 +113,10 @@ export default function CioAsaProvider(
     // Without an api key the store could not be scoped to this index, so there is none.
     if (!persistenceEnabled || resolvedApiKey === undefined) return undefined;
     // Per-user namespace so a shared browser never shows the previous shopper's chat.
-    return createLocalStoragePersistence({
-      namespace: persistenceNamespace({ apiKey: resolvedApiKey, domain, userId }),
-      storageArea: storageAreaFor(userId),
-    });
+    return sharedStore(
+      persistenceNamespace({ apiKey: resolvedApiKey, domain, userId }),
+      storageAreaFor(userId),
+    );
   }, [persistenceEnabled, resolvedApiKey, domain, userId]);
   const persistenceScope = persistence && (userId === undefined ? 'guest' : 'user');
   const persistenceIndex =

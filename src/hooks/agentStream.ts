@@ -29,6 +29,23 @@ export interface AgentStreamHandle {
   done: Promise<void>;
 }
 
+/** Where a running answer goes: the chat showing its conversation, or the background. */
+export interface TurnOwner {
+  setMessages: SetMessages;
+  onStart: (threadId?: string) => void;
+  /** The stream ended, failed or was cancelled. */
+  onDone: () => void;
+}
+
+/** An answer being read; its owner can change mid-stream, so leaving the chat does not stop it. */
+export interface LiveTurn extends AgentStreamHandle {
+  owner: TurnOwner;
+  /** The assistant message as streamed so far, whoever shows it. */
+  assistant: ChatMessage;
+  /** From the `start` event. */
+  serverThreadId?: string;
+}
+
 /** Drains an agent stream into the assistant message identified by `assistantId`. */
 export function readAgentStream(
   stream: ReadableStream,
@@ -111,4 +128,42 @@ export function readAgentStream(
       reader.cancel().catch(() => {});
     },
   };
+}
+
+export interface TurnCallbacks {
+  onLoadStart: AgentStreamCallbacks['onLoadStart'];
+  /** As `AgentStreamCallbacks.onFinish`, with the server thread the answer belongs to. */
+  onFinish: (
+    result: Parameters<AgentStreamCallbacks['onFinish']>[0] & { threadId?: string },
+  ) => void;
+}
+
+/** Streams into `assistant`, reporting to the owner `createOwner` returns for the new turn. */
+export function startTurn(
+  stream: ReadableStream,
+  assistant: ChatMessage,
+  createOwner: (turn: LiveTurn) => TurnOwner,
+  callbacks: TurnCallbacks,
+): LiveTurn {
+  const turn = { assistant } as LiveTurn;
+  turn.owner = createOwner(turn);
+  const handle = readAgentStream(
+    stream,
+    assistant.id,
+    (action) => {
+      if (typeof action === 'function') [turn.assistant] = action([turn.assistant]);
+      turn.owner.setMessages(action);
+    },
+    {
+      onLoadStart: callbacks.onLoadStart,
+      onFinish: (result) => callbacks.onFinish({ ...result, threadId: turn.serverThreadId }),
+      onStart: (threadId) => {
+        if (threadId) turn.serverThreadId = threadId;
+        turn.owner.onStart(threadId);
+      },
+    },
+  );
+  Object.assign(turn, handle);
+  handle.done.then(() => turn.owner.onDone());
+  return turn;
 }

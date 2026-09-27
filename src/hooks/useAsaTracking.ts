@@ -71,6 +71,8 @@ export interface TrackResultLoadFinishedArgs {
   intent: string;
   searchResultCount: number;
   intentResultId?: string;
+  /** Thread the answer belongs to, when it can differ from the hook's `threadId`. */
+  threadId?: string;
 }
 
 export interface TrackResultClickArgs {
@@ -156,12 +158,18 @@ export default function useAsaTracking({
   );
 
   const trackResultLoadFinished = useCallback(
-    ({ intent, searchResultCount, intentResultId }: TrackResultLoadFinishedArgs) => {
+    ({
+      intent,
+      searchResultCount,
+      intentResultId,
+      threadId: turnThreadId,
+    }: TrackResultLoadFinishedArgs) => {
       assistant?.trackAssistantResultLoadFinished({
         intent,
         searchResultCount,
         ...(intentResultId && { intentResultId }),
         ...base,
+        ...(turnThreadId && { threadId: turnThreadId }),
       });
     },
     [assistant, base],

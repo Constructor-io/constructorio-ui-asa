@@ -71,7 +71,9 @@ export default function ResultsGroup({
   callbacks,
 }: ResultsGroupProps) {
   const { searchResultId } = groupData;
-  const products = groupData.searchResults.map((item) => normalizeItem(item, { saleBadgeText }));
+  const products =
+    groupData.products ??
+    groupData.searchResults.map((item) => normalizeItem(item, { saleBadgeText }));
   const canTrack = !!intent && !!searchResultId;
 
   const { ref: viewRef } = useViewportTracking({

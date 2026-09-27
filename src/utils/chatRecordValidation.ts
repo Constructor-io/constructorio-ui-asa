@@ -1,8 +1,15 @@
 import type { ChatMessage, FollowUpRefinement, PersistedChat, ResultGroup } from '../types';
+import type { Product } from './productNormalizer';
 import { PERSISTED_CHAT_VERSION } from './chatThreads';
 
 const MESSAGE_ROLES = new Set(['user', 'assistant']);
 const MESSAGE_STATUSES = new Set(['idle', 'loading', 'streaming', 'done', 'error']);
+
+function isProduct(value: unknown): value is Product {
+  if (!value || typeof value !== 'object') return false;
+  const p = value as Partial<Product>;
+  return typeof p.id === 'string' && typeof p.name === 'string';
+}
 
 function isResultGroup(value: unknown): value is ResultGroup {
   if (!value || typeof value !== 'object') return false;
@@ -12,7 +19,8 @@ function isResultGroup(value: unknown): value is ResultGroup {
     typeof g.group === 'object' &&
     typeof g.group.display_name === 'string' &&
     Array.isArray(g.searchResults) &&
-    g.searchResults.every((r) => Boolean(r) && typeof r === 'object')
+    g.searchResults.every((r) => Boolean(r) && typeof r === 'object') &&
+    (g.products === undefined || (Array.isArray(g.products) && g.products.every(isProduct)))
   );
 }
 

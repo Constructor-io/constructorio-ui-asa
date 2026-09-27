@@ -1,4 +1,5 @@
 import type { ChatMessage, ChatPersistence, PersistedChat } from '../types';
+import type { Product } from './productNormalizer';
 
 /** Stored record format; records with another version are ignored on read. */
 export const PERSISTED_CHAT_VERSION = 1;
@@ -99,13 +100,32 @@ export function isInFlight(messages: ChatMessage[]): boolean {
   return last?.status === 'loading' || last?.status === 'streaming';
 }
 
-/** Settles answers stored mid-stream: `done` when they have content, `error` otherwise. */
+/** Settles answers stored mid-stream: `done` when they have content, an interrupted `error` otherwise. */
 export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.map((m) => {
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
     const hasContent = Boolean(m.text) || Boolean(m.groups?.length) || Boolean(m.refinement);
-    return { ...m, status: hasContent ? 'done' : 'error' };
+    return hasContent ? { ...m, status: 'done' } : { ...m, status: 'error', interrupted: true };
   });
+}
+
+/** Makes the product card for a raw search-result item. */
+export type ItemNormalizer = (item: Record<string, unknown>) => Product;
+
+/** Messages as stored: raw items replaced by the cards `normalize` makes; a restored group keeps its cards. */
+export function compactMessages(messages: ChatMessage[], normalize: ItemNormalizer): ChatMessage[] {
+  return messages.map((m) =>
+    m.groups?.length
+      ? {
+          ...m,
+          groups: m.groups.map((g) => ({
+            ...g,
+            searchResults: [],
+            products: g.products ?? g.searchResults.map(normalize),
+          })),
+        }
+      : m,
+  );
 }
 
 /** Both lists in stored order; a shared message takes the incoming version unless `preferStored`. */

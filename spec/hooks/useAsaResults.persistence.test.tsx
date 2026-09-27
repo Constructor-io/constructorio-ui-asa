@@ -8,16 +8,24 @@ import {
   createLocalStoragePersistence,
 } from '../../src/utils/localStoragePersistence';
 import { FakeStorage } from '../utils/chatFixtures';
+import { normalizeItemToProduct } from '../../src/utils/productNormalizer';
 import { AsaContext } from '../../src/hooks/useCioAsaContext';
 import * as formatters from '../../src/utils/formatters';
 import * as urlHelpers from '../../src/utils/urlHelpers';
 import {
+  createControllableStream,
   createEventStream,
   createMockCioClient,
   createPendingStream,
   StreamEvent,
 } from '../local_examples/mockCioClient';
-import type { AsaContextValue, ChatMessage, ChatPersistence, PersistedChat } from '../../src/types';
+import type {
+  AsaContextValue,
+  ChatMessage,
+  ChatPersistence,
+  PersistedChat,
+  UseAsaResultsOptions,
+} from '../../src/types';
 
 function createMemoryPersistence(initial: PersistedChat[] = [], withSubscribe = false) {
   const threads = new Map(initial.map((t) => [t.threadId, t]));
@@ -109,8 +117,9 @@ function renderWithPersistence(
   cioClient: ConstructorIOClient,
   persistence: ChatPersistence | boolean | undefined,
   initialThreadId?: string,
+  options: Omit<UseAsaResultsOptions, 'initialThreadId'> = {},
 ) {
-  return renderHook(() => useAsaResults({ initialThreadId }), {
+  return renderHook(() => useAsaResults({ initialThreadId, ...options }), {
     wrapper: ({ children }) => (
       <Wrapper cioClient={cioClient} persistence={persistence}>
         {children}
@@ -139,45 +148,6 @@ function createStartedThenPendingStream(threadId?: string) {
       };
     },
   } as unknown as ReadableStream<StreamEvent>;
-}
-
-/** A stream fed by hand: `push` queues an event, `end` closes it. */
-function createControllableStream() {
-  const queue: StreamEvent[] = [];
-  let ended = false;
-  const waiting: Array<() => void> = [];
-  const notify = () => waiting.splice(0).forEach((wake) => wake());
-  const next = (): Promise<void> =>
-    new Promise((resolve) => {
-      waiting.push(resolve);
-    });
-  const stream = {
-    getReader() {
-      return {
-        read: async () => {
-          while (queue.length === 0 && !ended) {
-            // eslint-disable-next-line no-await-in-loop
-            await next();
-          }
-          if (queue.length > 0) return { done: false, value: queue.shift()! };
-          return { done: true, value: undefined };
-        },
-        cancel: () => Promise.resolve(),
-        releaseLock: () => {},
-      };
-    },
-  } as unknown as ReadableStream<StreamEvent>;
-  return {
-    stream,
-    push(event: StreamEvent) {
-      queue.push(event);
-      notify();
-    },
-    end() {
-      ended = true;
-      notify();
-    },
-  };
 }
 
 const startEvent = (threadId: string): StreamEvent => ({
@@ -253,7 +223,7 @@ describe('useAsaResults persistence', () => {
 
   it('settles its own interrupted answer right away after a reload of the same tab', async () => {
     const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
-    const { store, threads } = createMemoryPersistence();
+    const { store } = createMemoryPersistence();
     const first = renderWithPersistence(client, store);
     await waitFor(() => expect(first.result.current.isHydrating).toBe(false));
 
@@ -264,8 +234,9 @@ describe('useAsaResults persistence', () => {
     expect(saved.messages[1].status).toBe('loading');
     first.unmount();
 
-    threads.set('t', { ...saved, updatedAt: Date.now() });
-    const { result } = renderWithPersistence(client, store);
+    // A reload is a new page: a new store over the same records, and nothing streaming any more.
+    const reloaded = createMemoryPersistence([{ ...saved, updatedAt: Date.now() }]);
+    const { result } = renderWithPersistence(client, reloaded.store);
     await waitFor(() => expect(result.current.isHydrating).toBe(false));
 
     expect(result.current.messages.map((m) => m.status)).toEqual(['done', 'error']);
@@ -321,6 +292,81 @@ describe('useAsaResults persistence', () => {
       ['assistant', 'Hi', 'done'],
     ]);
     expect(saved.createdAt).toBeLessThanOrEqual(saved.updatedAt);
+  });
+
+  const productItem = {
+    value: 'Trail running shoe',
+    data: {
+      id: 'item-1',
+      url: 'https://example.com/p/1',
+      price: 120,
+      description: 'Light trail shoe',
+      facets: [{ name: 'Color', values: ['Blue'] }],
+      variations: [{ color: 'Blue' }],
+    },
+  };
+  const productEvents = [
+    startEvent('thread-products'),
+    { type: 'search_result', data: { response: { results: [productItem] } } },
+  ];
+
+  it('stores the product cards, not the raw items, and keeps the raw items on screen', async () => {
+    const { client } = createMockCioClient({ events: productEvents });
+    const { store } = createMemoryPersistence();
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('shoes'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+
+    const saved = store.saveThread.mock.calls[1][0];
+    expect(saved.messages[1].groups?.[0].products).toEqual([normalizeItemToProduct(productItem)]);
+    expect(saved.messages[1].groups?.[0].searchResults).toEqual([]);
+    expect(result.current.messages[1].groups?.[0].searchResults).toEqual([productItem]);
+  });
+
+  it('stores the cards a custom normalizeItem makes, extra fields included', async () => {
+    const { client } = createMockCioClient({ events: productEvents });
+    const { store } = createMemoryPersistence();
+    const normalizeItem = (item: any) => ({
+      id: item.data.id,
+      name: item.value,
+      swatches: item.data.variations.map((v: { color: string }) => v.color),
+    });
+    const { result } = renderWithPersistence(client, store, undefined, { normalizeItem });
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    act(() => result.current.sendMessage('shoes'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
+
+    expect(store.saveThread.mock.calls[1][0].messages[1].groups?.[0].products).toEqual([
+      { id: 'item-1', name: 'Trail running shoe', swatches: ['Blue'] },
+    ]);
+  });
+
+  it('restores the stored cards as products of the group', async () => {
+    const { store } = createMemoryPersistence();
+    const products = [{ id: 'item-1', name: 'Trail running shoe' }];
+    await store.saveThread({
+      version: 1,
+      threadId: 'thread-products',
+      createdAt: Date.now() - 1000,
+      updatedAt: Date.now() - 1000,
+      messages: [
+        userMsg('msg-1', 'shoes'),
+        {
+          ...aiMsg('msg-2', 'Here you go'),
+          groups: [{ group: { display_name: 'Shoes' }, searchResults: [], products }],
+        },
+      ],
+    });
+    const { client } = createMockCioClient({ events: productEvents });
+    const { result } = renderWithPersistence(client, store);
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+    expect(result.current.messages[1].groups?.[0].products).toEqual(products);
   });
 
   it('saves under a generated local id when the domain is not conversational', async () => {
@@ -569,18 +615,64 @@ describe('useAsaResults persistence', () => {
     expect(store.saveThread).toHaveBeenCalledTimes(1);
   });
 
-  it('saves a settled snapshot when unmounted mid-answer', async () => {
-    const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
-    const { store, threads } = createMemoryPersistence();
-    const { result, unmount } = renderWithPersistence(client, store);
-    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+  describe('answers that go on after the chat unmounts', () => {
+    async function unmountMidAnswer() {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store, threads } = createMemoryPersistence();
+      const { result, unmount } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
 
-    act(() => result.current.sendMessage('hello'));
-    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+      act(() => result.current.sendMessage('hello'));
+      await act(async () => {
+        pending.push(startEvent('t'));
+        pending.push({ type: 'message', data: { text: 'Hel' } });
+      });
+      await waitFor(() => expect(result.current.messages[1]?.text).toBe('Hel'));
+      unmount();
+      await waitFor(() =>
+        expect(threads.get('t')?.messages[1]).toMatchObject({ text: 'Hel', status: 'streaming' }),
+      );
+      return { client, pending, store, threads };
+    }
 
-    unmount();
-    await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
-    expect(threads.get('t')?.messages.map((m) => m.status)).toEqual(['done', 'error']);
+    it('stores the answer once it finishes', async () => {
+      const { pending, threads } = await unmountMidAnswer();
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'lo there' } });
+        pending.end();
+      });
+
+      await waitFor(() =>
+        expect(threads.get('t')?.messages.map((m) => [m.text, m.status])).toEqual([
+          ['hello', 'done'],
+          ['Hello there', 'done'],
+        ]),
+      );
+    });
+
+    it('streams on in a chat mounted again before it finished', async () => {
+      const { client, pending, store, threads } = await unmountMidAnswer();
+
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      expect(result.current.messages[1]).toMatchObject({ text: 'Hel', status: 'streaming' });
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.canAbort).toBe(true);
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'lo' } });
+        pending.end();
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(result.current.messages[1]).toMatchObject({ text: 'Hello', status: 'done' });
+      await waitFor(() =>
+        expect(threads.get('t')?.messages[1]).toMatchObject({ text: 'Hello', status: 'done' }),
+      );
+    });
   });
 
   it('mints message ids that differ between hook instances', async () => {
@@ -1038,44 +1130,153 @@ describe('useAsaResults persistence', () => {
       );
     });
 
-    it('newThread mid-answer keeps the interrupted turn in storage as settled', async () => {
-      const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
-      const { store } = createMemoryPersistence();
+    it('newThread mid-answer lets the answer finish in the background', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store, threads } = createMemoryPersistence();
       const { result } = renderWithPersistence(client, store);
       await waitFor(() => expect(result.current.isHydrating).toBe(false));
 
       act(() => result.current.sendMessage('hello'));
+      await act(async () => pending.push(startEvent('t')));
       await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
 
       act(() => result.current.newThread());
       expect(result.current.messages).toEqual([]);
       expect(result.current.isStreaming).toBe(false);
-      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(2));
-      const saved = store.saveThread.mock.calls[1][0];
-      expect(saved.threadId).toBe('t');
-      expect(saved.messages.map((m) => m.status)).toEqual(['done', 'error']);
+      await waitFor(() => expect(result.current.threads.map((t) => t.inFlight)).toEqual([true]));
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'Hi' } });
+        pending.end();
+      });
+
       await waitFor(() => expect(result.current.threads.map((t) => t.inFlight)).toEqual([false]));
+      expect(threads.get('t')?.messages.map((m) => [m.text, m.status])).toEqual([
+        ['hello', 'done'],
+        ['Hi', 'done'],
+      ]);
+      expect(result.current.messages).toEqual([]);
     });
 
-    it('switchThread mid-answer keeps the interrupted turn in storage as settled', async () => {
-      const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+    function renderMidAnswerElsewhere() {
+      const { client, getAgentResultsStream, tracker } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
       const { store } = createMemoryPersistence([
         persisted('other', [userMsg('u1', 'other q'), aiMsg('a1', 'other a')]),
       ]);
-      const { result } = renderWithPersistence(client, store);
+      const hook = renderWithPersistence(client, store);
+      return {
+        ...hook,
+        pending,
+        store,
+        tracker,
+        async askThenSwitch() {
+          await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+          act(() => hook.result.current.newThread());
+          act(() => hook.result.current.sendMessage('running shoes'));
+          await act(async () => pending.push(startEvent('t')));
+          await waitFor(() => expect(hook.result.current.activeThreadId).toBe('t'));
+          await act(() => hook.result.current.switchThread('other'));
+          expect(hook.result.current.messages[0].text).toBe('other q');
+          expect(hook.result.current.isStreaming).toBe(false);
+        },
+      };
+    }
+
+    it('switching back shows the answer that finished in the background meanwhile', async () => {
+      const { result, pending, store, askThenSwitch } = renderMidAnswerElsewhere();
+      await askThenSwitch();
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'Here are some shoes' } });
+        pending.end();
+      });
+      await waitFor(async () =>
+        expect((await store.getThread('t'))?.messages[1].status).toBe('done'),
+      );
+      await act(() => result.current.switchThread('t'));
+
+      expect(result.current.messages.map((m) => [m.text, m.status])).toEqual([
+        ['running shoes', 'done'],
+        ['Here are some shoes', 'done'],
+      ]);
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('switching back while the answer still streams lets it finish on screen', async () => {
+      const { result, pending, store, askThenSwitch } = renderMidAnswerElsewhere();
+      await askThenSwitch();
+
+      await act(async () => pending.push({ type: 'message', data: { text: 'Here are' } }));
+      await act(() => result.current.switchThread('t'));
+      expect(result.current.messages[1]).toMatchObject({ text: 'Here are', status: 'streaming' });
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.canAbort).toBe(true);
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: ' some shoes' } });
+        pending.end();
+      });
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(result.current.messages[1]).toMatchObject({
+        text: 'Here are some shoes',
+        status: 'done',
+      });
+      await waitFor(async () =>
+        expect((await store.getThread('t'))?.messages[1]).toMatchObject({
+          text: 'Here are some shoes',
+          status: 'done',
+        }),
+      );
+    });
+
+    it('reports a load that finished in the background under its own thread', async () => {
+      const { pending, tracker, askThenSwitch } = renderMidAnswerElsewhere();
+      await askThenSwitch();
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'Here are some shoes' } });
+        pending.end();
+      });
+
+      await waitFor(() =>
+        expect(tracker.trackAssistantResultLoadFinished).toHaveBeenCalledTimes(1),
+      );
+      expect(tracker.trackAssistantResultLoadFinished.mock.calls[0][0].threadId).toBe('t');
+    });
+
+    it('stores a background answer settled on pagehide', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store } = createMemoryPersistence();
+      const saveThreadSync = jest.fn();
+      const { result } = renderWithPersistence(client, { ...store, saveThreadSync });
       await waitFor(() => expect(result.current.isHydrating).toBe(false));
-      act(() => result.current.newThread());
 
       act(() => result.current.sendMessage('hello'));
-      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+      await act(async () => {
+        pending.push(startEvent('t'));
+        pending.push({ type: 'message', data: { text: 'partial' } });
+      });
+      await waitFor(() => expect(result.current.messages[1]?.text).toBe('partial'));
+      act(() => result.current.newThread());
+      act(() => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
 
-      await act(() => result.current.switchThread('other'));
-      expect(result.current.messages[0].text).toBe('other q');
-      expect(result.current.isStreaming).toBe(false);
-      expect(store.saveThread).toHaveBeenCalledTimes(2);
-      const saved = store.saveThread.mock.calls[1][0];
-      expect(saved.threadId).toBe('t');
-      expect(saved.messages.map((m) => m.status)).toEqual(['done', 'error']);
+      expect(saveThreadSync).toHaveBeenCalledTimes(1);
+      const [snapshot] = saveThreadSync.mock.calls[0];
+      expect(snapshot.threadId).toBe('t');
+      expect(snapshot.messages.map((m: ChatMessage) => [m.text, m.status])).toEqual([
+        ['hello', 'done'],
+        ['partial', 'done'],
+      ]);
+      pending.end();
     });
 
     it('newThread and switchThread are safe without persistence', async () => {
@@ -1647,6 +1848,9 @@ describe('useAsaResults persistence', () => {
       });
       return {
         ...hook,
+        get client() {
+          return client;
+        },
         become(userId?: string, apiKey?: string) {
           client = clientFor(userId, apiKey);
           hook.rerender();
@@ -1661,6 +1865,30 @@ describe('useAsaResults persistence', () => {
     afterEach(() => {
       window.localStorage.clear();
       window.sessionStorage.clear();
+    });
+
+    it('moves an answer still streaming in the background into the shopper history on login', async () => {
+      const hook = renderAs();
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      const pending = createControllableStream();
+      (hook.client.agent.getAgentResultsStream as jest.Mock).mockReturnValueOnce(pending.stream);
+      act(() => hook.result.current.sendMessage('as guest'));
+      await act(async () => pending.push(startEvent('thread-bg')));
+      await waitFor(() => expect(window.sessionStorage.getItem(GUEST_KEY)).toContain('thread-bg'));
+      act(() => hook.result.current.newThread());
+
+      hook.become('user-1');
+      await waitFor(() => expect(hook.result.current.isHydrating).toBe(false));
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'late answer' } });
+        pending.end();
+      });
+
+      await waitFor(() =>
+        expect(window.localStorage.getItem(userKey('user-1'))).toContain('late answer'),
+      );
+      const guest = JSON.parse(window.sessionStorage.getItem(GUEST_KEY) ?? '{}');
+      expect(Object.keys(guest.threads ?? {})).toEqual([]);
     });
 
     it('does not carry a guest conversation into another index on login', async () => {

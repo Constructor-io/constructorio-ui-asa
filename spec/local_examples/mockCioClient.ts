@@ -114,6 +114,45 @@ export function createPendingStream(): {
   return { stream, cancel };
 }
 
+/** A stream fed by hand: `push` queues an event, `end` closes it. */
+export function createControllableStream() {
+  const queue: StreamEvent[] = [];
+  let ended = false;
+  const waiting: Array<() => void> = [];
+  const notify = () => waiting.splice(0).forEach((wake) => wake());
+  const next = (): Promise<void> =>
+    new Promise((resolve) => {
+      waiting.push(resolve);
+    });
+  const stream = {
+    getReader() {
+      return {
+        read: async () => {
+          while (queue.length === 0 && !ended) {
+            // eslint-disable-next-line no-await-in-loop
+            await next();
+          }
+          if (queue.length > 0) return { done: false, value: queue.shift()! };
+          return { done: true, value: undefined };
+        },
+        cancel: () => Promise.resolve(),
+        releaseLock: () => {},
+      };
+    },
+  } as unknown as ReadableStream<StreamEvent>;
+  return {
+    stream,
+    push(event: StreamEvent) {
+      queue.push(event);
+      notify();
+    },
+    end() {
+      ended = true;
+      notify();
+    },
+  };
+}
+
 export interface MockCioClientOptions {
   /** Events the agent stream should yield for every sendMessage call. */
   events?: StreamEvent[];

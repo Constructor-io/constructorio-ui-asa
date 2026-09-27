@@ -138,6 +138,8 @@ export interface ChatMessage {
   threadId?: string;
   /** Narrowing question the agent asked at the end of this turn, from a `follow_up_refinement` event. */
   refinement?: FollowUpRefinement;
+  /** The answer never arrived: the page was left or the shopper logged out mid-answer. Unset on a failure. */
+  interrupted?: boolean;
 }
 
 /** A narrowing question with selectable options, emitted by the agent as a `follow_up_refinement` event. */
@@ -193,7 +195,10 @@ export interface ResultGroupMeta {
 
 export interface ResultGroup {
   group: ResultGroupMeta;
+  /** Raw items as the agent sent them; empty on a conversation restored from storage. */
   searchResults: Record<string, unknown>[];
+  /** The cards as `normalizeItem` made them; set on a conversation restored from storage. */
+  products?: Product[];
   searchResultId?: string;
   intentResultId?: string;
 }
@@ -230,6 +235,8 @@ export interface UseAsaResultsOptions {
    * enabled, the matching stored transcript is restored too when one exists.
    */
   initialThreadId?: string;
+  /** Makes the card stored for each product: the function `Chat` renders with. Defaults to `normalizeItemToProduct`. */
+  normalizeItem?: (item: any) => Product;
 }
 
 // --- Persistence ---
@@ -397,6 +404,7 @@ export type Translations = {
   'CioAsa.results.saleBadge'?: string;
   'CioAsa.refinement.ariaLabel'?: string;
   'CioAsa.error.message'?: string;
+  'CioAsa.error.interrupted'?: string;
 };
 
 // --- Component Override Render Props ---

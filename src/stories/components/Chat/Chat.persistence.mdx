@@ -1,53 +1,55 @@
-import { Meta, Canvas, Markdown } from '@storybook/blocks';
-import * as PersistenceStories from './Chat.persistence.stories';
+import { Meta, Markdown } from '@storybook/blocks';
+import LinkTo from '@storybook/addon-links/react';
+import * as PlaygroundStories from './Chat.persistence.playground.stories';
 
-<Meta of={PersistenceStories} />
+<Meta of={PlaygroundStories} />
 
 # Persistent Chat
 
-By default a conversation lives only in memory and is lost on page load. Enable `persistConversation` on `CioAsaProvider` and the transcript plus the agent's thread id are kept in the browser, so a shopper who navigates between product pages or reloads continues where they left off. A signed-in shopper (one with a `userId`) also comes back to it later and in other tabs; a guest's conversation ends with the tab.
+By default a conversation lives in memory and is gone on the next page load. With `persistConversation` on the provider it is kept in the browser: the shopper moves between product pages, reloads, or opens the site in another tab, and finds the conversation where they left it. The agent continues the same thread, so it still remembers what was said.
+
+What the shopper gets:
+
+- **The conversation survives navigation and reloads**, including an answer that was still streaming when the page was left.
+- **A signed-in shopper keeps a history** of conversations for 7 days, in every tab of the site, and can come back to any of them.
+- **A guest's conversation lives in the tab** and ends with it, so the next person at that browser never sees it.
+- **Two open tabs stay in sync**: a question asked in one shows up in the other, with its answer.
+
+## Quick start
 
 ```jsx
-<CioAsaProvider apiKey="YOUR_API_KEY" persistConversation>
-  <Chat />
-</CioAsaProvider>
-```
+import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
 
-## Public API
-
-Everything below is optional and only active when `persistConversation` is set on the provider.
-
-<Markdown>
-{`
-| Where | Name | What it does |
-|-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in the browser: in \`localStorage\` for a signed-in shopper, in \`sessionStorage\` for a guest |
-| \`CioAsaProvider\` prop | \`userId\` | Whose conversation this is. Pass the signed-in shopper's id on login, \`null\` (or nothing) on logout. See [Login and logout](#login-and-logout) |
-| function | \`clearPersistedConversations({ apiKey, domain, userId })\` | Deletes every stored conversation of that shopper (or of the guest without \`userId\`) in this and every other tab. Optional, for a logout that must leave nothing behind |
-| \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | Fires after the initial load and whenever the stored list or the active conversation changes, including changes made in another tab. Use it to render a history list outside \`Chat\` |
-| \`Chat\` prop | \`initialThreadId\` | Restores that thread's stored transcript instead of the most recent one; falls back to seeding the thread id alone when nothing is stored |
-| \`Chat\` ref | \`newThread()\` | Opens an empty conversation and keeps the current one in storage |
-| \`Chat\` ref | \`switchThread(threadId)\` | Loads a stored conversation and continues it on the same agent thread |
-| \`Chat\` ref | \`clearHistory()\` | Resets the conversation and deletes it from storage |
-| \`useAsaResults\` | \`isHydrating\` | \`true\` while a stored conversation is being restored |
-| \`useAsaResults\` | \`threads\`, \`activeThreadId\` | Stored conversations, most recent first, and the id of the one on screen (\`null\` for an unsaved one) |
-| \`useAsaResults\` | \`newThread()\`, \`switchThread(threadId)\` | Same as the \`Chat\` ref methods, for custom UIs |
-`}
-</Markdown>
-
-`ThreadSummary` carries `threadId`, `title` (the first question), `createdAt`, `updatedAt` and `inFlight`, which is `true` while the latest answer of that thread is still streaming.
-
-## Login and logout
-
-History is stored per shopper, and the shopper is whoever `userId` says. Set it on login, remove it (or pass `null`) on logout. Everything else follows from that. On login every guest thread moves into the shopper's history, and the conversation on screen, if any, continues without interruption, even mid-answer; nothing stays in the guest history for the next person using the tab. When one signed-in id is replaced by another, or on logout, the chat switches storage, clears the screen and loads that shopper's own history, never reading a key that belongs to another id. This holds in every open tab. Use the same id you give Constructor for personalization, stable for that person over time and not an email or anything personal, because it becomes part of a `localStorage` key that any script on the page can read.
-
-```jsx
 <CioAsaProvider apiKey="YOUR_API_KEY" persistConversation userId={user?.id ?? null}>
   <Chat />
 </CioAsaProvider>
 ```
 
+That is the whole integration for a single conversation. `userId` tells the chat whose history it is: pass the signed-in shopper's id, and `null` (or nothing) for a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
+
 With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set `userId` on the client as well; a mismatch is reported in development. Storage is scoped by the client's api key; if it cannot be read from the client, nothing is stored until you pass `apiKey` too.
+
+## Guests and signed-in shoppers
+
+<Markdown>
+{`
+| | Guest (no \`userId\`) | Signed-in shopper |
+|---|---|---|
+| Where | \`sessionStorage\` | \`localStorage\` |
+| Survives | reloads and navigation within the tab | reloads, navigation, closing the browser, other tabs of the site |
+| Ends | when the tab is closed | after 7 days without activity, or when you delete it |
+| Other tabs | each tab is its own guest session | all tabs share the history and stay in sync |
+| Visible to | nobody else | only the same \`userId\` on that browser |
+`}
+</Markdown>
+
+## Login and logout
+
+Set `userId` on login and remove it on logout; everything else follows from that.
+
+- **On login** every guest conversation moves into the shopper's history, and the one on screen continues without interruption, even mid-answer. Nothing stays behind for the next guest in that tab.
+- **On logout**, or when one id is replaced by another, the chat switches storage, clears the screen and loads that shopper's own history. It never reads a key that belongs to another id, in any open tab.
+- **A login that ends in a full page reload** comes back already signed in; the guest conversation then stays in `sessionStorage` and is not carried over. Carry-over happens when `userId` changes on a mounted provider.
 
 By default nothing is deleted on logout. The history stays on the device under the old id for 7 days and comes back if the same shopper signs in again there. It cannot be shown to anyone else through the chat, but it is plain data in `localStorage`, readable from DevTools and by other scripts on the page. When that is not acceptable, delete it on logout:
 
@@ -59,32 +61,120 @@ async function onLogout(user) {
 }
 ```
 
-It resolves once the deletion is recorded. Only the ids of the deleted threads stay behind, for 7 days, so a tab still holding a copy cannot write one back.
+It resolves once the deletion is recorded, in this and every other tab. Called without `userId` it deletes the guest history of the current tab.
 
-A guest's history lives in `sessionStorage`: it survives reloads and navigation within the tab and is gone when the tab is closed, so the next person using the browser never sees it. Each tab is its own guest session, so a product opened in a new tab starts a fresh conversation. Signing in moves the current tab's guest history into the shopper's history. `clearPersistedConversations` without `userId` deletes the guest history of the current tab.
+## A history of conversations
 
-## How it works
+Every conversation of a signed-in shopper is kept until it expires. `Chat` does not draw the list itself; you build it wherever it fits your layout, from `onThreadsChange` and three methods on the `Chat` ref:
+
+- `newThread()` opens an empty conversation and keeps the current one in storage.
+- `switchThread(threadId)` loads a stored conversation and continues it on the same agent thread.
+- `clearHistory()` deletes the conversation on screen from storage and starts over.
+
+```jsx
+function ChatWithHistory() {
+  const chatRef = useRef(null);
+  const [threads, setThreads] = useState([]);
+  const [activeThreadId, setActiveThreadId] = useState(null);
+
+  return (
+    <>
+      <aside>
+        <button onClick={() => chatRef.current?.newThread()}>New chat</button>
+        {threads.map((t) => (
+          <button
+            key={t.threadId}
+            aria-current={t.threadId === activeThreadId}
+            onClick={() => chatRef.current?.switchThread(t.threadId)}>
+            {t.title}
+            {t.inFlight && ' (typing…)'}
+          </button>
+        ))}
+        <button onClick={() => chatRef.current?.clearHistory()}>Delete this chat</button>
+      </aside>
+      <Chat
+        ref={chatRef}
+        onThreadsChange={(list, active) => {
+          setThreads(list);
+          setActiveThreadId(active);
+        }}
+      />
+    </>
+  );
+}
+```
+
+`onThreadsChange` fires after the initial load and whenever the list or the active conversation changes, including changes made in another tab. Each `ThreadSummary` carries `threadId`, `title` (the first question, cut to 80 characters), `createdAt`, `updatedAt` and `inFlight`, which is `true` while the latest answer of that thread is still streaming, possibly in another tab.
+
+An answer keeps streaming when its conversation leaves the screen: after `newThread` or `switchThread`, or when `Chat` unmounts because the widget was closed. It is saved once it completes, and its thread reports `inFlight` meanwhile. Switching back to it, or opening the widget again on the same page, shows it streaming on.
+
+To open a specific conversation on mount, pass `initialThreadId` to `Chat`: its stored transcript is restored instead of the most recent one. When nothing is stored for that id, the id alone is sent to the agent, which still remembers the thread for 7 days.
+
+## Several tabs
+
+Two tabs of a signed-in shopper on the same conversation see each other's turns. While one tab streams an answer, the other shows the question with a typing indicator and locks its input until the answer lands, for at most 60 seconds. Turns from both tabs are merged rather than overwriting each other: writes go through a Web Lock and the merge is redone if another tab committed in between. In browsers without Web Locks (Safari before 15.4) the merge is best effort: two tabs writing in the very same instant can still lose the slower turn.
+
+Deleting a conversation in one tab clears it in the others; `clearPersistedConversations` empties every tab.
+
+## Interrupted answers
+
+Leaving the page in the middle of an answer keeps the turn. What the shopper sees on return depends on how far the answer had come:
+
+- **Some text had arrived**: it is shown as a complete answer. The next question continues the thread, and the agent knows the full answer it gave.
+- **Nothing had arrived yet**: the question is kept and the reply shows the `CioAsa.error.interrupted` message, by default *"The answer was interrupted. Please send your question again."* Sending the question again continues the same thread.
+
+The same applies when the shopper logs out or switches account mid-answer: the turn is settled into the history it belongs to. A real failure, a server error or a dropped stream, shows `CioAsa.error.message` instead (*"I can't assist you with that request."*). Both strings are translatable through the `translations` prop, and the error bubble carries the `cio-asa-ai-message__bubble--error` class.
+
+## What is stored, and for how long
 
 <Markdown>
 {`
 | Aspect | Behaviour |
 |--------|-----------|
-| Storage | A signed-in shopper's chats live in \`localStorage\` under \`cio-asa:chat:v1:<apiKey>:<domain>:<userId>\`, so they follow them across pages and tabs of the same site and a login change on a shared browser starts a separate history. A guest's chats live in \`sessionStorage\` under \`cio-asa:chat:v1:<apiKey>:<domain>\` and end with the tab |
-| What is stored | Messages, product results as received, and the agent's \`thread_id\`; the next message continues the same server-side conversation |
-| When it saves | When the answer stream starts, when it completes (or fails), and as a settled snapshot on \`pagehide\`, on unmount, and on \`newThread\` / \`switchThread\` while an answer is still in flight. Never per streamed chunk |
-| On load | The most recent thread is restored before anything renders, so there is no welcome-screen flash. \`isHydrating\` is \`true\` meanwhile |
-| Retention | Threads idle for 7 days expire, matching how long the agent remembers a thread. Expired entries are dropped on read and removed on the next write |
-| Interrupted answers | Leaving the page mid-answer saves the turn as settled: a partial answer is shown as complete, an empty one as an error. Each record carries the id of the tab that wrote it, so a reload of that tab settles its own interrupted answer at once even when \`pagehide\` did not fire. Only a different tab treats a fresh in-flight record as still streaming, for up to 60 seconds |
-| Non-conversational domains | The agent returns no \`thread_id\`; the transcript is still kept under a client-side \`local-\` id, which is never sent to the agent |
+| Keys | \`cio-asa:chat:v1:<apiKey>:<domain>:<userId>\` in \`localStorage\` for a shopper, \`cio-asa:chat:v1:<apiKey>:<domain>\` in \`sessionStorage\` for a guest. One key holds every conversation of that shopper |
+| Content | Messages, the agent's \`thread_id\`, and for each product the card as it was rendered, never the raw item: \`Chat\` runs every item through the \`normalizeItem\` prop you give it, or through the default \`normalizeItemToProduct\` when you give none, and stores the result. By default that is id, name, url, image, price, sale price, description and badge; with your own \`normalizeItem\` it is whatever it returns, custom fields included. A restored group carries these in \`groups[].products\` and has an empty \`searchResults\`, which only matters when you render messages from \`useAsaResults\` yourself |
+| When it saves | When the answer stream starts, when it completes or fails, when its conversation leaves the screen, and as a settled snapshot on \`pagehide\`. Never per streamed chunk |
+| On load | The most recent conversation is restored before anything renders, so there is no welcome-screen flash. \`isHydrating\` from \`useAsaResults\` is \`true\` meanwhile |
+| Retention | Conversations idle for 7 days expire, matching how long the agent remembers a thread. Deleted ones leave only their id behind, for 7 days, so a tab still holding a copy cannot write it back |
 `}
 </Markdown>
 
 Storage stays on the device. Another browser or device starts fresh, and so does the agent's own memory, which is scoped per browser as well.
 
-Two tabs of a signed-in shopper on the same thread merge their turns instead of overwriting each other: writes go through a Web Lock, the merge is redone if another tab committed in between, and an older snapshot can add turns but never regresses a message a newer one already settled. In browsers without Web Locks (Safari before 15.4) the merge is best effort: two tabs writing in the very same instant can still lose the slower turn.
+## When storage is full or unavailable
 
-## Several conversations
+Persistence never gets in the way of the conversation. Whatever the browser does, the chat on screen keeps working; only what comes back after a reload changes.
 
-Every conversation is kept until it expires. A history list is built outside `Chat`: read the list from `onThreadsChange`, and drive the chat with `newThread()`, `switchThread(threadId)` and `clearHistory()` on its ref. `inFlight` on a `ThreadSummary` tells you the latest answer of that thread is still streaming, possibly in another tab.
+- **Storage is full.** A save that does not fit first drops the shopper's oldest conversations, then the oldest turns of the one being saved. A turn is stored whole, with its product cards, or not at all. If nothing fits, that conversation is simply not stored; it is not left behind half-written.
+- **Storage is blocked**, for example by a privacy setting, or throws on access. The chat runs as if `persistConversation` were off.
+- **Storage frees up later.** The next save lands normally.
 
-<Canvas of={PersistenceStories.WithHistory} />
+Records are small: a conversation with a few answers and their product cards takes on the order of 10 KB, against a browser quota of about 5 MB per site.
+
+## Reference
+
+Everything below is active only with `persistConversation` on the provider.
+
+<Markdown>
+{`
+| Where | Name | What it does |
+|-------|------|--------------|
+| \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in the browser |
+| \`CioAsaProvider\` prop | \`userId\` | Whose history this is; the signed-in shopper's id, or \`null\` for a guest |
+| function | \`clearPersistedConversations({ apiKey, domain, userId })\` | Deletes every stored conversation of that shopper, or of the guest without \`userId\`, in every tab |
+| \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | The stored list and the active conversation, whenever either changes |
+| \`Chat\` prop | \`initialThreadId\` | Restores that conversation instead of the most recent one |
+| \`Chat\` ref | \`newThread()\` | Opens an empty conversation and keeps the current one |
+| \`Chat\` ref | \`switchThread(threadId)\` | Loads a stored conversation and continues it |
+| \`Chat\` ref | \`clearHistory()\` | Deletes the conversation on screen and starts over |
+| \`Chat\` prop | \`translations\` | \`CioAsa.error.interrupted\` and \`CioAsa.error.message\` for the two error texts |
+| \`useAsaResults\` | \`isHydrating\` | \`true\` while a stored conversation is being restored |
+| \`useAsaResults\` | \`threads\`, \`activeThreadId\` | The same list and active id, for custom UIs |
+| \`useAsaResults\` | \`newThread()\`, \`switchThread(threadId)\` | The same methods, for custom UIs |
+| \`useAsaResults\` option | \`normalizeItem\` | How a raw item becomes a stored card, when you use the hook without \`Chat\` |
+`}
+</Markdown>
+
+## Try it
+
+The <LinkTo kind="Components/Chat/Persistent Chat" story="Playground">Playground</LinkTo> runs the chat against the live demo API. Pick a guest or a signed-in shopper, ask something, reload the page, open a second tab, switch between conversations, and watch what lands in `localStorage` and `sessionStorage` in the panel on the right.

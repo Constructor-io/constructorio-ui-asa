@@ -1,8 +1,10 @@
 import React, { createRef } from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Chat, { ChatHandle } from '../../../src/components/Chat/Chat';
+import CioAsa from '../../../src/components/CioAsa/CioAsa';
 import CioAsaProvider from '../../../src/components/CioAsaProvider/CioAsaProvider';
-import { createMockCioClient } from '../../local_examples/mockCioClient';
+import { createControllableStream, createMockCioClient } from '../../local_examples/mockCioClient';
 
 const STORAGE_KEY = 'cio-asa:chat:v1:key_test:chatbot';
 
@@ -136,6 +138,42 @@ describe('Chat persistence', () => {
 
     await act(() => pending);
     expect(await screen.findByRole('heading', { name: 'Shopping Assistant' })).toBeInTheDocument();
+  });
+
+  it('streams on in the widget opened again mid-answer', async () => {
+    const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+    (client as unknown as { options: { apiKey: string } }).options = { apiKey: 'key_test' };
+    const pending = createControllableStream();
+    getAgentResultsStream.mockReturnValueOnce(pending.stream);
+    const widget = (open: boolean) =>
+      open ? (
+        <CioAsa
+          cioClient={client}
+          staticRequestConfigs={{ domain: 'chatbot' }}
+          persistConversation
+        />
+      ) : null;
+    const view = render(widget(true));
+    await screen.findByRole('heading', { name: 'Shopping Assistant' });
+
+    await userEvent.type(screen.getByRole('textbox'), 'running shoes{Enter}');
+    await act(async () => {
+      pending.push({ type: 'start', data: { thread_id: 't' } });
+      pending.push({ type: 'message', data: { text: 'Here are' } });
+    });
+    expect(await screen.findByText('Here are')).toBeInTheDocument();
+
+    view.rerender(widget(false));
+    await act(async () => pending.push({ type: 'message', data: { text: ' some' } }));
+    view.rerender(widget(true));
+    expect(await screen.findByText('Here are some')).toBeInTheDocument();
+
+    await act(async () => {
+      pending.push({ type: 'message', data: { text: ' shoes' } });
+      pending.end();
+    });
+    expect(await screen.findByText('Here are some shoes')).toBeInTheDocument();
+    expect(screen.queryByText("I can't assist you with that request.")).not.toBeInTheDocument();
   });
 
   it('does not fire onThreadsChange when persistence is off', async () => {

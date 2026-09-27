@@ -1,5 +1,14 @@
-import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Dispatch,
+  MutableRefObject,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { ChatMessage, ChatPersistence, PersistedChat, PersistenceScope } from '../../types';
+import type { LiveTurn, TurnOwner } from '../agentStream';
 import {
   findRekeyedThread,
   foreignStreamRemainingMs,
@@ -12,7 +21,9 @@ import {
 } from '../../utils/chatThreads';
 import {
   ChatSession,
+  adoptSession,
   adoptStoredChat,
+  forkSession,
   isOwnMessage,
   prepareSnapshot,
   resetConversation,
@@ -22,6 +33,13 @@ import useLatest from '../useLatest';
 import useWriteQueue from './useWriteQueue';
 import useThreadList from './useThreadList';
 import useForeignStream from './useForeignStream';
+import {
+  BackgroundTurn,
+  continueInBackground,
+  moveBackgroundTurns,
+  resumeBackgroundTurn,
+  subscribeBackgroundTurns,
+} from './backgroundTurns';
 
 interface Params {
   store: ChatPersistence | undefined;
@@ -35,6 +53,8 @@ interface Params {
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
   isStreaming: boolean;
   setIsStreaming: (value: boolean) => void;
+  /** This tab's answer streaming into the conversation on screen, if any. */
+  turnRef: MutableRefObject<LiveTurn | null>;
   /** Stop the answer currently streaming in this tab, if any. */
   cancelStream: () => void;
 }
@@ -55,6 +75,7 @@ export default function useChatPersistence(params: Params) {
     setMessages,
     isStreaming,
     setIsStreaming,
+    turnRef,
     cancelStream,
   } = params;
   const [isHydrating, setIsHydrating] = useState(Boolean(store));
@@ -177,6 +198,67 @@ export default function useChatPersistence(params: Params) {
     [session, storeRef, messagesRef, enqueueWrite, mountedRef],
   );
 
+  const onStreamStart = useCallback(() => {
+    persistNow()?.then(refreshThreads);
+  }, [persistNow, refreshThreads]);
+
+  /** Where this tab's answer goes while its conversation is on screen. */
+  const screenOwner = useCallback(
+    (turn: LiveTurn): TurnOwner => ({
+      setMessages,
+      onStart: (threadId) => {
+        if (threadId) session.serverThreadId = threadId;
+        onStreamStart();
+      },
+      onDone: () => {
+        // A turn cancelled by a reset, or handed to the background, is accounted for elsewhere.
+        if (turnRef.current !== turn) return;
+        turnRef.current = null;
+        session.dirty = true;
+        session.isStreaming = false;
+        setIsStreaming(false);
+      },
+    }),
+    [session, setMessages, onStreamStart, turnRef, setIsStreaming],
+  );
+
+  /** Lets this tab's answer finish in the background, so leaving its conversation does not stop it. */
+  const detachTurn = useCallback((): boolean => {
+    const turn = turnRef.current;
+    const { current } = storeRef;
+    const shown = messagesRef.current;
+    if (!turn || !current || !session.isStreaming) return false;
+    if (!shown.some((m) => m.id === turn.assistantId)) return false;
+    turnRef.current = null;
+    continueInBackground(turn, {
+      store: current,
+      session: forkSession(session),
+      messages: shown.map((m) => (m.id === turn.assistantId ? turn.assistant : m)),
+      after: enqueueWrite(async () => {}),
+    });
+    session.isStreaming = false;
+    return true;
+  }, [session, storeRef, messagesRef, turnRef, enqueueWrite]);
+
+  /** Shows a conversation whose answer went on in the background; an unfinished one streams on here. */
+  const showBackgroundTurn = useCallback(
+    (bg: BackgroundTurn) => {
+      stopForeign();
+      adoptSession(session, bg.session, bg.messages);
+      enqueueWrite(() => bg.writes);
+      setActiveThreadId(session.storageThreadId);
+      setMessages(bg.messages);
+      if (!bg.streaming) {
+        if (!bg.saved) session.dirty = true;
+        return;
+      }
+      turnRef.current = bg.turn;
+      session.isStreaming = true;
+      setIsStreaming(true);
+    },
+    [session, stopForeign, enqueueWrite, setMessages, turnRef, setIsStreaming],
+  );
+
   const settleAndPersist = useCallback(() => {
     if (hasUnsavedWork(session)) return persistNow({ settle: true });
     return undefined;
@@ -215,7 +297,11 @@ export default function useChatPersistence(params: Params) {
     // Behind the guest store's pending writes, so none of them can recreate a moved record.
     const migrate = (onScreen?: Parameters<typeof moveThreads>[2]) =>
       migrateFrom && store
-        ? enqueueWrite(() => moveThreads(migrateFrom, store, onScreen).catch(() => {}))
+        ? enqueueWrite(() =>
+            moveBackgroundTurns(migrateFrom, store)
+              .then(() => moveThreads(migrateFrom, store, onScreen))
+              .catch(() => {}),
+          )
         : undefined;
     if (carryOverFrom && store && migrateFrom) {
       // A login mid-conversation: the guest conversation continues as the shopper's own.
@@ -236,7 +322,7 @@ export default function useChatPersistence(params: Params) {
       // Saved into the shopper's store first: the guest copies are deleted only once it is there.
       session.dirty = session.isStreaming;
       const saved = persistNow();
-      Promise.all([guestWritesDone, saved])
+      Promise.all([guestWritesDone, saved, moveBackgroundTurns(migrateFrom, store)])
         .then(() => moveThreads(migrateFrom, store, onScreen))
         .catch(() => {})
         .then(refreshThreads);
@@ -281,6 +367,11 @@ export default function useChatPersistence(params: Params) {
         }
         setThreads(summaries);
         const targetId = initialThreadId ?? summaries[0]?.threadId;
+        const live = targetId ? resumeBackgroundTurn(store, targetId, screenOwner) : null;
+        if (live) {
+          showBackgroundTurn(live);
+          return;
+        }
         const chat = targetId ? await store.getThread(targetId) : null;
         if (cancelled || session.interacted) return;
         if (!chat) {
@@ -309,10 +400,11 @@ export default function useChatPersistence(params: Params) {
   }, [store, flushBeforeUnload]);
   useEffect(
     () => () => {
-      settleAndPersist();
+      if (!detachTurn()) settleAndPersist();
     },
-    [settleAndPersist],
+    [detachTurn, settleAndPersist],
   );
+  useEffect(() => subscribeBackgroundTurns(refreshThreads), [refreshThreads]);
 
   // Follow changes another tab made to the list or to the thread on screen.
   const syncFromStore = useCallback(async () => {
@@ -398,10 +490,6 @@ export default function useChatPersistence(params: Params) {
     setIsHydrating(false);
   }, [session]);
 
-  const onStreamStart = useCallback(() => {
-    persistNow()?.then(refreshThreads);
-  }, [persistNow, refreshThreads]);
-
   const clearHistory = useCallback(() => {
     const storedIds = forgetConversation();
     const { current } = storeRef;
@@ -413,9 +501,9 @@ export default function useChatPersistence(params: Params) {
   }, [forgetConversation, storeRef, enqueueWrite, refreshThreads]);
 
   const leaveConversation = useCallback(() => {
-    settleAndPersist()?.then(refreshThreads);
+    if (!detachTurn()) settleAndPersist()?.then(refreshThreads);
     forgetConversation();
-  }, [settleAndPersist, refreshThreads, forgetConversation]);
+  }, [detachTurn, settleAndPersist, refreshThreads, forgetConversation]);
 
   const newThread = leaveConversation;
 
@@ -424,6 +512,11 @@ export default function useChatPersistence(params: Params) {
       const { current } = storeRef;
       if (!current || threadId === session.storageThreadId) return;
       leaveConversation();
+      const live = resumeBackgroundTurn(current, threadId, screenOwner);
+      if (live) {
+        showBackgroundTurn(live);
+        return;
+      }
       const request = session.loadRequest;
       const stillWanted = () => mountedRef.current && request === session.loadRequest;
       setIsHydrating(true);
@@ -436,7 +529,15 @@ export default function useChatPersistence(params: Params) {
         if (stillWanted()) setIsHydrating(false);
       }
     },
-    [session, storeRef, leaveConversation, showStoredChat, mountedRef],
+    [
+      session,
+      storeRef,
+      leaveConversation,
+      screenOwner,
+      showBackgroundTurn,
+      showStoredChat,
+      mountedRef,
+    ],
   );
 
   return {
@@ -445,7 +546,7 @@ export default function useChatPersistence(params: Params) {
     activeThreadId,
     foreignInFlight,
     beginTurn,
-    onStreamStart,
+    screenOwner,
     clearHistory,
     newThread,
     switchThread,
