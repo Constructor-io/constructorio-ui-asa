@@ -88,12 +88,6 @@ export interface PersistConversationOptions {
    * keyed by api key + domain + user id; a guest's in `sessionStorage`, ending with the tab.
    */
   enabled: boolean;
-  /**
-   * Delete the shopper's stored conversations when `userId` changes away from them, in every
-   * tab. Off by default. A logout that reloads the page never passes through here; call
-   * `clearPersistedConversations` there instead.
-   */
-  clearOnLogout?: boolean;
 }
 
 interface PersistentProviderProps {

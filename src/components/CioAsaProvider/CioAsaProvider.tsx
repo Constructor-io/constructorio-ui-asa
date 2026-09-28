@@ -7,7 +7,6 @@ import * as defaultFormatters from '../../utils/formatters';
 import * as defaultUrlHelpers from '../../utils/urlHelpers';
 import { readClientOptions } from '../../utils/clientOptions';
 import {
-  clearPersistedConversations,
   persistenceNamespace,
   sharedLocalStoragePersistence,
   shopperId,
@@ -33,7 +32,6 @@ export default function CioAsaProvider(
 
   // Read field by field: an inline options object is a new reference on every render.
   const persistenceEnabled = Boolean(persistOptions?.enabled);
-  const clearOnLogout = Boolean(persistOptions?.clearOnLogout);
   const [cioClientOptions, setCioClientOptions] = useState({});
   const initialUserId = useRef(userIdProp).current;
   const clientInit = useMemo(
@@ -68,16 +66,6 @@ export default function CioAsaProvider(
       storageAreaFor(userId),
     );
   }, [persistenceEnabled, resolvedApiKey, domain, userId]);
-
-  // Runs after the chat's own effects, so the answer streaming at logout is settled first.
-  const previousUserIdRef = useRef(userId);
-  useEffect(() => {
-    const previous = previousUserIdRef.current;
-    previousUserIdRef.current = userId;
-    if (!clearOnLogout || previous === undefined || previous === userId) return;
-    if (resolvedApiKey === undefined) return;
-    clearPersistedConversations({ apiKey: resolvedApiKey, domain, userId: previous });
-  }, [clearOnLogout, userId, resolvedApiKey, domain]);
 
   const persistenceScope = persistence && (userId === undefined ? 'guest' : 'user');
   const persistenceIndex =

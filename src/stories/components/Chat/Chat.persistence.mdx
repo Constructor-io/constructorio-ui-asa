@@ -21,11 +21,11 @@ What the shopper gets:
 import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
 
 <CioAsaProvider
-  apiKey="YOUR_API_KEY"
+  apiKey='YOUR_API_KEY'
   persistConversation={{ enabled: true }}
   userId={user?.id ?? null}>
   <Chat />
-</CioAsaProvider>
+</CioAsaProvider>;
 ```
 
 That is the whole integration for a single conversation. `persistConversation` takes an options object: `enabled` turns the feature on, and can be a feature flag. `userId` is required with it: it tells the chat whose history it is. Pass the signed-in shopper's id, and `null` for a guest; TypeScript reports a missing one, and in JavaScript an omitted one is treated as a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
@@ -35,7 +35,7 @@ With `apiKey` the id is also set on the client the provider builds, so agent req
 ## Guests and signed-in shoppers
 
 <Markdown>
-{`
+  {`
 | | Guest (no \`userId\`) | Signed-in shopper |
 |---|---|---|
 | Where | \`sessionStorage\` | \`localStorage\` |
@@ -54,16 +54,7 @@ Set `userId` on login and remove it on logout; everything else follows from that
 - **On logout**, or when one id is replaced by another, the chat switches storage, clears the screen and loads that shopper's own history. It never reads a key that belongs to another id, in any open tab.
 - **A login that ends in a full page reload** comes back already signed in; the guest conversation then stays in `sessionStorage` and is not carried over. Carry-over happens when `userId` changes on a mounted provider.
 
-By default nothing is deleted on logout. The history stays on the device under the old id for 7 days and comes back if the same shopper signs in again there. It cannot be shown to anyone else through the chat, but it is plain data in `localStorage`, readable from DevTools and by other scripts on the page. When that is not acceptable, turn on `clearOnLogout`:
-
-```jsx
-<CioAsaProvider
-  apiKey="YOUR_API_KEY"
-  persistConversation={{ enabled: true, clearOnLogout: true }}
-  userId={user?.id ?? null}>
-```
-
-Whenever `userId` changes away from a shopper, their stored conversations are deleted in every tab. The answer streaming at that moment is settled into their history first, then removed with the rest. This only works while the provider stays mounted: a logout that reloads the page comes back without the old id, so the provider never sees the change. For that flow, delete the history yourself:
+By default nothing is deleted on logout. The history stays on the device under the old id for 7 days and comes back if the same shopper signs in again there. It cannot be shown to anyone else through the chat, but it is plain data in `localStorage`, readable from DevTools and by other scripts on the page. When that is not acceptable, delete it on logout:
 
 ```js
 import { clearPersistedConversations } from '@constructor-io/constructorio-ui-asa';
@@ -133,14 +124,14 @@ Deleting a conversation in one tab clears it in the others; `clearPersistedConve
 Leaving the page in the middle of an answer keeps the turn. What the shopper sees on return depends on how far the answer had come:
 
 - **Some text had arrived**: it is shown as a complete answer. The next question continues the thread, and the agent knows the full answer it gave.
-- **Nothing had arrived yet**: the question is kept and the reply shows the `CioAsa.error.interrupted` message, by default *"The answer was interrupted. Please send your question again."* Sending the question again continues the same thread.
+- **Nothing had arrived yet**: the question is kept and the reply shows the `CioAsa.error.interrupted` message, by default _"The answer was interrupted. Please send your question again."_ Sending the question again continues the same thread.
 
-The same applies when the shopper logs out or switches account mid-answer: the turn is settled into the history it belongs to. A real failure, a server error or a dropped stream, shows `CioAsa.error.message` instead (*"I can't assist you with that request."*). Both strings are translatable through the `translations` prop, and the error bubble carries the `cio-asa-ai-message__bubble--error` class.
+The same applies when the shopper logs out or switches account mid-answer: the turn is settled into the history it belongs to. A real failure, a server error or a dropped stream, shows `CioAsa.error.message` instead (_"I can't assist you with that request."_). Both strings are translatable through the `translations` prop, and the error bubble carries the `cio-asa-ai-message__bubble--error` class.
 
 ## What is stored, and for how long
 
 <Markdown>
-{`
+  {`
 | Aspect | Behaviour |
 |--------|-----------|
 | Keys | \`cio-asa:chat:v1:<apiKey>:<domain>:<userId>\` in \`localStorage\` for a shopper, \`cio-asa:chat:v1:<apiKey>:<domain>\` in \`sessionStorage\` for a guest. One key holds every conversation of that shopper |
@@ -168,10 +159,10 @@ Records are small: a conversation with a few answers and their product cards tak
 Everything below is active only with `persistConversation` on the provider.
 
 <Markdown>
-{`
+  {`
 | Where | Name | What it does |
 |-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistConversation\` | \`{ enabled, clearOnLogout? }\`. \`enabled\` keeps conversations in the browser; \`clearOnLogout\` deletes a shopper's history when \`userId\` changes away from them |
+| \`CioAsaProvider\` prop | \`persistConversation\` | \`{ enabled: boolean }\`, off by default. \`{ enabled: true }\` keeps conversations in the browser |
 | \`CioAsaProvider\` prop | \`userId\` | Required with \`persistConversation\`. Whose history this is: the signed-in shopper's id, or \`null\` for a guest |
 | function | \`clearPersistedConversations({ apiKey, domain, userId })\` | Deletes every stored conversation of that shopper, or of the guest without \`userId\`, in every tab |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | The stored list and the active conversation, whenever either changes |
