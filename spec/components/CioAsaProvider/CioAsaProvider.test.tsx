@@ -91,6 +91,7 @@ describe('CioAsaProvider', () => {
       <CioAsaProvider
         apiKey='key_test'
         staticRequestConfigs={{} as RequestConfigs}
+        userId={null}
         persistConversation>
         {(ctx) => {
           received = ctx;
@@ -109,6 +110,14 @@ describe('CioAsaProvider', () => {
     window.sessionStorage.clear();
   });
 
+  it('requires userId with persistConversation, and only then', () => {
+    // @ts-expect-error userId is required once persistConversation is on
+    const missing = <CioAsaProvider apiKey='key_test' persistConversation />;
+    const guest = <CioAsaProvider apiKey='key_test' persistConversation userId={null} />;
+    const off = <CioAsaProvider apiKey='key_test' />;
+    expect([missing, guest, off]).toHaveLength(3);
+  });
+
   describe('userId', () => {
     const KEY = 'cio-asa:chat:v1:key_test:chatbot';
     type Props = { userId?: string | null; cioClient?: unknown };
@@ -118,7 +127,8 @@ describe('CioAsaProvider', () => {
       <CioAsaProvider
         {...(cioClient ? { cioClient: cioClient as never } : { apiKey: 'key_test' })}
         staticRequestConfigs={{ domain: 'chatbot' }}
-        userId={userId}
+        // An omitted id is what a JavaScript caller can still send.
+        {...({ userId } as { userId: string | null })}
         persistConversation>
         {(ctx) => {
           received = ctx;
@@ -179,10 +189,12 @@ describe('CioAsaProvider', () => {
       expect(window.localStorage.getItem(KEY)).toBeNull();
     });
 
-    it('falls back to the client id when the prop is omitted', async () => {
+    it('treats an omitted userId as the guest, whatever id the client carries', async () => {
       renderWith({ cioClient: { agent: {}, options: { apiKey: 'key_test', userId: 'user-3' } } });
+      expect(received!.persistenceScope).toBe('guest');
       await save('t3');
-      expect(window.localStorage.getItem(`${KEY}:user-3`)).toContain('t3');
+      expect(window.sessionStorage.getItem(KEY)).toContain('t3');
+      expect(window.localStorage.getItem(`${KEY}:user-3`)).toBeNull();
     });
 
     it('treats null as the guest, even when the client still carries an id', async () => {
@@ -193,6 +205,20 @@ describe('CioAsaProvider', () => {
       await save('t4');
       expect(window.sessionStorage.getItem(KEY)).toContain('t4');
       expect(window.localStorage.getItem(`${KEY}:stale`)).toBeNull();
+    });
+
+    it('treats an empty userId as the guest and clears the id on the client', async () => {
+      const view = renderWith({ userId: 'user-e' });
+      expect(clientUserId()).toBe('user-e');
+
+      view.rerender(element({ userId: '' }));
+
+      expect(received!.persistenceScope).toBe('guest');
+      expect(clientUserId()).toBeUndefined();
+      await save('te');
+      expect(window.sessionStorage.getItem(KEY)).toContain('te');
+      expect(window.localStorage.getItem(`${KEY}:`)).toBeNull();
+      expect(window.localStorage.getItem(`${KEY}:user-e`)).toBeNull();
     });
 
     it('switches to a separate history on login and back to the guest one on logout', async () => {

@@ -78,6 +78,10 @@ const aiMsg = (id: string, text: string, status: ChatMessage['status'] = 'done')
   groups: [],
 });
 
+/** The id a test put on its mock client, handed to the provider as the `userId` prop. */
+const userIdOf = (client: ConstructorIOClient) =>
+  (client as unknown as { options?: { userId?: string } }).options?.userId ?? null;
+
 // The provider only exposes `persistConversation: boolean`; tests that need a controllable store
 // hand it to the hook through the context the provider would otherwise populate.
 function Wrapper({
@@ -107,6 +111,7 @@ function Wrapper({
     <CioAsaProvider
       cioClient={cioClient}
       staticRequestConfigs={{ domain: 'chatbot' }}
+      userId={userIdOf(cioClient)}
       persistConversation={typeof persistence === 'boolean' ? persistence : undefined}>
       {children}
     </CioAsaProvider>
@@ -176,7 +181,7 @@ describe('useAsaResults persistence', () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
-  it('reports no hydration and touches no storage when persistence is off', () => {
+  it('reports no hydration when persistence is off', () => {
     const { client } = createMockCioClient({ events: [] });
     const { result } = renderWithPersistence(client, undefined);
 
@@ -758,6 +763,7 @@ describe('useAsaResults persistence', () => {
           <CioAsaProvider
             cioClient={client}
             staticRequestConfigs={{ domain: 'chatbot' }}
+            userId={userIdOf(client)}
             persistConversation>
             {children}
           </CioAsaProvider>
@@ -1867,6 +1873,7 @@ describe('useAsaResults persistence', () => {
           <CioAsaProvider
             cioClient={client}
             staticRequestConfigs={{ domain: 'chatbot' }}
+            userId={userIdOf(client)}
             persistConversation>
             {children}
           </CioAsaProvider>
@@ -2140,6 +2147,7 @@ describe('useAsaResults persistence', () => {
           <CioAsaProvider
             cioClient={current}
             staticRequestConfigs={{ domain: 'chatbot' }}
+            userId={userIdOf(current)}
             persistConversation>
             {children}
           </CioAsaProvider>
@@ -2177,6 +2185,7 @@ describe('useAsaResults persistence', () => {
           <CioAsaProvider
             cioClient={current}
             staticRequestConfigs={{ domain: 'chatbot' }}
+            userId={userIdOf(current)}
             persistConversation>
             {children}
           </CioAsaProvider>
@@ -2288,7 +2297,7 @@ describe('useAsaResults persistence', () => {
     window.localStorage.clear();
   });
 
-  it('scopes the built-in storage key by user id when the client has one', async () => {
+  it('scopes the built-in storage key by the userId prop', async () => {
     window.localStorage.clear();
     const { client } = createMockCioClient({
       events: [startEvent('thread-u'), { type: 'message', data: { text: 'Hi' } }],

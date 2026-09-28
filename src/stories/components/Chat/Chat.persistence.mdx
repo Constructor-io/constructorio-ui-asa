@@ -25,7 +25,7 @@ import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
 </CioAsaProvider>
 ```
 
-That is the whole integration for a single conversation. `userId` tells the chat whose history it is: pass the signed-in shopper's id, and `null` (or nothing) for a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
+That is the whole integration for a single conversation. `userId` is required with `persistConversation`: it tells the chat whose history it is. Pass the signed-in shopper's id, and `null` for a guest; TypeScript reports a missing one, and in JavaScript an omitted one is treated as a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
 
 With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set the same `userId` on the client as well: agent requests use the client's id, stored chats use the prop. Storage is scoped by the client's api key; if it cannot be read from the client, nothing is stored until you pass `apiKey` too.
 
@@ -160,7 +160,7 @@ Everything below is active only with `persistConversation` on the provider.
 | Where | Name | What it does |
 |-------|------|--------------|
 | \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in the browser |
-| \`CioAsaProvider\` prop | \`userId\` | Whose history this is; the signed-in shopper's id, or \`null\` for a guest |
+| \`CioAsaProvider\` prop | \`userId\` | Required with \`persistConversation\`. Whose history this is: the signed-in shopper's id, or \`null\` for a guest |
 | function | \`clearPersistedConversations({ apiKey, domain, userId })\` | Deletes every stored conversation of that shopper, or of the guest without \`userId\`, in every tab |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | The stored list and the active conversation, whenever either changes |
 | \`Chat\` prop | \`initialThreadId\` | Restores that conversation instead of the most recent one |

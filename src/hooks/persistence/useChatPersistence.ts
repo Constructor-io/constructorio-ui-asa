@@ -11,6 +11,7 @@ import { ChatMessage, ChatPersistence, PersistedChat, PersistenceScope } from '.
 import type { LiveTurn, TurnOwner } from '../agentStream';
 import {
   findRekeyedThread,
+  getTabId,
   foreignStreamRemainingMs,
   isInFlight,
   mergeMessages,
@@ -78,6 +79,7 @@ export default function useChatPersistence(params: Params) {
     turnRef,
     cancelStream,
   } = params;
+  if (store) getTabId();
   const [isHydrating, setIsHydrating] = useState(Boolean(store));
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const storeRef = useLatest(store);

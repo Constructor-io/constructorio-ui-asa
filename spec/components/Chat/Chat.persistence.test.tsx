@@ -36,6 +36,7 @@ function renderChat(ref?: React.Ref<ChatHandle>) {
     <CioAsaProvider
       cioClient={client}
       staticRequestConfigs={{ domain: 'chatbot' }}
+      userId={null}
       persistConversation>
       <Chat ref={ref} />
     </CioAsaProvider>,
@@ -88,6 +89,7 @@ describe('Chat persistence', () => {
       <CioAsaProvider
         cioClient={client}
         staticRequestConfigs={{ domain: 'chatbot' }}
+        userId={null}
         persistConversation>
         <Chat ref={ref} onThreadsChange={onThreadsChange} />
       </CioAsaProvider>,
@@ -121,6 +123,7 @@ describe('Chat persistence', () => {
       <CioAsaProvider
         cioClient={client}
         staticRequestConfigs={{ domain: 'chatbot' }}
+        userId={null}
         persistConversation>
         <Chat ref={ref} onClose={onClose} />
       </CioAsaProvider>,
@@ -150,6 +153,7 @@ describe('Chat persistence', () => {
         <CioAsa
           cioClient={client}
           staticRequestConfigs={{ domain: 'chatbot' }}
+          userId={null}
           persistConversation
         />
       ) : null;

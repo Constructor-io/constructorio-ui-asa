@@ -2,6 +2,7 @@ import {
   clearPersistedConversations,
   createLocalStoragePersistence,
   persistenceNamespace,
+  shopperId,
   storageAreaFor,
 } from '../../src/utils/localStoragePersistence';
 import { IN_FLIGHT_GRACE_MS, PERSISTED_CHAT_VERSION, getTabId } from '../../src/utils/chatThreads';
@@ -22,6 +23,20 @@ describe('persistenceNamespace', () => {
 
   it('falls back to a default domain only', () => {
     expect(persistenceNamespace({ apiKey: 'k' })).toBe('k:default');
+  });
+});
+
+describe('shopperId', () => {
+  it('is undefined for a guest, whether missing, null or empty', () => {
+    expect(shopperId(undefined)).toBeUndefined();
+    expect(shopperId(null)).toBeUndefined();
+    expect(shopperId('')).toBeUndefined();
+  });
+
+  it('is the id as a string for a shopper, a numeric 0 included', () => {
+    expect(shopperId('user-1')).toBe('user-1');
+    expect(shopperId(42)).toBe('42');
+    expect(shopperId(0)).toBe('0');
   });
 });
 

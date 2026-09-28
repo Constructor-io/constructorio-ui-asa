@@ -69,6 +69,10 @@ function resolveStorage(storage: Storage | undefined, area: StorageArea): Storag
 export const isGuest = (userId: string | number | null | undefined): boolean =>
   userId == null || userId === '';
 
+/** The id the client and storage use: `undefined` for a guest (no id, `null` or empty). */
+export const shopperId = (userId: string | number | null | undefined): string | undefined =>
+  isGuest(userId) ? undefined : String(userId);
+
 /** Guests live in `sessionStorage`, so their history ends with the tab; shoppers keep theirs in `localStorage`. */
 export function storageAreaFor(userId: string | null | undefined): StorageArea {
   return isGuest(userId) ? 'session' : 'local';
@@ -80,8 +84,7 @@ export function persistenceNamespace(parts: {
   domain?: string;
   userId?: string | null;
 }): string {
-  const userId = isGuest(parts.userId) ? undefined : String(parts.userId);
-  return [parts.apiKey, parts.domain ?? 'default', userId]
+  return [parts.apiKey, parts.domain ?? 'default', shopperId(parts.userId)]
     .filter((part): part is string => part !== undefined)
     .map(encodeURIComponent)
     .join(':');

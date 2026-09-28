@@ -58,7 +58,7 @@ export interface UrlHelpers {
 // `cioClientOptions` is intentionally excluded: it is runtime state managed via
 // `setCioClientOptions`, not a provider input. Configure the client with `apiKey`
 // (optionally after instantiating your own `cioClient`).
-export interface CioAsaProviderProps
+interface CioAsaProviderBaseProps
   extends Omit<
     Partial<AsaContextValue>,
     | 'setCioClientOptions'
@@ -68,21 +68,6 @@ export interface CioAsaProviderProps
     | 'persistenceIndex'
   > {
   apiKey?: string;
-  /**
-   * Persist the conversation so it survives page loads. With `userId` it is kept in
-   * `localStorage` for 7 days, keyed by api key + domain + user id; without one (a guest) it is
-   * kept in `sessionStorage` and ends with the tab. Off when omitted.
-   */
-  persistConversation?: boolean;
-  /**
-   * The signed-in shopper's id, the same stable non-personal one given to Constructor for
-   * personalization. Set it on login and `null` on logout: each shopper only sees their own
-   * history, and a guest conversation is carried over into the shopper's history on login.
-   * With `apiKey` it is also set on the client; falls back to the `cioClient`'s own id. That
-   * fallback is read when the provider renders, so a `cioClient.setClientOptions({ userId })` login
-   * takes effect on its next render only: pass `userId` to switch right away.
-   */
-  userId?: string | null;
   /**
    * A/B test cells to attach to tracking events, as `{ [testName]: cellName }`. Each entry is
    * sent as an `ef-<testName>` parameter. Constructor's docs have the page set
@@ -95,6 +80,33 @@ export interface CioAsaProviderProps
    */
   testCells?: Record<string, string>;
 }
+
+interface PersistentProviderProps {
+  /**
+   * Persist the conversation so it survives page loads. A signed-in shopper's conversations are
+   * kept in `localStorage` for 7 days, keyed by api key + domain + user id; a guest's are kept in
+   * `sessionStorage` and end with the tab.
+   */
+  persistConversation: true;
+  /**
+   * Whose history it is, required with `persistConversation`: the signed-in shopper's id, the
+   * same stable non-personal one given to Constructor for personalization, or `null` for a guest.
+   * Change it on login and logout; a guest conversation moves into the shopper's history on
+   * login. With `apiKey` it is also set on the client; with your own `cioClient`, set it there too.
+   */
+  userId: string | null;
+}
+
+interface EphemeralProviderProps {
+  /** Off: the conversation lives in memory and is gone on the next page load. */
+  persistConversation?: false;
+  /** The shopper's id; with `apiKey` it is set on the client. `null` for a guest. */
+  userId?: string | null;
+}
+
+export type CioAsaPersistenceProps = PersistentProviderProps | EphemeralProviderProps;
+
+export type CioAsaProviderProps = CioAsaProviderBaseProps & CioAsaPersistenceProps;
 
 export interface UseCioClientProps {
   apiKey?: string;

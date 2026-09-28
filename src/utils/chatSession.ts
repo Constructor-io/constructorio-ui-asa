@@ -42,8 +42,6 @@ export function createChatSession(
   initialThreadId?: string,
   normalizeItem: ItemNormalizer = normalizeItemToProduct,
 ): ChatSession {
-  // Claimed at once, before a duplicate of this tab could copy it.
-  getTabId();
   return {
     normalizeItem,
     serverThreadId: initialThreadId && !isLocalThreadId(initialThreadId) ? initialThreadId : null,
