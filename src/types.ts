@@ -89,10 +89,8 @@ interface PersistentProviderProps {
    */
   persistConversation: true;
   /**
-   * Whose history it is, required with `persistConversation`: the signed-in shopper's id, the
-   * same stable non-personal one given to Constructor for personalization, or `null` for a guest.
-   * Change it on login and logout; a guest conversation moves into the shopper's history on
-   * login. With `apiKey` it is also set on the client; with your own `cioClient`, set it there too.
+   * Whose history it is: the signed-in shopper's stable, non-personal id, or `null` for a guest.
+   * Change it on login and logout. With `apiKey` it is also set on the client.
    */
   userId: string | null;
 }

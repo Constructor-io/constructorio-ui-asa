@@ -60,7 +60,6 @@ interface Params {
   cancelStream: () => void;
 }
 
-/** Whether the conversation has something storage does not have yet: a turn, or ids to retire. */
 const hasUnsavedWork = (session: ChatSession) =>
   session.isStreaming || session.dirty || session.orphanIds.length > 0;
 
