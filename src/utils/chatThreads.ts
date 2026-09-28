@@ -14,11 +14,19 @@ const LOCAL_THREAD_PREFIX = 'local-';
 /** Thread titles are the first question, cut to this many characters. */
 const TITLE_MAX_LENGTH = 80;
 
+let fallbackCounter = 0;
+
 /** Random token for the ids that must not collide between tabs: threads, tabs and messages. */
 export function randomId(): string {
-  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  if (typeof crypto !== 'undefined') {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    if (typeof crypto.getRandomValues === 'function') {
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    }
+  }
+  fallbackCounter += 1;
+  return `${Date.now().toString(36)}-${fallbackCounter.toString(36)}`;
 }
 
 /** Client-side thread id for a conversation the server has not named yet. */
