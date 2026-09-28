@@ -41,6 +41,9 @@
       "require": "./lib/cjs/index.js"
     }
   },
+  "sideEffects": [
+    "*.css"
+  ],
   "files": [
     "lib/**/*",
     "dist/constructorio-ui-asa-bundled.js"

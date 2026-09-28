@@ -5,7 +5,6 @@ import { useCioAsaContext } from '../../hooks/useCioAsaContext';
 import useAsaTracking from '../../hooks/useAsaTracking';
 import { AspectRatio, PEEK_FRACTION, aspectRatioMap } from './constants';
 import ResultsGroup from './ResultsGroup';
-import './ResultsBlock.css';
 
 export type { AspectRatio } from './constants';
 
