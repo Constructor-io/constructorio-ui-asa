@@ -1166,6 +1166,62 @@ describe('useAsaResults persistence', () => {
       expect(result.current.messages).toEqual([]);
     });
 
+    it('re-keys a background answer whose thread id arrives after the chat moved on', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store, threads } = createMemoryPersistence();
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      act(() => result.current.newThread());
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+      const localId = store.saveThread.mock.calls[0][0].threadId;
+      expect(localId).toMatch(/^local-/);
+
+      await act(async () => {
+        pending.push(startEvent('t'));
+        pending.push({ type: 'message', data: { text: 'Hi' } });
+        pending.end();
+      });
+
+      await waitFor(() => expect(result.current.threads.map((t) => t.threadId)).toEqual(['t']));
+      expect(threads.get('t')?.messages.map((m) => [m.text, m.status])).toEqual([
+        ['hello', 'done'],
+        ['Hi', 'done'],
+      ]);
+      expect(threads.has(localId)).toBe(false);
+    });
+
+    it('retires a local copy of a background answer on its next save when the first delete fails', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store, threads } = createMemoryPersistence();
+      store.deleteThread.mockImplementationOnce(async () => {});
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      act(() => result.current.newThread());
+      await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+      const localId = store.saveThread.mock.calls[0][0].threadId;
+
+      await act(async () => pending.push(startEvent('t')));
+      await waitFor(() => expect(store.deleteThread).toHaveBeenCalledWith(localId));
+      expect(threads.has(localId)).toBe(true);
+
+      await act(async () => {
+        pending.push({ type: 'message', data: { text: 'Hi' } });
+        pending.end();
+      });
+
+      await waitFor(() => expect(threads.has(localId)).toBe(false));
+      expect(Array.from(threads.keys())).toEqual(['t']);
+      expect(store.deleteThread.mock.calls.filter(([id]) => id === localId).length).toBe(2);
+    });
+
     function renderMidAnswerElsewhere() {
       const { client, getAgentResultsStream, tracker } = createMockCioClient({ events: [] });
       const pending = createControllableStream();
