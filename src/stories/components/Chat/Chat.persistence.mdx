@@ -38,7 +38,7 @@ With `apiKey` the id is also set on the client the provider builds, so agent req
 | Where | \`sessionStorage\` | \`localStorage\` |
 | Survives | reloads and navigation within the tab | reloads, navigation, closing the browser, other tabs of the site |
 | Ends | when the tab is closed | after 7 days without activity, or when you delete it |
-| Other tabs | each tab is its own guest session | all tabs share the history and stay in sync |
+| Other tabs | each tab is its own guest session; a tab the browser duplicates starts with a copy and goes its own way | all tabs share the history and stay in sync |
 | Visible to | nobody else | only the same \`userId\` on that browser |
 `}
 </Markdown>

@@ -340,9 +340,17 @@ export default function useChatPersistence(params: Params) {
           session,
           normalizeHydratedMessages(settleInto.messages),
         );
-        enqueueWrite(() =>
-          saveThreadAndRetireStale(settleInto.store, snapshot, staleIds).then(() => {}),
-        );
+        const { store: left } = settleInto;
+        // Written at once when the store can: a logout often navigates away before a queued write runs.
+        if (left.saveThreadSync) {
+          try {
+            left.saveThreadSync(snapshot, staleIds);
+          } catch {
+            /* ignore */
+          }
+        } else {
+          enqueueWrite(() => saveThreadAndRetireStale(left, snapshot, staleIds).then(() => {}));
+        }
       }
       migrate()?.then(refreshThreads);
       resetConversation(session);

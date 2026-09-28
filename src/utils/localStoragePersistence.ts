@@ -278,7 +278,7 @@ export function createLocalStoragePersistence(
     let chat = priority;
     while (chat.messages.length > 2) {
       chat = { ...chat, messages: trimToTurns(chat.messages.slice(2), maxTurns) };
-      next = { ...next, threads: { [chat.threadId]: chat } };
+      next = { ...next, threads: { ...next.threads, [chat.threadId]: chat } };
       if (tryWrite(storage, next)) return;
     }
     if (tryWriteShedding(storage, next)) return;

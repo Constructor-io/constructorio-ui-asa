@@ -305,7 +305,7 @@ describe('useAsaResults persistence', () => {
       variations: [{ color: 'Blue' }],
     },
   };
-  const productEvents = [
+  const productEvents: StreamEvent[] = [
     startEvent('thread-products'),
     { type: 'search_result', data: { response: { results: [productItem] } } },
   ];
@@ -1693,6 +1693,32 @@ describe('useAsaResults persistence', () => {
         },
       };
     }
+
+    it('settles the old conversation at once on a store switch, even behind a stuck write', async () => {
+      const { client } = createMockCioClient({ stream: createStartedThenPendingStream('t') });
+      const { store: storeA } = createMemoryPersistence();
+      storeA.saveThread.mockImplementation(() => new Promise(() => {}));
+      const saveThreadSync = jest.fn();
+      storeA.saveThreadSync = saveThreadSync;
+      const { store: storeB } = createMemoryPersistence();
+      const { result, switchTo } = renderSwitchable(client, storeA);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await waitFor(() => expect(storeA.saveThread).toHaveBeenCalledTimes(1));
+
+      act(() => switchTo(storeB));
+
+      expect(saveThreadSync).toHaveBeenCalledTimes(1);
+      const [snapshot] = saveThreadSync.mock.calls[0];
+      expect(snapshot.threadId).toBe('t');
+      expect(snapshot.messages.map((m: ChatMessage) => [m.text, m.status])).toEqual([
+        ['hello', 'done'],
+        ['', 'error'],
+      ]);
+      expect(snapshot.messages[1].interrupted).toBe(true);
+      expect(storeB.saveThread).not.toHaveBeenCalled();
+    });
 
     it('re-hydrates from a new store and leaves the old conversation behind', async () => {
       const { client } = createMockCioClient({ events: [] });
