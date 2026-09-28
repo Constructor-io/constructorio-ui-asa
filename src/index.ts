@@ -29,6 +29,7 @@ export type {
   Nullable,
   // Provider configuration
   CioAsaProviderProps,
+  PersistConversationOptions,
   AsaContextValue,
   CioClientOptions,
   RequestConfigs,

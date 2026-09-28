@@ -20,12 +20,15 @@ What the shopper gets:
 ```jsx
 import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
 
-<CioAsaProvider apiKey="YOUR_API_KEY" persistConversation userId={user?.id ?? null}>
+<CioAsaProvider
+  apiKey="YOUR_API_KEY"
+  persistConversation={{ enabled: true }}
+  userId={user?.id ?? null}>
   <Chat />
 </CioAsaProvider>
 ```
 
-That is the whole integration for a single conversation. `userId` is required with `persistConversation`: it tells the chat whose history it is. Pass the signed-in shopper's id, and `null` for a guest; TypeScript reports a missing one, and in JavaScript an omitted one is treated as a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
+That is the whole integration for a single conversation. `persistConversation` takes an options object: `enabled` turns the feature on, and can be a feature flag. `userId` is required with it: it tells the chat whose history it is. Pass the signed-in shopper's id, and `null` for a guest; TypeScript reports a missing one, and in JavaScript an omitted one is treated as a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
 
 With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set the same `userId` on the client as well: agent requests use the client's id, stored chats use the prop. Storage is scoped by the client's api key; if it cannot be read from the client, nothing is stored until you pass `apiKey` too.
 
@@ -51,7 +54,16 @@ Set `userId` on login and remove it on logout; everything else follows from that
 - **On logout**, or when one id is replaced by another, the chat switches storage, clears the screen and loads that shopper's own history. It never reads a key that belongs to another id, in any open tab.
 - **A login that ends in a full page reload** comes back already signed in; the guest conversation then stays in `sessionStorage` and is not carried over. Carry-over happens when `userId` changes on a mounted provider.
 
-By default nothing is deleted on logout. The history stays on the device under the old id for 7 days and comes back if the same shopper signs in again there. It cannot be shown to anyone else through the chat, but it is plain data in `localStorage`, readable from DevTools and by other scripts on the page. When that is not acceptable, delete it on logout:
+By default nothing is deleted on logout. The history stays on the device under the old id for 7 days and comes back if the same shopper signs in again there. It cannot be shown to anyone else through the chat, but it is plain data in `localStorage`, readable from DevTools and by other scripts on the page. When that is not acceptable, turn on `clearOnLogout`:
+
+```jsx
+<CioAsaProvider
+  apiKey="YOUR_API_KEY"
+  persistConversation={{ enabled: true, clearOnLogout: true }}
+  userId={user?.id ?? null}>
+```
+
+Whenever `userId` changes away from a shopper, their stored conversations are deleted in every tab. The answer streaming at that moment is settled into their history first, then removed with the rest. This only works while the provider stays mounted: a logout that reloads the page comes back without the old id, so the provider never sees the change. For that flow, delete the history yourself:
 
 ```js
 import { clearPersistedConversations } from '@constructor-io/constructorio-ui-asa';
@@ -159,7 +171,7 @@ Everything below is active only with `persistConversation` on the provider.
 {`
 | Where | Name | What it does |
 |-------|------|--------------|
-| \`CioAsaProvider\` prop | \`persistConversation\` | \`true\` keeps conversations in the browser |
+| \`CioAsaProvider\` prop | \`persistConversation\` | \`{ enabled, clearOnLogout? }\`. \`enabled\` keeps conversations in the browser; \`clearOnLogout\` deletes a shopper's history when \`userId\` changes away from them |
 | \`CioAsaProvider\` prop | \`userId\` | Required with \`persistConversation\`. Whose history this is: the signed-in shopper's id, or \`null\` for a guest |
 | function | \`clearPersistedConversations({ apiKey, domain, userId })\` | Deletes every stored conversation of that shopper, or of the guest without \`userId\`, in every tab |
 | \`Chat\` prop | \`onThreadsChange(threads, activeThreadId)\` | The stored list and the active conversation, whenever either changes |

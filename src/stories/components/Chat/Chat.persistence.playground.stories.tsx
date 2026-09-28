@@ -368,7 +368,10 @@ function PersistentChatPlayground() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
         <div style={frameStyle}>
-          <CioAsaProvider apiKey={DEMO_API_KEY} persistConversation userId={userId}>
+          <CioAsaProvider
+            apiKey={DEMO_API_KEY}
+            persistConversation={{ enabled: true }}
+            userId={userId}>
             <Chat
               key={chatKey}
               ref={chatRef}

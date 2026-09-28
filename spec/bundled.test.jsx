@@ -102,7 +102,7 @@ describe('bundled entry (standalone browser build)', () => {
     );
     mountTarget();
 
-    mount({ apiKey: 'key_test', persistConversation: true });
+    mount({ apiKey: 'key_test', persistConversation: { enabled: true } });
 
     await waitFor(() => {
       expect(screen.getByText('Stored question')).toBeInTheDocument();

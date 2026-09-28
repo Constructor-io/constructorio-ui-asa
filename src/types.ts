@@ -81,13 +81,23 @@ interface CioAsaProviderBaseProps
   testCells?: Record<string, string>;
 }
 
-interface PersistentProviderProps {
+/** How conversations are kept in the browser. */
+export interface PersistConversationOptions {
   /**
-   * Persist the conversation so it survives page loads. A signed-in shopper's conversations are
-   * kept in `localStorage` for 7 days, keyed by api key + domain + user id; a guest's are kept in
-   * `sessionStorage` and end with the tab.
+   * Keep conversations across page loads: a signed-in shopper's in `localStorage` for 7 days,
+   * keyed by api key + domain + user id; a guest's in `sessionStorage`, ending with the tab.
    */
-  persistConversation: boolean;
+  enabled: boolean;
+  /**
+   * Delete the shopper's stored conversations when `userId` changes away from them, in every
+   * tab. Off by default. A logout that reloads the page never passes through here; call
+   * `clearPersistedConversations` there instead.
+   */
+  clearOnLogout?: boolean;
+}
+
+interface PersistentProviderProps {
+  persistConversation: PersistConversationOptions;
   /**
    * Whose history it is: the signed-in shopper's stable, non-personal id, or `null` for a guest.
    * Change it on login and logout. With `apiKey` it is also set on the client.
@@ -96,8 +106,8 @@ interface PersistentProviderProps {
 }
 
 interface EphemeralProviderProps {
-  /** Off: the conversation lives in memory and is gone on the next page load. */
-  persistConversation?: false;
+  /** Off, or omitted: the conversation lives in memory and is gone on the next page load. */
+  persistConversation?: PersistConversationOptions & { enabled: false };
   /** The shopper's id; with `apiKey` it is set on the client. `null` for a guest. */
   userId?: string | null;
 }

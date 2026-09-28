@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, renderHook } from '@testing-library/react';
+import { render, screen, renderHook, waitFor } from '@testing-library/react';
 import CioAsaProvider from '../../../src/components/CioAsaProvider/CioAsaProvider';
 import { useCioAsaContext } from '../../../src/hooks/useCioAsaContext';
 import { DEMO_API_KEY } from '../../../src/constants';
@@ -92,7 +92,7 @@ describe('CioAsaProvider', () => {
         apiKey='key_test'
         staticRequestConfigs={{} as RequestConfigs}
         userId={null}
-        persistConversation>
+        persistConversation={{ enabled: true }}>
         {(ctx) => {
           received = ctx;
           return null;
@@ -113,27 +113,34 @@ describe('CioAsaProvider', () => {
   it('requires userId with persistConversation, and only then', () => {
     const flag = Boolean(process.env.PERSIST);
     // @ts-expect-error userId is required once persistConversation is on
-    const missing = <CioAsaProvider apiKey='key_test' persistConversation />;
-    // @ts-expect-error a dynamic flag may be on, so userId is required with it too
-    const flagMissing = <CioAsaProvider apiKey='key_test' persistConversation={flag} />;
-    const guest = <CioAsaProvider apiKey='key_test' persistConversation userId={null} />;
-    const flagged = <CioAsaProvider apiKey='key_test' persistConversation={flag} userId='u' />;
+    const missing = <CioAsaProvider apiKey='key_test' persistConversation={{ enabled: true }} />;
+    const flagMissing = (
+      // @ts-expect-error a dynamic flag may be on, so userId is required with it too
+      <CioAsaProvider apiKey='key_test' persistConversation={{ enabled: flag }} />
+    );
+    const guest = (
+      <CioAsaProvider apiKey='key_test' persistConversation={{ enabled: true }} userId={null} />
+    );
+    const flagged = (
+      <CioAsaProvider apiKey='key_test' persistConversation={{ enabled: flag }} userId='u' />
+    );
+    const disabled = <CioAsaProvider apiKey='key_test' persistConversation={{ enabled: false }} />;
     const off = <CioAsaProvider apiKey='key_test' />;
-    expect([missing, flagMissing, guest, flagged, off]).toHaveLength(5);
+    expect([missing, flagMissing, guest, flagged, disabled, off]).toHaveLength(6);
   });
 
   describe('userId', () => {
     const KEY = 'cio-asa:chat:v1:key_test:chatbot';
-    type Props = { userId?: string | null; cioClient?: unknown };
+    type Props = { userId?: string | null; cioClient?: unknown; clearOnLogout?: boolean };
     let received: AsaContextValue | undefined;
 
-    const element = ({ userId, cioClient }: Props) => (
+    const element = ({ userId, cioClient, clearOnLogout }: Props) => (
       <CioAsaProvider
         {...(cioClient ? { cioClient: cioClient as never } : { apiKey: 'key_test' })}
         staticRequestConfigs={{ domain: 'chatbot' }}
         // An omitted id is what a JavaScript caller can still send.
         {...({ userId } as { userId: string | null })}
-        persistConversation>
+        persistConversation={{ enabled: true, clearOnLogout }}>
         {(ctx) => {
           received = ctx;
           return null;
@@ -141,6 +148,8 @@ describe('CioAsaProvider', () => {
       </CioAsaProvider>
     );
     const renderWith = (props: Props) => render(element(props));
+    const threadsIn = (key: string, storage: Storage = window.localStorage) =>
+      Object.keys(JSON.parse(storage.getItem(key) ?? '{}').threads ?? {});
     const save = (threadId: string) =>
       received!.persistence!.saveThread({
         version: 1,
@@ -266,6 +275,36 @@ describe('CioAsaProvider', () => {
       view.rerender(element({ cioClient }));
 
       expect(received!.persistenceScope).toBe('guest');
+    });
+
+    it('keeps the same store when the options object is a new reference', () => {
+      const view = renderWith({ userId: 'user-s' });
+      const store = received!.persistence;
+      view.rerender(element({ userId: 'user-s' }));
+      expect(received!.persistence).toBe(store);
+    });
+
+    it('deletes the previous shopper history on logout with clearOnLogout', async () => {
+      const view = renderWith({ userId: 'user-c', clearOnLogout: true });
+      await save('mine');
+      expect(window.localStorage.getItem(`${KEY}:user-c`)).toContain('mine');
+
+      view.rerender(element({ userId: null, clearOnLogout: true }));
+
+      await waitFor(() => expect(threadsIn(`${KEY}:user-c`)).toEqual([]));
+      expect(received!.persistenceScope).toBe('guest');
+    });
+
+    it('deletes the previous shopper history when another shopper signs in, never the guest one', async () => {
+      const view = renderWith({ userId: null, clearOnLogout: true });
+      await save('guest');
+      view.rerender(element({ userId: 'user-d', clearOnLogout: true }));
+      await save('mine');
+
+      view.rerender(element({ userId: 'user-e', clearOnLogout: true }));
+
+      await waitFor(() => expect(threadsIn(`${KEY}:user-d`)).toEqual([]));
+      expect(threadsIn(KEY, window.sessionStorage)).toEqual(['guest']);
     });
 
     it('keeps the same client across login and logout and only updates its user id', () => {

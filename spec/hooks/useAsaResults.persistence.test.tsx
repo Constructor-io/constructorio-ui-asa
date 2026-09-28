@@ -23,6 +23,7 @@ import type {
   AsaContextValue,
   ChatMessage,
   ChatPersistence,
+  CioAsaPersistenceProps,
   PersistedChat,
   UseAsaResultsOptions,
 } from '../../src/types';
@@ -82,7 +83,7 @@ const aiMsg = (id: string, text: string, status: ChatMessage['status'] = 'done')
 const userIdOf = (client: ConstructorIOClient) =>
   (client as unknown as { options?: { userId?: string } }).options?.userId ?? null;
 
-// The provider only exposes `persistConversation: boolean`; tests that need a controllable store
+// The provider builds its own store; tests that need a controllable store
 // hand it to the hook through the context the provider would otherwise populate.
 function Wrapper({
   cioClient,
@@ -107,12 +108,15 @@ function Wrapper({
     [cioClient, store],
   );
   if (store) return <AsaContext.Provider value={value}>{children}</AsaContext.Provider>;
+  const persistenceProps: CioAsaPersistenceProps =
+    typeof persistence === 'boolean'
+      ? { persistConversation: { enabled: persistence }, userId: userIdOf(cioClient) }
+      : { userId: userIdOf(cioClient) };
   return (
     <CioAsaProvider
       cioClient={cioClient}
       staticRequestConfigs={{ domain: 'chatbot' }}
-      userId={userIdOf(cioClient)}
-      persistConversation={typeof persistence === 'boolean' ? persistence : undefined}>
+      {...persistenceProps}>
       {children}
     </CioAsaProvider>
   );
@@ -764,7 +768,7 @@ describe('useAsaResults persistence', () => {
             cioClient={client}
             staticRequestConfigs={{ domain: 'chatbot' }}
             userId={userIdOf(client)}
-            persistConversation>
+            persistConversation={{ enabled: true }}>
             {children}
           </CioAsaProvider>
         ),
@@ -1974,7 +1978,7 @@ describe('useAsaResults persistence', () => {
             cioClient={client}
             staticRequestConfigs={{ domain: 'chatbot' }}
             userId={userIdOf(client)}
-            persistConversation>
+            persistConversation={{ enabled: true }}>
             {children}
           </CioAsaProvider>
         ),
@@ -2248,7 +2252,7 @@ describe('useAsaResults persistence', () => {
             cioClient={current}
             staticRequestConfigs={{ domain: 'chatbot' }}
             userId={userIdOf(current)}
-            persistConversation>
+            persistConversation={{ enabled: true }}>
             {children}
           </CioAsaProvider>
         ),
@@ -2286,7 +2290,7 @@ describe('useAsaResults persistence', () => {
             cioClient={current}
             staticRequestConfigs={{ domain: 'chatbot' }}
             userId={userIdOf(current)}
-            persistConversation>
+            persistConversation={{ enabled: true }}>
             {children}
           </CioAsaProvider>
         ),
@@ -2328,7 +2332,7 @@ describe('useAsaResults persistence', () => {
           cioClient={client}
           staticRequestConfigs={{ domain: 'chatbot' }}
           userId='user-c'
-          persistConversation>
+          persistConversation={{ enabled: true }}>
           {children}
         </CioAsaProvider>
       ),
