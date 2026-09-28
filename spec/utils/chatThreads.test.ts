@@ -130,6 +130,15 @@ describe('mergeMessages', () => {
     expect(merged[0].status).toBe('done');
   });
 
+  it('settles a stored in-flight message from an older snapshot that holds its final version', () => {
+    const stored = [msg('user', 'q'), { ...msg('assistant', '', 'loading'), id: 'a' }];
+    const incoming = [{ ...msg('assistant', 'Hi', 'done'), id: 'a' }];
+    expect(mergeMessages(stored, incoming, true)[1]).toEqual(incoming[0]);
+    expect(mergeMessages(stored, [{ ...incoming[0], status: 'streaming' }], true)[1]).toBe(
+      stored[1],
+    );
+  });
+
   it('keeps the stored version when asked to prefer it', () => {
     const a = msg('assistant', 'a', 'done');
     const b = msg('assistant', 'b');

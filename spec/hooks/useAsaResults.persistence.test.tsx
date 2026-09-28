@@ -1401,6 +1401,50 @@ describe('useAsaResults persistence', () => {
       await waitFor(() => expect(threads.has('active')).toBe(true));
     });
 
+    it("defers another tab's newer snapshot while a settled turn is still being saved", async () => {
+      const storage = new FakeStorage();
+      const real = createLocalStoragePersistence({ storage, namespace: 'x' });
+      const otherTab = createLocalStoragePersistence({ storage, namespace: 'x' });
+      let release: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const store: ChatPersistence = {
+        ...real,
+        saveThread: (chat) =>
+          chat.messages[chat.messages.length - 1]?.status === 'done'
+            ? gate.then(() => real.saveThread(chat))
+            : real.saveThread(chat),
+      };
+      const { client } = createMockCioClient({
+        events: [startEvent('t'), { type: 'message', data: { text: 'Hi' } }],
+      });
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('mine'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      await act(async () => {});
+
+      await otherTab.saveThread({
+        ...persisted('t', [userMsg('o1', 'theirs'), aiMsg('o2', 'their answer')]),
+        updatedAt: Date.now() + 5000,
+        owner: 'tab-2',
+      });
+      act(() => {
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cio-asa:chat:v1:x' }));
+      });
+      await act(async () => {});
+      expect(result.current.messages.map((m) => m.text)).toEqual(['mine', 'Hi']);
+
+      release();
+      await waitFor(() =>
+        expect(result.current.messages.map((m) => m.text)).toEqual(
+          expect.arrayContaining(['theirs', 'their answer', 'mine', 'Hi']),
+        ),
+      );
+    });
+
     it('keeps and shows a turn another tab added while this one was streaming', async () => {
       const storage = new FakeStorage();
       const store = createLocalStoragePersistence({ storage, namespace: 'x' });

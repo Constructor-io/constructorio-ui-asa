@@ -111,11 +111,15 @@ describe('CioAsaProvider', () => {
   });
 
   it('requires userId with persistConversation, and only then', () => {
+    const flag = Boolean(process.env.PERSIST);
     // @ts-expect-error userId is required once persistConversation is on
     const missing = <CioAsaProvider apiKey='key_test' persistConversation />;
+    // @ts-expect-error a dynamic flag may be on, so userId is required with it too
+    const flagMissing = <CioAsaProvider apiKey='key_test' persistConversation={flag} />;
     const guest = <CioAsaProvider apiKey='key_test' persistConversation userId={null} />;
+    const flagged = <CioAsaProvider apiKey='key_test' persistConversation={flag} userId='u' />;
     const off = <CioAsaProvider apiKey='key_test' />;
-    expect([missing, guest, off]).toHaveLength(3);
+    expect([missing, flagMissing, guest, flagged, off]).toHaveLength(5);
   });
 
   describe('userId', () => {

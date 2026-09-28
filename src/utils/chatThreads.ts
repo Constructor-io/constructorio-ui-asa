@@ -136,7 +136,12 @@ export function compactMessages(messages: ChatMessage[], normalize: ItemNormaliz
   );
 }
 
-/** Both lists in stored order; a shared message takes the incoming version unless `preferStored`. */
+const isUnsettled = (m: ChatMessage) => m.status === 'loading' || m.status === 'streaming';
+
+/**
+ * Both lists in stored order; a shared message takes the incoming version unless `preferStored`.
+ * A settled incoming version still replaces a stored one mid-stream: it is the later one by definition.
+ */
 export function mergeMessages(
   stored: ChatMessage[],
   incoming: ChatMessage[],
@@ -145,7 +150,12 @@ export function mergeMessages(
   const incomingById = new Map(incoming.map((m) => [m.id, m]));
   const storedIds = new Set(stored.map((m) => m.id));
   return [
-    ...stored.map((m) => (preferStored ? m : incomingById.get(m.id) ?? m)),
+    ...stored.map((m) => {
+      const update = incomingById.get(m.id);
+      if (!update) return m;
+      if (!preferStored) return update;
+      return isUnsettled(m) && !isUnsettled(update) ? update : m;
+    }),
     ...incoming.filter((m) => !storedIds.has(m.id)),
   ];
 }

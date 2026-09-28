@@ -87,7 +87,7 @@ interface PersistentProviderProps {
    * kept in `localStorage` for 7 days, keyed by api key + domain + user id; a guest's are kept in
    * `sessionStorage` and end with the tab.
    */
-  persistConversation: true;
+  persistConversation: boolean;
   /**
    * Whose history it is: the signed-in shopper's stable, non-personal id, or `null` for a guest.
    * Change it on login and logout. With `apiKey` it is also set on the client.

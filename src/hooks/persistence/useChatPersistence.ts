@@ -442,7 +442,8 @@ export default function useChatPersistence(params: Params) {
         else session.dirty = true;
         return;
       }
-      if (session.isStreaming) {
+      // Unsaved local work first; the save's completion looks at the store again.
+      if (session.isStreaming || session.dirty || pendingWritesRef.current > 0) {
         missedSyncRef.current = true;
         return;
       }
