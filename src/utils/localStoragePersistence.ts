@@ -417,4 +417,24 @@ export function createLocalStoragePersistence(
   };
 }
 
+const sharedStores = new Map<string, ChatPersistence>();
+
+/**
+ * One store per namespace and area for the page, so a chat mounted again finds the answers still
+ * streaming into it. Not shared on the server, where the map would outlive the request.
+ */
+export function sharedLocalStoragePersistence(
+  namespace: string,
+  storageArea: StorageArea,
+): ChatPersistence {
+  if (typeof window === 'undefined')
+    return createLocalStoragePersistence({ namespace, storageArea });
+  const id = `${storageArea}:${namespace}`;
+  const existing = sharedStores.get(id);
+  if (existing) return existing;
+  const store = createLocalStoragePersistence({ namespace, storageArea });
+  sharedStores.set(id, store);
+  return store;
+}
+
 export default createLocalStoragePersistence;

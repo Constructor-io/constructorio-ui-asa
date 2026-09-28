@@ -1,35 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConstructorClientOptions } from '@constructor-io/constructorio-client-javascript/lib/types';
 import useCioClient from '../../hooks/useCioClient';
-import {
-  AsaContextValue,
-  ChatPersistence,
-  IncludeRenderProps,
-  CioAsaProviderProps,
-  StorageArea,
-} from '../../types';
+import { AsaContextValue, IncludeRenderProps, CioAsaProviderProps } from '../../types';
 import { AsaContext } from '../../hooks/useCioAsaContext';
 import * as defaultFormatters from '../../utils/formatters';
 import * as defaultUrlHelpers from '../../utils/urlHelpers';
 import { readClientOptions } from '../../utils/clientOptions';
 import {
-  createLocalStoragePersistence,
-  shopperId,
   persistenceNamespace,
+  sharedLocalStoragePersistence,
+  shopperId,
   storageAreaFor,
 } from '../../utils/localStoragePersistence';
-
-const sharedStores = new Map<string, ChatPersistence>();
-function sharedStore(namespace: string, storageArea: StorageArea): ChatPersistence {
-  if (typeof window === 'undefined')
-    return createLocalStoragePersistence({ namespace, storageArea });
-  const id = `${storageArea}:${namespace}`;
-  const existing = sharedStores.get(id);
-  if (existing) return existing;
-  const store = createLocalStoragePersistence({ namespace, storageArea });
-  sharedStores.set(id, store);
-  return store;
-}
 
 export default function CioAsaProvider(
   props: IncludeRenderProps<CioAsaProviderProps, AsaContextValue>,
@@ -77,7 +59,7 @@ export default function CioAsaProvider(
   const persistence = useMemo(() => {
     if (!persistenceEnabled || resolvedApiKey === undefined) return undefined;
 
-    return sharedStore(
+    return sharedLocalStoragePersistence(
       persistenceNamespace({ apiKey: resolvedApiKey, domain, userId }),
       storageAreaFor(userId),
     );

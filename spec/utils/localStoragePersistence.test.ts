@@ -2,6 +2,7 @@ import {
   clearPersistedConversations,
   createLocalStoragePersistence,
   persistenceNamespace,
+  sharedLocalStoragePersistence,
   shopperId,
   storageAreaFor,
 } from '../../src/utils/localStoragePersistence';
@@ -37,6 +38,28 @@ describe('shopperId', () => {
     expect(shopperId('user-1')).toBe('user-1');
     expect(shopperId(42)).toBe('42');
     expect(shopperId(0)).toBe('0');
+  });
+});
+
+describe('sharedLocalStoragePersistence', () => {
+  it('hands out one store per namespace and area for the page', () => {
+    const store = sharedLocalStoragePersistence('k:chatbot:u1', 'local');
+    expect(sharedLocalStoragePersistence('k:chatbot:u1', 'local')).toBe(store);
+    expect(sharedLocalStoragePersistence('k:chatbot:u2', 'local')).not.toBe(store);
+    expect(sharedLocalStoragePersistence('k:chatbot:u1', 'session')).not.toBe(store);
+  });
+
+  it('is a working store bound to the area it was asked for', async () => {
+    window.localStorage.clear();
+    const store = sharedLocalStoragePersistence('k:chatbot:shared', 'local');
+    await store.saveThread(chat('t1', turns(1)));
+    expect(window.localStorage.getItem('cio-asa:chat:v1:k:chatbot:shared')).toContain('t1');
+    expect(
+      (await sharedLocalStoragePersistence('k:chatbot:shared', 'local').listThreads()).map(
+        (t) => t.threadId,
+      ),
+    ).toEqual(['t1']);
+    window.localStorage.clear();
   });
 });
 

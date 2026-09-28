@@ -1,4 +1,7 @@
-import { createLocalStoragePersistence } from '../../src/utils/localStoragePersistence';
+import {
+  createLocalStoragePersistence,
+  sharedLocalStoragePersistence,
+} from '../../src/utils/localStoragePersistence';
 
 describe('createLocalStoragePersistence (SSR)', () => {
   it('is a no-op without window', async () => {
@@ -11,5 +14,11 @@ describe('createLocalStoragePersistence (SSR)', () => {
     ).resolves.toBeUndefined();
     await expect(store.deleteThread('t1')).resolves.toBeUndefined();
     expect(() => store.subscribe(() => {})()).not.toThrow();
+  });
+
+  it('does not share stores across requests on the server', () => {
+    const a = sharedLocalStoragePersistence('k:chatbot:u1', 'local');
+    const b = sharedLocalStoragePersistence('k:chatbot:u1', 'local');
+    expect(a).not.toBe(b);
   });
 });
