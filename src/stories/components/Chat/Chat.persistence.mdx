@@ -27,7 +27,7 @@ import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
 
 That is the whole integration for a single conversation. `userId` tells the chat whose history it is: pass the signed-in shopper's id, and `null` (or nothing) for a guest. Use the same stable, non-personal id you give Constructor for personalization, not an email, because it becomes part of a `localStorage` key that any script on the page can read.
 
-With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set `userId` on the client as well; a mismatch is reported in development. Storage is scoped by the client's api key; if it cannot be read from the client, nothing is stored until you pass `apiKey` too.
+With `apiKey` the id is also set on the client the provider builds, so agent requests and stored chats agree. With your own `cioClient`, set the same `userId` on the client as well: agent requests use the client's id, stored chats use the prop. Storage is scoped by the client's api key; if it cannot be read from the client, nothing is stored until you pass `apiKey` too.
 
 ## Guests and signed-in shoppers
 

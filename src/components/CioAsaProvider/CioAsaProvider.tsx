@@ -54,7 +54,6 @@ export default function CioAsaProvider(
   } = props;
 
   const [cioClientOptions, setCioClientOptions] = useState({});
-  // With `apiKey` the client is built here once, with the id it starts with; later ids are set on it below.
   const initialUserId = useRef(userIdProp).current;
   const clientInit = useMemo(
     () =>
@@ -70,13 +69,15 @@ export default function CioAsaProvider(
     testCells,
   });
 
-  // Once the prop has been given, dropping it means a logout, not "read the id from the client".
   const controlledRef = useRef(userIdProp !== undefined);
   if (userIdProp !== undefined) controlledRef.current = true;
   const controlled = controlledRef.current;
 
   useEffect(() => {
-    if (customCioClient || !cioClient || !controlled) return;
+    if (customCioClient || !cioClient || !controlled) {
+      return;
+    }
+
     cioClient.setClientOptions({ userId: userIdProp ?? undefined } as ConstructorClientOptions);
   }, [cioClient, customCioClient, controlled, userIdProp]);
 
@@ -85,29 +86,6 @@ export default function CioAsaProvider(
   const clientUserId = normalizeUserId(clientOptions?.userId);
   const userId = controlled ? normalizeUserId(userIdProp) : clientUserId;
   const { domain } = staticRequestConfigs;
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'production' || !customCioClient) return;
-    if (persistenceEnabled && resolvedApiKey === undefined) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        '[cio-asa] could not read the api key from cioClient, so the conversation is not persisted. Pass apiKey as well.',
-      );
-    }
-    if (!controlled || !clientOptions || clientUserId === userId) return;
-    // eslint-disable-next-line no-console
-    console.warn(
-      `[cio-asa] userId "${userId ?? 'none'}" differs from the client's "${clientUserId ?? 'none'}". Agent requests use the client's id, stored chats use userId: set both to the same value.`,
-    );
-  }, [
-    customCioClient,
-    persistenceEnabled,
-    resolvedApiKey,
-    controlled,
-    clientOptions,
-    clientUserId,
-    userId,
-  ]);
 
   const persistence = useMemo(() => {
     // Without an api key the store could not be scoped to this index, so there is none.

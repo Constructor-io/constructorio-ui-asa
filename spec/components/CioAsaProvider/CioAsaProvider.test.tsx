@@ -186,7 +186,6 @@ describe('CioAsaProvider', () => {
     });
 
     it('treats null as the guest, even when the client still carries an id', async () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       renderWith({
         userId: null,
         cioClient: { agent: {}, options: { apiKey: 'key_test', userId: 'stale' } },
@@ -194,7 +193,6 @@ describe('CioAsaProvider', () => {
       await save('t4');
       expect(window.sessionStorage.getItem(KEY)).toContain('t4');
       expect(window.localStorage.getItem(`${KEY}:stale`)).toBeNull();
-      warn.mockRestore();
     });
 
     it('switches to a separate history on login and back to the guest one on logout', async () => {
@@ -231,7 +229,6 @@ describe('CioAsaProvider', () => {
     });
 
     it('treats a removed userId prop as a logout for a caller-provided client too', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       const cioClient = { agent: {}, options: { apiKey: 'key_test', userId: 'user-9' } };
       const view = renderWith({ userId: 'user-9', cioClient });
       expect(received!.persistenceScope).toBe('user');
@@ -239,8 +236,6 @@ describe('CioAsaProvider', () => {
       view.rerender(element({ cioClient }));
 
       expect(received!.persistenceScope).toBe('guest');
-      expect(warn).toHaveBeenCalledTimes(1);
-      warn.mockRestore();
     });
 
     it('keeps the same client across login and logout and only updates its user id', () => {
@@ -257,32 +252,10 @@ describe('CioAsaProvider', () => {
       expect(clientUserId()).toBeUndefined();
     });
 
-    it('has no store, and warns in development, when a caller-provided client exposes no api key', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    it('has no store when a caller-provided client exposes no api key', () => {
       renderWith({ userId: 'user-7', cioClient: { agent: {} } });
       expect(received!.persistence).toBeUndefined();
       expect(received!.persistenceScope).toBeUndefined();
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0][0]).toContain('api key');
-      warn.mockRestore();
-    });
-
-    it('warns once in development when the prop and a caller-provided client disagree', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const cioClient = { agent: {}, options: { apiKey: 'key_test', userId: 'from-client' } };
-      const view = renderWith({ userId: 'from-prop', cioClient });
-      view.rerender(element({ userId: 'from-prop', cioClient }));
-      expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn.mock.calls[0][0]).toContain('from-prop');
-      expect(warn.mock.calls[0][0]).toContain('from-client');
-      warn.mockRestore();
-    });
-
-    it('does not warn when the id reaches the client through the api key path', () => {
-      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      renderWith({ userId: 'user-5' });
-      expect(warn).not.toHaveBeenCalled();
-      warn.mockRestore();
     });
   });
 });
