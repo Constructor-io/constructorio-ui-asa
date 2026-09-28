@@ -21,6 +21,7 @@ const defaultTranslations: Translations = {
   'CioAsa.results.saleBadge': 'Sale',
   'CioAsa.refinement.ariaLabel': 'Refine your results',
   'CioAsa.error.message': "I can't assist you with that request.",
+  'CioAsa.error.interrupted': 'The answer was interrupted. Please send your question again.',
 };
 
 export default function translate(key: keyof Translations, translations?: Translations): string {

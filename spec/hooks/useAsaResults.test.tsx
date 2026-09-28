@@ -29,6 +29,26 @@ describe('useAsaResults', () => {
     errorSpy.mockRestore();
   });
 
+  it('writes nothing to browser storage when persistence is off, not even on pagehide', async () => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    const { client } = createMockCioClient({
+      events: [{ type: 'message', data: { text: 'Hi' } }],
+    });
+    const { result } = renderUseAsaResults(client);
+
+    act(() => result.current.sendMessage('hello'));
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    const keys = [window.localStorage, window.sessionStorage].flatMap((storage) =>
+      Array.from({ length: storage.length }, (_, i) => storage.key(i)),
+    );
+    expect(keys.filter((key) => key?.startsWith('cio-asa'))).toEqual([]);
+  });
+
   describe('guards', () => {
     it('throws when used outside a CioAsaProvider', () => {
       expect(() => renderHook(() => useAsaResults())).toThrow(

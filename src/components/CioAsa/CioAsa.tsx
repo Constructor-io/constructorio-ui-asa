@@ -1,7 +1,7 @@
 import React from 'react';
 import CioAsaProvider from '../CioAsaProvider/CioAsaProvider';
 import Chat, { ChatHandle, ChatProps } from '../Chat/Chat';
-import { CioAsaProviderProps } from '../../types';
+import { CioAsaPersistenceProps, CioAsaProviderProps } from '../../types';
 
 export type CioAsaProps = CioAsaProviderProps & ChatProps;
 
@@ -24,8 +24,14 @@ const CioAsa = React.forwardRef<ChatHandle, CioAsaProps>((props, ref) => {
     urlHelpers,
     callbacks,
     section,
+    persistConversation,
+    userId = null,
     ...chatProps
   } = props;
+  // Split so TypeScript can match the pair against the provider's props.
+  const persistenceProps: CioAsaPersistenceProps = persistConversation
+    ? { persistConversation, userId }
+    : { userId };
 
   return (
     <CioAsaProvider
@@ -36,7 +42,8 @@ const CioAsa = React.forwardRef<ChatHandle, CioAsaProps>((props, ref) => {
       formatters={formatters}
       urlHelpers={urlHelpers}
       callbacks={callbacks}
-      section={section}>
+      section={section}
+      {...persistenceProps}>
       <Chat {...chatProps} ref={ref} />
     </CioAsaProvider>
   );

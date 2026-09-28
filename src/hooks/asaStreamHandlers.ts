@@ -17,7 +17,7 @@ function omitInternalRequestFields(request: Record<string, unknown>): SearchResu
   ) as SearchResultEventRequest;
 }
 
-function updateMessageById(
+export function updateMessageById(
   setMessages: MessageUpdater,
   id: string,
   patch: (msg: ChatMessage) => ChatMessage,

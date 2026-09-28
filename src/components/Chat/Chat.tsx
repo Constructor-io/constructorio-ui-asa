@@ -1,8 +1,16 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import useAsaResults from '../../hooks/useAsaResults';
+import { useCioAsaContext } from '../../hooks/useCioAsaContext';
 import useFocusTrap from '../../hooks/useFocusTrap';
-import { ChatComponentOverrides, ChatMessage, ResultGroupMeta, Translations } from '../../types';
-import { Product, NormalizeOptions } from '../../utils/productNormalizer';
+import useLatest from '../../hooks/useLatest';
+import {
+  ChatComponentOverrides,
+  ChatMessage,
+  ResultGroupMeta,
+  ThreadSummary,
+  Translations,
+} from '../../types';
+import { Product, NormalizeOptions, normalizeItemToProduct } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import ChatHeader from './ChatHeader';
@@ -17,8 +25,12 @@ export interface ChatHandle {
    * No-op when nothing is streaming.
    */
   abort: () => void;
-  /** Cancel any active response, then reset the conversation and the thread. */
+  /** Cancel any active response, then reset the conversation and delete it from storage. */
   clearHistory: () => void;
+  /** Start an empty conversation, keeping the current one in storage. */
+  newThread: () => void;
+  /** Load a stored conversation. No-op when persistence is off. */
+  switchThread: (threadId: string) => Promise<void>;
 }
 
 export interface ChatProps {
@@ -51,6 +63,8 @@ export interface ChatProps {
   translations?: Translations;
   /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
   initialThreadId?: string;
+  /** Fires with the stored conversations and the active one whenever either changes. Requires persistence. */
+  onThreadsChange?: (threads: ThreadSummary[], activeThreadId: string | null) => void;
   /**
    * Whether the input's send button becomes a stop button while a reply streams.
    * Defaults to `false`, so the packaged UI is unchanged unless you opt in. While it is
@@ -94,26 +108,59 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       componentOverrides,
       translations,
       initialThreadId,
+      onThreadsChange,
       showStopButton = false,
     },
     ref,
   ) => {
-    const { messages, sendMessage, isStreaming, abort, clearHistory } = useAsaResults({
+    const {
+      messages,
+      sendMessage,
+      isStreaming,
+      canAbort,
+      abort,
+      clearHistory,
+      isHydrating,
+      threads,
+      activeThreadId,
+      newThread,
+      switchThread,
+    } = useAsaResults({
       initialThreadId,
+      normalizeItem: (item) =>
+        (normalizeItem ?? normalizeItemToProduct)(item, {
+          saleBadgeText: translate('CioAsa.results.saleBadge', translations),
+        }),
     });
     const chatViewRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const isWelcome = messages.length === 0;
+    // While another thread loads, keep the chat frame (header, close button) instead of a blank body.
+    const lastViewRef = useRef<'welcome' | 'chat' | null>(null);
+    if (!isHydrating) lastViewRef.current = isWelcome ? 'welcome' : 'chat';
+    const showWelcome = !isHydrating && isWelcome;
+    const showChat = !isHydrating && !isWelcome;
+    const showChatFrame = showChat || (isHydrating && lastViewRef.current === 'chat');
     const isModal = typeof onClose === 'function';
     const announcement = getAnnouncement(messages, translations);
 
-    useImperativeHandle(ref, () => ({
+    useImperativeHandle(ref, () => ({ abort, clearHistory, newThread, switchThread }), [
       abort,
       clearHistory,
-    }));
+      newThread,
+      switchThread,
+    ]);
+
+    const hasPersistence = Boolean(useCioAsaContext()?.persistence);
+    const onThreadsChangeRef = useLatest(onThreadsChange);
+    useEffect(() => {
+      if (!hasPersistence || isHydrating) return;
+      onThreadsChangeRef.current?.(threads, activeThreadId);
+    }, [threads, activeThreadId, isHydrating, hasPersistence, onThreadsChangeRef]);
 
     useEffect(() => {
+      if (isHydrating) return;
       const root = isWelcome ? containerRef.current : chatViewRef.current;
       const input = root?.querySelector('input');
       if (input) {
@@ -125,7 +172,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
           input.focus();
         }
       }
-    }, [isWelcome]);
+    }, [isWelcome, isHydrating]);
 
     useFocusTrap(containerRef, { onEscape: onClose, trapFocus: isModal });
 
@@ -143,7 +190,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
           {announcement}
         </div>
         <div className='cio-asa-chat-body'>
-          {isWelcome ? (
+          {showWelcome && (
             <div className='cio-asa-chat-view cio-asa-chat-view--welcome'>
               <WelcomeScreen
                 suggestions={initialSuggestions}
@@ -154,7 +201,8 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 componentOverrides={componentOverrides?.welcomeScreen}
               />
             </div>
-          ) : (
+          )}
+          {showChatFrame && (
             <div className='cio-asa-chat-view cio-asa-chat-view--chat' ref={chatViewRef}>
               <ChatHeader
                 onClose={onClose}
@@ -180,9 +228,9 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
               />
               <ChatInput
                 onSubmit={sendMessage}
-                isDisabled={isStreaming}
+                isDisabled={isStreaming || isHydrating}
                 isStreaming={isStreaming}
-                onAbort={abort}
+                onAbort={canAbort ? abort : undefined}
                 showStopButton={showStopButton}
                 translations={translations}
                 componentOverrides={componentOverrides?.input}
