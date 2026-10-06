@@ -17,6 +17,9 @@ jobs:
     # Job steps
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Chromatic walks git history to find the baseline build
+          fetch-depth: 0
       - name: Install dependencies
         # 👇 Install dependencies with the same package manager used in the project (replace it as needed), e.g. yarn, npm, pnpm
         run: npm ci
