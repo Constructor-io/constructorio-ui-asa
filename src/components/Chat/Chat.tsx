@@ -7,6 +7,7 @@ import {
   ChatComponentOverrides,
   ChatMessage,
   ResultGroupMeta,
+  SendMessageOptions,
   ThreadSummary,
   Translations,
 } from '../../types';
@@ -31,6 +32,12 @@ export interface ChatHandle {
   newThread: () => void;
   /** Load a stored conversation. No-op when persistence is off. */
   switchThread: (threadId: string) => Promise<void>;
+  /**
+   * Send a prompt from outside the chat, e.g. one the shopper clicked elsewhere on the page.
+   * Pass `threadId` to send it into that conversation instead of the one on screen. Skipped
+   * while an answer is streaming. Opening the chat stays with you, as with `onClose`.
+   */
+  sendMessage: (text: string, options?: SendMessageOptions) => void;
 }
 
 export interface ChatProps {
@@ -63,6 +70,12 @@ export interface ChatProps {
   translations?: Translations;
   /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
   initialThreadId?: string;
+  /**
+   * A prompt sent once on mount, after any stored conversation loads, e.g. one the shopper
+   * clicked elsewhere before you opened the chat. Goes into `initialThreadId` when set.
+   * Read once on mount; use `sendMessage` on the ref once the chat is already open.
+   */
+  initialPrompt?: string;
   /** Fires with the stored conversations and the active one whenever either changes. Requires persistence. */
   onThreadsChange?: (threads: ThreadSummary[], activeThreadId: string | null) => void;
   /**
@@ -108,6 +121,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       componentOverrides,
       translations,
       initialThreadId,
+      initialPrompt,
       onThreadsChange,
       showStopButton = false,
     },
@@ -145,12 +159,29 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
     const isModal = typeof onClose === 'function';
     const announcement = getAnnouncement(messages, translations);
 
-    useImperativeHandle(ref, () => ({ abort, clearHistory, newThread, switchThread }), [
-      abort,
-      clearHistory,
-      newThread,
-      switchThread,
-    ]);
+    useImperativeHandle(
+      ref,
+      () => ({
+        abort,
+        clearHistory,
+        newThread,
+        switchThread,
+        sendMessage: (text, options) => sendMessage(text, 'external', options),
+      }),
+      [abort, clearHistory, newThread, switchThread, sendMessage],
+    );
+
+    // Sent from a timer so StrictMode's mount, unmount, mount cannot cancel the stream it starts.
+    const initialPromptRef = useRef(initialPrompt);
+    useEffect(() => {
+      const prompt = initialPromptRef.current;
+      if (isHydrating || !prompt) return undefined;
+      const timer = setTimeout(() => {
+        initialPromptRef.current = undefined;
+        sendMessage(prompt, 'external');
+      });
+      return () => clearTimeout(timer);
+    }, [isHydrating, sendMessage]);
 
     const hasPersistence = Boolean(useCioAsaContext()?.persistence);
     const onThreadsChangeRef = useLatest(onThreadsChange);
