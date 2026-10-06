@@ -169,6 +169,7 @@ Everything below is active only with `persistConversation` on the provider.
 | \`Chat\` prop | \`initialThreadId\` | Restores that conversation instead of the most recent one |
 | \`Chat\` ref | \`newThread()\` | Opens an empty conversation and keeps the current one |
 | \`Chat\` ref | \`switchThread(threadId)\` | Loads a stored conversation and continues it |
+| \`Chat\` ref | \`sendMessage(text, { threadId })\` | Loads that stored conversation, or continues it on the server when it is not stored, then sends \`text\` into it |
 | \`Chat\` ref | \`clearHistory()\` | Deletes the conversation on screen and starts over |
 | \`Chat\` prop | \`translations\` | \`CioAsa.error.interrupted\` and \`CioAsa.error.message\` for the two error texts |
 | \`useAsaResults\` | \`isHydrating\` | \`true\` while a stored conversation is being restored |
