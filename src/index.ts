@@ -48,6 +48,7 @@ export type {
   SearchResultEventRequest,
   UseAsaResultsOptions,
   UseChatReturn,
+  SendMessageOptions,
   // Persistence
   ClearPersistedConversationsOptions,
   ThreadSummary,
