@@ -259,7 +259,8 @@ options (for example _"Who are you shopping for?"_ with _Women's styles / Men's 
   refinements stay visible but disabled, so the thread reads back as a history of what was offered.
 - If the agent sends several `follow_up_refinement` events in one turn, the last one wins.
 - Refinement clicks reach `onAssistantSubmit` with `source: 'refinement'` (welcome-screen chips use
-  `'suggestion'`, typed input uses `'input'`).
+  `'suggestion'`, typed input uses `'input'`). The `assistant_submit` beacon carries `source: 'follow_up'`
+  for them instead, the value the behavioral-actions API documents (see Behavioral Tracking).
 
 Customize the rendering via the `aiMessage.followUpRefinement` override slot and the label via the
 `CioAsa.refinement.ariaLabel` translation key. When using `useAsaResults` directly, the payload is
@@ -821,14 +822,14 @@ Every event carries the provider's `section` (default `'Products'`) and the conv
 Each event has a matching entry in the provider's `callbacks` prop, fired right after the beacon
 with the same payload, so you can mirror ASA analytics into your own systems:
 
-| Event                           | Callback             | Fired when                                                          |
-| ------------------------------- | -------------------- | ------------------------------------------------------------------- |
-| `assistant_submit`              | `onAssistantSubmit`  | An intent is submitted — typed, or by clicking a suggested question |
-| `assistant_result_load_start`   | `onResultLoadStart`  | The response stream for that intent begins                          |
-| `assistant_result_load_finish`  | `onResultLoadFinish` | The stream completes; carries the number of result pods             |
-| `assistant_search_result_view`  | `onResultView`       | A result pod enters the viewport                                    |
-| `assistant_search_result_click` | `onResultClick`      | A product in a result pod is clicked                                |
-| `assistant_search_submit`       | `onSearchSubmit`     | The shopper opens a full search-results page from a pod (View More) |
+| Event                           | Callback             | Fired when                                                                       |
+| ------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
+| `assistant_submit`              | `onAssistantSubmit`  | An intent is submitted — typed, or by clicking a suggested or follow-up question |
+| `assistant_result_load_start`   | `onResultLoadStart`  | The response stream for that intent begins                                       |
+| `assistant_result_load_finish`  | `onResultLoadFinish` | The stream completes; carries the number of result pods                          |
+| `assistant_search_result_view`  | `onResultView`       | A result pod enters the viewport                                                 |
+| `assistant_search_result_click` | `onResultClick`      | A product in a result pod is clicked                                             |
+| `assistant_search_submit`       | `onSearchSubmit`     | The shopper opens a full search-results page from a pod (View More)              |
 
 ### Submit sources
 
@@ -836,12 +837,13 @@ with the same payload, so you can mirror ASA analytics into your own systems:
 Every one of them sends `assistant_submit`, tagged with where it came from, so engagement reports
 count clicked questions alongside typed ones and can still tell them apart:
 
-| `source`     | Entry point                                                             |
-| ------------ | ----------------------------------------------------------------------- |
-| `input`      | Shopper typed the intent and pressed Enter / clicked send               |
-| `suggestion` | Shopper clicked a welcome-screen suggestion chip (`initialSuggestions`) |
+| `source` on the beacon | `source` in `onAssistantSubmit` | Entry point                                                             |
+| ---------------------- | ------------------------------- | ----------------------------------------------------------------------- |
+| `input`                | `input`                         | Shopper typed the intent and pressed Enter / clicked send               |
+| `suggestion`           | `suggestion`                    | Shopper clicked a welcome-screen suggestion chip (`initialSuggestions`) |
+| `follow_up`            | `refinement`                    | Shopper clicked an option of a follow-up refinement question            |
 
-`onAssistantSubmit` receives the same `source`, so your own analytics get the same attribution:
+`onAssistantSubmit` receives the source too, so your own analytics get the same attribution:
 
 ```jsx
 <CioAsaProvider
@@ -870,11 +872,14 @@ cioClient.tracker.trackAssistantSubmit({ intent, source: 'input', threadId });
 
 // Suggested question chip
 cioClient.tracker.trackAssistantSubmit({ intent: suggestion, source: 'suggestion', threadId });
+
+// Follow-up question option
+cioClient.tracker.trackAssistantSubmit({ intent: option, source: 'follow_up', threadId });
 ```
 
 `source` needs a client version that forwards it on submit; older clients drop the field and the
 event is still recorded, just without attribution. On the API the field is optional and free-form —
-an unrecognized value is stored rather than rejected — but stick to the values above so
+an unrecognized value is stored rather than rejected — but stick to the beacon values above so
 reporting stays comparable across integrations. Pass the same `threadId` for every event in one
 conversation.
 
