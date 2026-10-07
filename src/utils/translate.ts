@@ -6,6 +6,7 @@ const defaultTranslations: Translations = {
   'CioAsa.input.placeholder': 'Ask a question about this product',
   'CioAsa.input.ariaLabel': 'Type your message',
   'CioAsa.input.sendAriaLabel': 'Send message',
+  'CioAsa.input.stopAriaLabel': 'Stop response',
   'CioAsa.welcome.title': 'Shopping Assistant',
   'CioAsa.welcome.placeholder': 'Ask anything',
   'CioAsa.welcome.sendButton': 'Chat',
@@ -20,6 +21,7 @@ const defaultTranslations: Translations = {
   'CioAsa.results.saleBadge': 'Sale',
   'CioAsa.refinement.ariaLabel': 'Refine your results',
   'CioAsa.error.message': "I can't assist you with that request.",
+  'CioAsa.error.interrupted': 'The answer was interrupted. Please send your question again.',
 };
 
 export default function translate(key: keyof Translations, translations?: Translations): string {

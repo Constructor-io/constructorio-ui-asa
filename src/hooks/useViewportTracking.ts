@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import useLatest from './useLatest';
 
 export interface UseViewportTrackingProps {
   /** Fired once, the first time the observed element becomes at least 50% visible. */
@@ -20,8 +21,7 @@ export default function useViewportTracking({
   onView,
   enabled = true,
 }: UseViewportTrackingProps): UseViewportTrackingReturn {
-  const onViewRef = useRef(onView);
-  onViewRef.current = onView;
+  const onViewRef = useLatest(onView);
   const firedRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -47,7 +47,7 @@ export default function useViewportTracking({
       observer.observe(node);
       cleanupRef.current = () => observer.disconnect();
     },
-    [enabled],
+    [enabled, onViewRef],
   );
 
   useEffect(

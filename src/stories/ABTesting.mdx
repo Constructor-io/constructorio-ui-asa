@@ -1,0 +1,117 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="General/Integration Guide/AB Testing Docs" />
+
+<style>
+{`
+  .abtest-wrapper {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    color: #1a1a2e;
+  }
+  .abtest-wrapper h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  .abtest-wrapper h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 36px 0 12px;
+  }
+  .abtest-wrapper p,
+  .abtest-wrapper li {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .abtest-wrapper code {
+    background: #f4f4f7;
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 13px;
+  }
+  .abtest-wrapper pre {
+    background: #1a1a2e;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .abtest-wrapper pre code {
+    background: none;
+    color: #e6e6f0;
+    padding: 0;
+  }
+  .abtest-wrapper table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+  }
+  .abtest-wrapper th,
+  .abtest-wrapper td {
+    border: 1px solid #e4e4ec;
+    padding: 8px 10px;
+    text-align: left;
+  }
+`}
+</style>
+
+<div className="abtest-wrapper">
+
+# A/B Testing
+
+Attach test cells so the agent's tracking events can be attributed to the cell a shopper is in.
+
+## What you need
+
+Your own A/B system decides which cell each shopper is in. The library does not assign cells, read
+them from the page, or persist them — you resolve the cell and pass it in.
+
+## Setting it up
+
+Pass `testCells` alongside your API key:
+
+```jsx
+<CioAsa
+  apiKey='YOUR_API_KEY'
+  testCells={{ constructorio: window.cnstrc.testCell }}
+/>
+```
+
+Every event the agent sends then carries an `ef-<testName>` parameter per cell.
+
+## Several tests at once
+
+`testCells` is a `{ [testName]: cellName }` map, and the keys are your own test names, not values
+Constructor defines. A shopper in several concurrent tests carries every cell:
+
+```jsx
+testCells={{ constructorio: 'variant_a', checkout_flow: 'b' }}
+```
+
+
+## If you supply your own `cioClient`
+
+A client you construct owns its own options, so set the cells there and the library will leave them
+alone:
+
+```jsx
+const cioClient = new ConstructorIOClient({
+  apiKey: 'YOUR_API_KEY',
+  sendTrackingEvents: true,
+  testCells: { constructorio: window.cnstrc.testCell },
+});
+
+<CioAsa cioClient={cioClient} />
+```
+
+The `testCells` prop is ignored in this case and logs a warning, so the value is never dropped
+without telling you.
+
+## Checking that it works
+
+Open the network tab and filter on `cnstrc`. The agent's tracking requests should carry an
+`ef-<testName>=<cellName>` query parameter for each cell you passed.
+
+</div>

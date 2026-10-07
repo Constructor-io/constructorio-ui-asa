@@ -52,6 +52,22 @@ function renderGroup(overrides: Partial<React.ComponentProps<typeof ResultsGroup
   return { ...utils, tracking };
 }
 
+describe('ResultsGroup restored cards', () => {
+  it('renders stored products without normalizing anything', () => {
+    const normalizeItem = jest.fn(normalizeItemToProduct);
+    renderGroup({
+      normalizeItem,
+      groupData: {
+        ...groupData,
+        searchResults: [],
+        products: [{ id: '9', name: 'Restored sneaker', imageUrl: 'https://img/9.jpg', price: 30 }],
+      },
+    });
+    expect(screen.getByText('Restored sneaker')).toBeInTheDocument();
+    expect(normalizeItem).not.toHaveBeenCalled();
+  });
+});
+
 describe('ResultsGroup tracking', () => {
   let io: MockIntersectionObserver;
 

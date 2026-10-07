@@ -22,9 +22,8 @@ export default function AiMessage({ message, componentOverrides, translations }:
   const hasGroups = !!message.groups?.length;
   // On error, fall back to the (translatable) error message when the agent
   // returned no partial text of its own.
-  const text = isError
-    ? message.text || translate('CioAsa.error.message', translations)
-    : message.text || '';
+  const errorKey = message.interrupted ? 'CioAsa.error.interrupted' : 'CioAsa.error.message';
+  const text = isError ? message.text || translate(errorKey, translations) : message.text || '';
   const hasText = text.length > 0;
 
   const loaderRenderProps: AiMessageLoaderRenderProps = { translations };

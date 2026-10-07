@@ -1,5 +1,7 @@
+/* eslint-disable react/jsx-props-no-spreading */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import CioAsaComponent from './components/CioAsa/CioAsa';
 import './styles.css';
 
 const CioAsa = ({ selector, includeCSS = true, ...rest }) => {
@@ -24,7 +26,7 @@ const CioAsa = ({ selector, includeCSS = true, ...rest }) => {
 
     ReactDOM.createRoot(containerElement).render(
       <React.StrictMode>
-        <div {...rest} />
+        <CioAsaComponent {...rest} />
       </React.StrictMode>,
     );
   }

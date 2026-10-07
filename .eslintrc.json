@@ -40,6 +40,10 @@
     "react/jsx-uses-react": "off",
     "react/react-in-jsx-scope": "off",
     "prefer-const": "error",
+    "no-param-reassign": [
+      "error",
+      { "props": true, "ignorePropertyModificationsFor": ["session"] }
+    ],
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": "warn",
     "prettier/prettier": ["error"],

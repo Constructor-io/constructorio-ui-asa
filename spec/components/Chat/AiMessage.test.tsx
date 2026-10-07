@@ -37,6 +37,30 @@ describe('AiMessage', () => {
     expect(screen.getByText("I can't assist you with that request.")).toBeInTheDocument();
   });
 
+  it('tells the shopper to ask again when the answer was interrupted', () => {
+    render(<AiMessage message={makeMessage({ status: 'error', text: '', interrupted: true })} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The answer was interrupted. Please send your question again.',
+    );
+  });
+
+  it('keeps the partial text of an interrupted answer', () => {
+    render(
+      <AiMessage message={makeMessage({ status: 'error', text: 'partial', interrupted: true })} />,
+    );
+    expect(screen.getByText('partial')).toBeInTheDocument();
+  });
+
+  it('uses the translated interrupted message when provided', () => {
+    render(
+      <AiMessage
+        message={makeMessage({ status: 'error', text: '', interrupted: true })}
+        translations={{ 'CioAsa.error.interrupted': 'Cut off, ask again' }}
+      />,
+    );
+    expect(screen.getByText('Cut off, ask again')).toBeInTheDocument();
+  });
+
   it('announces errors through a live region instead of color alone', () => {
     render(<AiMessage message={makeMessage({ status: 'error', text: '' })} />);
     expect(screen.getByRole('alert')).toHaveTextContent("I can't assist you with that request.");

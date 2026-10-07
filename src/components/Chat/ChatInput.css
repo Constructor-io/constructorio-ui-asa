@@ -81,3 +81,14 @@
   cursor: default;
   opacity: 0.3;
 }
+
+/* Replaces the send button while a reply streams; always actionable, so it never
+   inherits the disabled styling above. */
+.cio-asa-chat-input__stop {
+  cursor: pointer;
+  opacity: 1;
+}
+
+.cio-asa-chat-input__stop:hover rect {
+  fill-opacity: 1;
+}
