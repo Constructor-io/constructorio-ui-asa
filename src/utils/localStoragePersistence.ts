@@ -145,6 +145,9 @@ function readItem(storage: Storage, key: string): string | null {
   }
 }
 
+/** How often a write is redone when another tab changed the key between its read and its write. */
+const MAX_COMMIT_ATTEMPTS = 3;
+
 /** Drops expired threads and tombstones under every namespace of `key`, other shoppers' included. */
 async function sweepExpired(storage: Storage, key: string, ttlMs: number): Promise<void> {
   const prefix = storageKeyFor(key);
@@ -159,16 +162,21 @@ async function sweepExpired(storage: Storage, key: string, ttlMs: number): Promi
   await Promise.all(
     keys.map((k) =>
       withStorageLock(k, () => {
-        const raw = readItem(storage, k);
-        const stored = raw === null ? null : readStored(raw);
-        if (!stored) return;
-        const kept = dropExpired(stored, Date.now() - ttlMs);
-        if (entryCount(kept) === entryCount(stored)) return;
-        try {
-          if (entryCount(kept) === 0) storage.removeItem(k);
-          else storage.setItem(k, JSON.stringify(kept));
-        } catch {
-          /* storage unavailable */
+        for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt += 1) {
+          const raw = readItem(storage, k);
+          const stored = raw === null ? null : readStored(raw);
+          if (!stored) return;
+          const kept = dropExpired(stored, Date.now() - ttlMs);
+          if (entryCount(kept) === entryCount(stored)) return;
+          if (readItem(storage, k) === raw) {
+            try {
+              if (entryCount(kept) === 0) storage.removeItem(k);
+              else storage.setItem(k, JSON.stringify(kept));
+            } catch {
+              /* storage unavailable */
+            }
+            return;
+          }
         }
       }),
     ),
@@ -361,7 +369,6 @@ export function createLocalStoragePersistence(
   };
 
   // Redo the merge if another tab wrote between our read and this write.
-  const MAX_COMMIT_ATTEMPTS = 3;
   const transact = (
     mutate: (data: StoredThreads) => StoredThreads | null,
     priorityThreadId?: string,

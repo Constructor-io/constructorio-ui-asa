@@ -1003,6 +1003,25 @@ describe('expired conversations of every shopper', () => {
     expect(storage.getItem(`${KEY}:k:d:carol`)).toBeNull();
   });
 
+  it('cleans the latest value when another tab writes the key meanwhile', async () => {
+    const key = `${KEY}:k:d:bob`;
+    const old = chat('old', turns(1), WEEK_AND_A_DAY_AGO);
+    storage.poke(key, blob([old]));
+    let reads = 0;
+    storage.beforeGetItem = () => {
+      reads += 1;
+      // Bob's tab, still holding the expired thread, saves a new one right after the sweep read.
+      if (reads === 2) storage.poke(key, blob([old, chat('fresh', turns(1))]));
+    };
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+
+    await store.listThreads();
+    await settle();
+    storage.beforeGetItem = undefined;
+
+    expect(storedIds(key)).toEqual(['fresh']);
+  });
+
   it('does not rewrite a record with nothing expired', async () => {
     const raw = blob([chat('fresh', turns(1))], { gone: Date.now() });
     storage.poke(`${KEY}:k:d:bob`, raw);
