@@ -65,6 +65,7 @@ describe('useAsaTracking', () => {
     result.current.trackSubmit('shoes');
 
     expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({ intent: 'shoes' });
+    expect(tracker.trackAssistantSubmit.mock.calls[0][0]).not.toHaveProperty('source');
   });
 
   it('forwards trackResultLoadStarted with optional intentResultId', () => {
