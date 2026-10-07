@@ -1144,6 +1144,17 @@ describe('abort requests across tabs', () => {
     expect(store.subscribeAbort).toBeUndefined();
   });
 
+  it('offers no abort channel when one cannot be opened', () => {
+    (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = class {
+      constructor() {
+        throw new DOMException('blocked', 'SecurityError');
+      }
+    };
+    const store = createLocalStoragePersistence({ storage: new FakeStorage() });
+    expect(store.requestAbort).toBeUndefined();
+    expect(store.subscribeAbort).toBeUndefined();
+  });
+
   it('offers no abort channel without BroadcastChannel', () => {
     (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = undefined;
     const store = createLocalStoragePersistence({ storage: new FakeStorage() });

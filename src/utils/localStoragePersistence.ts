@@ -222,6 +222,24 @@ export async function clearPersistedConversations(
   }
 }
 
+/** The channel abort requests travel on between tabs, or `null` where none can be opened. */
+function openAbortChannel(
+  name: string,
+  onRequest: (request: AbortRequest) => void,
+): BroadcastChannel | null {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return null;
+  try {
+    const channel = new BroadcastChannel(name);
+    channel.onmessage = ({ data }: MessageEvent) => {
+      if (typeof data?.threadId !== 'string' || typeof data?.messageId !== 'string') return;
+      onRequest({ threadId: data.threadId, messageId: data.messageId });
+    };
+    return channel;
+  } catch {
+    return null;
+  }
+}
+
 /** Conversation store on top of `localStorage`; one key per namespace, merged across tabs. */
 export function createLocalStoragePersistence(
   options: LocalStoragePersistenceOptions = {},
@@ -405,41 +423,25 @@ export function createLocalStoragePersistence(
     return next;
   };
 
-  // Only `localStorage` is shared between tabs; a guest's `sessionStorage` thread streams in this tab alone.
-  const abortChannel =
-    storageArea === 'local' &&
-    typeof window !== 'undefined' &&
-    typeof BroadcastChannel !== 'undefined'
-      ? `${storageKey}:abort`
-      : null;
-  let channel: BroadcastChannel | null = null;
   const abortListeners = new Set<(request: AbortRequest) => void>();
-  const openChannel = (name: string): BroadcastChannel | null => {
-    if (channel) return channel;
-    try {
-      channel = new BroadcastChannel(name);
-      channel.onmessage = ({ data }: MessageEvent) => {
-        if (typeof data?.threadId !== 'string' || typeof data?.messageId !== 'string') return;
-        const request = { threadId: data.threadId, messageId: data.messageId };
-        abortListeners.forEach((listener) => listener(request));
-      };
-    } catch {
-      channel = null;
-    }
-    return channel;
-  };
-  const abortMethods: Pick<ChatPersistence, 'requestAbort' | 'subscribeAbort'> = abortChannel
+  // Only `localStorage` is shared between tabs; a guest's `sessionStorage` thread streams in this tab alone.
+  const channel =
+    storageArea === 'local'
+      ? openAbortChannel(`${storageKey}:abort`, (request) =>
+          abortListeners.forEach((listener) => listener(request)),
+        )
+      : null;
+  const abortMethods: Pick<ChatPersistence, 'requestAbort' | 'subscribeAbort'> = channel
     ? {
         requestAbort(threadId: string, messageId: string) {
           try {
-            openChannel(abortChannel)?.postMessage({ threadId, messageId });
+            channel.postMessage({ threadId, messageId });
           } catch {
             /* channel closed */
           }
         },
         subscribeAbort(listener: (request: AbortRequest) => void) {
           abortListeners.add(listener);
-          openChannel(abortChannel);
           return () => {
             abortListeners.delete(listener);
           };
