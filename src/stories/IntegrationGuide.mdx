@@ -817,10 +817,13 @@ If the agent returns a server error, or the response stream fails, the in-progre
 
 Behavioral tracking is built in: mount the components (or call `useAsaResults`) with a provider that
 has a `cioClient`, and every event below is sent for you. There is nothing to instrument manually.
-Every event carries the provider's `section` (default `'Products'`) and the conversation's `threadId`.
+Every event carries the provider's `section` (default `'Products'`) and the conversation's `threadId`
+once the agent has assigned one, so the first `assistant_submit` of a new conversation goes out
+without it.
 
 Each event has a matching entry in the provider's `callbacks` prop, fired right after the beacon
-with the same payload, so you can mirror ASA analytics into your own systems:
+with that event's data (without `section` and `threadId`), so you can mirror ASA analytics into
+your own systems:
 
 | Event                           | Callback             | Fired when                                                                       |
 | ------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
@@ -878,9 +881,11 @@ cioClient.tracker.trackAssistantSubmit({ intent: option, source: 'follow_up', th
 ```
 
 `source` is forwarded by `@constructor-io/constructorio-client-javascript` 2.94.0 and later; older
-clients drop the field and the event is still recorded, just without attribution. On the API the field is optional and free-form —
-an unrecognized value is stored rather than rejected — but stick to the beacon values above so
-reporting stays comparable across integrations. Pass the same `threadId` for every event in one
-conversation.
+clients drop the field and the event is still recorded, just without attribution. On the API the
+field is optional and free-form — an unrecognized value is stored rather than rejected — but stick
+to the beacon values above so reporting stays comparable across integrations.
+
+The first submit of a new conversation has no `threadId` yet; send it without one, then pass the
+`thread_id` the agent returns on every later event of that conversation.
 
 </div>
