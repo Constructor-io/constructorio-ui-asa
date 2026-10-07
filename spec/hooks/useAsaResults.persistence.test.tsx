@@ -897,6 +897,20 @@ describe('useAsaResults persistence', () => {
       expect(result.current.canAbort).toBe(false);
     });
 
+    it('cannot stop it either when the store can ask but no tab can listen', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([foreignInFlight()], true, true);
+      delete store.subscribeAbort;
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      expect(result.current.canAbort).toBe(false);
+
+      act(() => result.current.abort());
+
+      expect(store.requestAbort).not.toHaveBeenCalled();
+      expect(result.current.isStreaming).toBe(true);
+    });
+
     it('stops its own answer when another tab asks for it', async () => {
       const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
       const pending = createControllableStream();

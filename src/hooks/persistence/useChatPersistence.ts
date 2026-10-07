@@ -63,6 +63,12 @@ interface Params {
   abortTurn: () => void;
 }
 
+/** Whether `store` can both ask another tab to stop an answer and hear such a request. */
+const canAbortAcrossTabs = (
+  store: ChatPersistence | undefined,
+): store is ChatPersistence & Required<Pick<ChatPersistence, 'requestAbort' | 'subscribeAbort'>> =>
+  Boolean(store?.requestAbort && store.subscribeAbort);
+
 const hasUnsavedWork = (session: ChatSession) =>
   session.isStreaming || session.dirty || session.orphanIds.length > 0;
 
@@ -177,7 +183,7 @@ export default function useChatPersistence(params: Params) {
     const { current } = storeRef;
     const threadId = session.storageThreadId;
     const last = messagesRef.current[messagesRef.current.length - 1];
-    if (!current?.requestAbort || !session.foreignInFlight || !threadId || !last) return;
+    if (!canAbortAcrossTabs(current) || !session.foreignInFlight || !threadId || !last) return;
     current.requestAbort(threadId, last.id);
     watchForeign(FOREIGN_ABORT_TIMEOUT_MS, () => settleForeign(threadId));
   }, [session, storeRef, messagesRef, watchForeign, settleForeign]);
@@ -581,7 +587,7 @@ export default function useChatPersistence(params: Params) {
     threads,
     activeThreadId,
     foreignInFlight,
-    canAbortForeign: foreignInFlight && Boolean(store?.requestAbort),
+    canAbortForeign: foreignInFlight && canAbortAcrossTabs(store),
     abortForeign,
     beginTurn,
     screenOwner,
