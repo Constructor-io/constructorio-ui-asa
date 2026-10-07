@@ -3,14 +3,8 @@ import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/typ
 import { AgentButtonClickPayload, AssistantTrackedItem } from '../types';
 
 /**
- * The installed client (2.88.0) exposes the six `trackAssistant*` methods but its
- * published types don't yet include `threadId` (that lands with the client bump on
- * the `at-194` branch). We describe the parameter shapes we send here — including
- * `threadId` — and call through this narrowed view of the tracker so the extra field
- * compiles now and flows through once the client types catch up.
- *
- * `trackAgentButtonClick` ships in client 2.94.0; it is optional here because the peer
- * range still allows older clients, which simply skip the beacon.
+ * Narrowed view of the tracker covering the shapes we send. `trackAgentButtonClick` is
+ * optional because the peer range still allows clients older than 2.94.0.
  */
 interface AssistantTracker {
   trackAgentButtonClick?(params: AgentButtonClickPayload & { section?: string }): unknown;
