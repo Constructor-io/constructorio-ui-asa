@@ -351,7 +351,7 @@ export interface LocalStoragePersistenceOptions {
 
 /**
  * How an intent was submitted: typed input, a welcome-screen suggestion chip, a refinement chip,
- * or the host page through `ChatHandle.sendMessage`.
+ * or the host page (`ChatHandle.sendMessage` or the `initialPrompt` prop).
  */
 export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement' | 'external';
 
