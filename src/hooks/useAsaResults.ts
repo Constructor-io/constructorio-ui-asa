@@ -6,6 +6,7 @@ import useChatPersistence from './persistence/useChatPersistence';
 import { LiveTurn, startTurn } from './agentStream';
 import { ChatSession, createChatSession, nextMessageId } from '../utils/chatSession';
 import { normalizeItemToProduct } from '../utils/productNormalizer';
+import { settleCancelledReply } from '../utils/chatThreads';
 import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
@@ -56,6 +57,17 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     turnRef.current = null;
   }, []);
 
+  const abortOwnTurn = useCallback(() => {
+    if (!session.isStreaming) return;
+    const abortedId = turnRef.current?.assistantId;
+    cancelStream();
+    session.isStreaming = false;
+    setIsStreaming(false);
+    if (abortedId) setMessages((prev) => settleCancelledReply(prev, abortedId));
+    // With persistence on, the cancelled turn is stored as it stands.
+    session.dirty = true;
+  }, [session, cancelStream]);
+
   const store = useChatPersistence({
     store: persistence,
     scope: persistenceScope,
@@ -68,9 +80,10 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     setIsStreaming,
     turnRef,
     cancelStream,
+    abortTurn: abortOwnTurn,
   });
 
-  const { beginTurn, screenOwner } = store;
+  const { beginTurn, screenOwner, abortForeign } = store;
 
   useEffect(() => cancelStream, [cancelStream]);
 
@@ -150,31 +163,19 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
    * No beacon is sent: there is no "aborted" ASA event, and reporting the load as
    * finished would be false. An aborted turn therefore leaves an
    * `assistant_result_load_started` with no matching finished event.
+   *
+   * An answer streaming in another tab is stopped by that tab, which stores the result.
    */
   const abort = useCallback(() => {
-    if (!session.isStreaming) return;
-    const abortedId = turnRef.current?.assistantId;
-    cancelStream();
-    session.isStreaming = false;
-    setIsStreaming(false);
-    if (abortedId) {
-      setMessages((prev) =>
-        prev.flatMap((msg) => {
-          if (msg.id !== abortedId) return [msg];
-          if (!msg.text && !msg.groups?.length && !msg.refinement) return [];
-          return [{ ...msg, status: 'done' as const }];
-        }),
-      );
-    }
-    // With persistence on, the cancelled turn is stored as it stands.
-    session.dirty = true;
-  }, [session, cancelStream]);
+    if (session.isStreaming) abortOwnTurn();
+    else abortForeign();
+  }, [session, abortOwnTurn, abortForeign]);
 
   return {
     messages,
     sendMessage,
     isStreaming: isStreaming || store.foreignInFlight,
-    canAbort: isStreaming,
+    canAbort: isStreaming || store.canAbortForeign,
     abort,
     clearHistory: store.clearHistory,
     isHydrating: store.isHydrating,

@@ -544,7 +544,7 @@ For custom UI implementations, use the `useAsaResults` hook. Configuration (clie
 import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
 
 function CustomChat() {
-  const { messages, sendMessage, isStreaming, abort, clearHistory } = useAsaResults();
+  const { messages, sendMessage, canAbort, abort, clearHistory } = useAsaResults();
 
   return (
     <div>
@@ -554,7 +554,7 @@ function CustomChat() {
         </div>
       ))}
       <button onClick={() => sendMessage('Show me running shoes')}>Send</button>
-      <button onClick={abort} disabled={!isStreaming}>
+      <button onClick={abort} disabled={!canAbort}>
         Stop
       </button>
       <button onClick={clearHistory}>Reset</button>
@@ -571,6 +571,7 @@ The hook returns:
 | `sendMessage`    | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement') => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. |
 | `isStreaming`    | `boolean`                                                                  | Whether a response is currently streaming                                                                                                     |
 | `abort`          | `() => void`                                                               | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle.                                                      |
+| `canAbort`       | `boolean`                                                                  | Whether `abort` can stop the response now: this tab's own, or one streaming in another tab                                                    |
 | `clearHistory`   | `() => void`                                                               | Cancel any active stream, reset messages and the thread                                                                                       |
 | `isHydrating`    | `boolean`                                                                  | Whether a stored conversation is still being loaded. Always `false` when persistence is off                                                   |
 | `threads`        | `ThreadSummary[]`                                                          | Stored conversations, most recent first. Empty when persistence is off                                                                        |
@@ -581,10 +582,10 @@ The hook returns:
 **Cancelling a response.** `abort()` keeps the partial reply and the thread, so the next message continues the same conversation; `clearHistory()` starts over.
 
 ```jsx
-const { isStreaming, abort } = useAsaResults();
+const { isStreaming, canAbort, abort } = useAsaResults();
 
 // A cancel button
-<button onClick={abort} disabled={!isStreaming}>
+<button onClick={abort} disabled={!canAbort}>
   Stop
 </button>;
 
@@ -595,6 +596,8 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, [isStreaming, abort]);
 ```
+
+With `persistConversation` on, the same conversation can be open in several tabs of a signed-in shopper. `canAbort` is true in all of them while it streams, and `abort()` in any of them stops it in the tab it streams in.
 
 No beacon is sent for an aborted turn, so it leaves an `assistant_result_load_started` with no matching `assistant_result_load_finished`.
 

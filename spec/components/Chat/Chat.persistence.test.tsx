@@ -5,6 +5,7 @@ import Chat, { ChatHandle } from '../../../src/components/Chat/Chat';
 import CioAsa from '../../../src/components/CioAsa/CioAsa';
 import CioAsaProvider from '../../../src/components/CioAsaProvider/CioAsaProvider';
 import { createControllableStream, createMockCioClient } from '../../local_examples/mockCioClient';
+import FakeBroadcastChannel from '../../utils/fakeBroadcastChannel';
 
 const STORAGE_KEY = 'cio-asa:chat:v1:key_test:chatbot';
 
@@ -178,6 +179,61 @@ describe('Chat persistence', () => {
     });
     expect(await screen.findByText('Here are some shoes')).toBeInTheDocument();
     expect(screen.queryByText("I can't assist you with that request.")).not.toBeInTheDocument();
+  });
+
+  describe('an answer streaming in another tab', () => {
+    const ALICE_KEY = `${STORAGE_KEY}:alice`;
+    const original = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+
+    beforeEach(() => {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = FakeBroadcastChannel;
+      window.localStorage.setItem(
+        ALICE_KEY,
+        JSON.stringify({
+          version: 1,
+          threads: {
+            t1: {
+              version: 1,
+              threadId: 't1',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              owner: 'other-tab',
+              messages: [
+                { id: 'u1', role: 'user', text: 'running shoes', status: 'done' },
+                { id: 'a1', role: 'assistant', text: '', status: 'loading', groups: [] },
+              ],
+            },
+          },
+        }),
+      );
+    });
+
+    afterEach(() => {
+      FakeBroadcastChannel.open.clear();
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = original;
+      window.localStorage.clear();
+    });
+
+    it('shows the stop button there too, and asks the streaming tab to stop', async () => {
+      const streamingTab = new FakeBroadcastChannel(`${ALICE_KEY}:abort`);
+      const requests: unknown[] = [];
+      streamingTab.onmessage = ({ data }) => requests.push(data);
+      const { client } = createMockCioClient({ events: [] });
+      (client as unknown as { options: { apiKey: string } }).options = { apiKey: 'key_test' };
+      render(
+        <CioAsaProvider
+          cioClient={client}
+          staticRequestConfigs={{ domain: 'chatbot' }}
+          userId='alice'
+          persistConversation={{ enabled: true }}>
+          <Chat showStopButton />
+        </CioAsaProvider>,
+      );
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Stop response' }));
+
+      expect(requests).toEqual([{ threadId: 't1', messageId: 'a1' }]);
+    });
   });
 
   it('does not fire onThreadsChange when persistence is off', async () => {

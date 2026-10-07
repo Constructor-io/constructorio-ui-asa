@@ -1,7 +1,11 @@
 import type { ChatMessage, ChatPersistence } from '../../types';
 import type { LiveTurn, TurnOwner } from '../agentStream';
 import { ChatSession, prepareSnapshot } from '../../utils/chatSession';
-import { normalizeHydratedMessages, saveThreadAndRetireStale } from '../../utils/chatThreads';
+import {
+  normalizeHydratedMessages,
+  saveThreadAndRetireStale,
+  settleCancelledReply,
+} from '../../utils/chatThreads';
 
 const turns = new Set<BackgroundTurn>();
 const listeners = new Set<() => void>();
@@ -29,6 +33,8 @@ export class BackgroundTurn {
   /** Its writes, in order; a chat that takes the turn back writes after them. */
   writes: Promise<void>;
 
+  private stopListening?: () => void;
+
   constructor(
     turn: LiveTurn,
     params: {
@@ -53,6 +59,8 @@ export class BackgroundTurn {
         this.save().then(notify);
       },
       onDone: () => {
+        if (!this.streaming) return;
+        this.release();
         this.streaming = false;
         this.messages = normalizeHydratedMessages(this.messages);
         this.save().then(() => {
@@ -83,6 +91,33 @@ export class BackgroundTurn {
   /** Later writes go into `store`. */
   moveTo(store: ChatPersistence): void {
     this.store = store;
+    if (this.streaming) this.listen();
+  }
+
+  /** Stops the answer when another tab asks to, through the store it is saved into. */
+  listen(): void {
+    this.release();
+    this.stopListening = this.store.subscribeAbort?.(({ messageId }) => {
+      if (messageId === this.turn.assistantId) this.abort();
+    });
+  }
+
+  release(): void {
+    this.stopListening?.();
+    this.stopListening = undefined;
+  }
+
+  /** Stops the answer and stores it settled, as the stop button does on screen. */
+  abort(): void {
+    if (!this.streaming) return;
+    this.streaming = false;
+    this.release();
+    this.turn.cancel();
+    this.messages = settleCancelledReply(this.messages, this.turn.assistantId);
+    this.save().then(() => {
+      if (this.saved) turns.delete(this);
+      notify();
+    });
   }
 
   /** Stores the conversation settled, without awaiting: the page is going away. */
@@ -109,6 +144,7 @@ export function continueInBackground(
 ): void {
   const bg = new BackgroundTurn(turn, params);
   turns.add(bg);
+  bg.listen();
   if (!listeningForPagehide && typeof window !== 'undefined') {
     listeningForPagehide = true;
     window.addEventListener('pagehide', () => turns.forEach((t) => t.flush()));
@@ -128,6 +164,7 @@ export function resumeBackgroundTurn(
   const bg = Array.from(turns).find((t) => t.store === store && t.ids.has(threadId));
   if (!bg) return null;
   turns.delete(bg);
+  bg.release();
   if (bg.streaming) bg.turn.owner = createOwner(bg.turn);
   return bg;
 }

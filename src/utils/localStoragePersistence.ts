@@ -1,4 +1,5 @@
 import type {
+  AbortRequest,
   ChatMessage,
   ChatPersistence,
   ClearPersistedConversationsOptions,
@@ -100,11 +101,11 @@ const emptyStored = (): StoredThreads => ({
   deleted: {},
 });
 
-function parseStored(raw: string | null): StoredThreads {
-  if (!raw) return emptyStored();
+/** The record `raw` holds, or `null` when it is not one of this version. */
+function readStored(raw: string): StoredThreads | null {
   try {
     const parsed = JSON.parse(raw) as Partial<StoredThreads>;
-    if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return emptyStored();
+    if (parsed?.version !== PERSISTED_CHAT_VERSION || !parsed.threads) return null;
     const threads = Object.fromEntries(
       Object.entries(parsed.threads).filter(([, chat]) => isPersistedChat(chat)),
     );
@@ -113,9 +114,28 @@ function parseStored(raw: string | null): StoredThreads {
     );
     return { version: PERSISTED_CHAT_VERSION, threads, deleted };
   } catch {
-    return emptyStored();
+    return null;
   }
 }
+
+function parseStored(raw: string | null): StoredThreads {
+  return (raw && readStored(raw)) || emptyStored();
+}
+
+function dropExpired(data: StoredThreads, cutoff: number): StoredThreads {
+  return {
+    version: PERSISTED_CHAT_VERSION,
+    threads: Object.fromEntries(
+      Object.entries(data.threads).filter(([, chat]) => chat.updatedAt >= cutoff),
+    ),
+    deleted: Object.fromEntries(
+      Object.entries(data.deleted ?? {}).filter(([, at]) => at >= cutoff),
+    ),
+  };
+}
+
+const entryCount = (data: StoredThreads) =>
+  Object.keys(data.threads).length + Object.keys(data.deleted ?? {}).length;
 
 function readItem(storage: Storage, key: string): string | null {
   try {
@@ -123,6 +143,36 @@ function readItem(storage: Storage, key: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** Drops expired threads and tombstones under every namespace of `key`, other shoppers' included. */
+async function sweepExpired(storage: Storage, key: string, ttlMs: number): Promise<void> {
+  const prefix = storageKeyFor(key);
+  let keys: string[];
+  try {
+    keys = Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter(
+      (k): k is string => k === prefix || Boolean(k?.startsWith(`${prefix}:`)),
+    );
+  } catch {
+    return;
+  }
+  await Promise.all(
+    keys.map((k) =>
+      withStorageLock(k, () => {
+        const raw = readItem(storage, k);
+        const stored = raw === null ? null : readStored(raw);
+        if (!stored) return;
+        const kept = dropExpired(stored, Date.now() - ttlMs);
+        if (entryCount(kept) === entryCount(stored)) return;
+        try {
+          if (entryCount(kept) === 0) storage.removeItem(k);
+          else storage.setItem(k, JSON.stringify(kept));
+        } catch {
+          /* storage unavailable */
+        }
+      }),
+    ),
+  );
 }
 
 /**
@@ -194,20 +244,20 @@ export function createLocalStoragePersistence(
   const parse = (raw: string | null): StoredThreads => {
     if (!raw) return emptyStored();
     if (lastParsed?.raw !== raw) lastParsed = { raw, data: parseStored(raw) };
-    const cutoff = Date.now() - ttlMs;
-    const { data } = lastParsed;
-    return {
-      version: PERSISTED_CHAT_VERSION,
-      threads: Object.fromEntries(
-        Object.entries(data.threads).filter(([, chat]) => chat.updatedAt >= cutoff),
-      ),
-      deleted: Object.fromEntries(
-        Object.entries(data.deleted ?? {}).filter(([, at]) => at >= cutoff),
-      ),
-    };
+    return dropExpired(lastParsed.data, Date.now() - ttlMs);
+  };
+
+  // Other shoppers' records expire only here: their own store may never run again on this device.
+  let swept = false;
+  const sweepOnce = () => {
+    if (swept) return;
+    swept = true;
+    const local = resolveStorage(storageOption, 'local');
+    if (local) sweepExpired(local, key, ttlMs).catch(() => {});
   };
 
   const read = (): StoredThreads => {
+    sweepOnce();
     const storage = resolveStorage(storageOption, storageArea);
     return parse(storage ? readRaw(storage) : null);
   };
@@ -232,8 +282,7 @@ export function createLocalStoragePersistence(
     }
   };
 
-  const isEmpty = (data: StoredThreads) =>
-    Object.keys(data.threads).length === 0 && Object.keys(data.deleted ?? {}).length === 0;
+  const isEmpty = (data: StoredThreads) => entryCount(data) === 0;
 
   // Retries without tombstones, oldest first: the last thing to shed, see `write`.
   const tryWriteShedding = (storage: Storage, data: StoredThreads): boolean => {
@@ -299,6 +348,7 @@ export function createLocalStoragePersistence(
     mutate: (data: StoredThreads) => StoredThreads | null,
     priorityThreadId?: string,
   ) => {
+    sweepOnce();
     const storage = resolveStorage(storageOption, storageArea);
     if (!storage) return;
     for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt += 1) {
@@ -354,6 +404,48 @@ export function createLocalStoragePersistence(
     }
     return next;
   };
+
+  // Only `localStorage` is shared between tabs; a guest's `sessionStorage` thread streams in this tab alone.
+  const abortChannel =
+    storageArea === 'local' &&
+    typeof window !== 'undefined' &&
+    typeof BroadcastChannel !== 'undefined'
+      ? `${storageKey}:abort`
+      : null;
+  let channel: BroadcastChannel | null = null;
+  const abortListeners = new Set<(request: AbortRequest) => void>();
+  const openChannel = (name: string): BroadcastChannel | null => {
+    if (channel) return channel;
+    try {
+      channel = new BroadcastChannel(name);
+      channel.onmessage = ({ data }: MessageEvent) => {
+        if (typeof data?.threadId !== 'string' || typeof data?.messageId !== 'string') return;
+        const request = { threadId: data.threadId, messageId: data.messageId };
+        abortListeners.forEach((listener) => listener(request));
+      };
+    } catch {
+      channel = null;
+    }
+    return channel;
+  };
+  const abortMethods: Pick<ChatPersistence, 'requestAbort' | 'subscribeAbort'> = abortChannel
+    ? {
+        requestAbort(threadId: string, messageId: string) {
+          try {
+            openChannel(abortChannel)?.postMessage({ threadId, messageId });
+          } catch {
+            /* channel closed */
+          }
+        },
+        subscribeAbort(listener: (request: AbortRequest) => void) {
+          abortListeners.add(listener);
+          openChannel(abortChannel);
+          return () => {
+            abortListeners.delete(listener);
+          };
+        },
+      }
+    : {};
 
   const retire = (data: StoredThreads, staleId: string): StoredThreads => {
     const { [staleId]: retired, ...threads } = data.threads;
@@ -414,6 +506,8 @@ export function createLocalStoragePersistence(
       window.addEventListener('storage', onStorage);
       return () => window.removeEventListener('storage', onStorage);
     },
+
+    ...abortMethods,
   };
 }
 

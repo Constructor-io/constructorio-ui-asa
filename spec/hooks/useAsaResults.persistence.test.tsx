@@ -8,6 +8,7 @@ import {
   createLocalStoragePersistence,
 } from '../../src/utils/localStoragePersistence';
 import { FakeStorage } from '../utils/chatFixtures';
+import { FOREIGN_ABORT_TIMEOUT_MS } from '../../src/utils/chatThreads';
 import { normalizeItemToProduct } from '../../src/utils/productNormalizer';
 import { AsaContext } from '../../src/hooks/useCioAsaContext';
 import * as formatters from '../../src/utils/formatters';
@@ -20,6 +21,7 @@ import {
   StreamEvent,
 } from '../local_examples/mockCioClient';
 import type {
+  AbortRequest,
   AsaContextValue,
   ChatMessage,
   ChatPersistence,
@@ -28,15 +30,28 @@ import type {
   UseAsaResultsOptions,
 } from '../../src/types';
 
-function createMemoryPersistence(initial: PersistedChat[] = [], withSubscribe = false) {
+function createMemoryPersistence(
+  initial: PersistedChat[] = [],
+  withSubscribe = false,
+  withAbort = false,
+) {
   const threads = new Map(initial.map((t) => [t.threadId, t]));
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((l) => l());
+  const abortListeners = new Set<(request: AbortRequest) => void>();
+  const abortFromOtherTab = (request: AbortRequest) => abortListeners.forEach((l) => l(request));
   const store: jest.Mocked<ChatPersistence> = {
     ...(withSubscribe && {
       subscribe: jest.fn((listener: () => void) => {
         listeners.add(listener);
         return () => listeners.delete(listener);
+      }),
+    }),
+    ...(withAbort && {
+      requestAbort: jest.fn(),
+      subscribeAbort: jest.fn((listener: (request: AbortRequest) => void) => {
+        abortListeners.add(listener);
+        return () => abortListeners.delete(listener);
       }),
     }),
     listThreads: jest.fn(async () =>
@@ -58,7 +73,7 @@ function createMemoryPersistence(initial: PersistedChat[] = [], withSubscribe = 
       threads.delete(id);
     }),
   };
-  return { store, threads, notify };
+  return { store, threads, notify, abortFromOtherTab, abortListeners };
 }
 
 function persisted(threadId: string, messages: ChatMessage[]): PersistedChat {
@@ -808,6 +823,135 @@ describe('useAsaResults persistence', () => {
         threadId: 't',
       });
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+  });
+
+  describe('abort across tabs', () => {
+    const foreignInFlight = () => ({
+      ...persisted('fresh', [userMsg('u1', 'q'), aiMsg('a1', '', 'loading')]),
+      updatedAt: Date.now(),
+    });
+
+    it('offers to stop an answer streaming in another tab and asks that tab to stop it', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([foreignInFlight()], true, true);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.canAbort).toBe(true);
+
+      act(() => result.current.abort());
+
+      expect(store.requestAbort).toHaveBeenCalledWith('fresh', 'a1');
+      // The streaming tab settles the answer; until it is stored this tab keeps showing it.
+      expect(result.current.isStreaming).toBe(true);
+      expect(store.saveThread).not.toHaveBeenCalled();
+    });
+
+    it('stops showing the answer as typing once the other tab stored it cancelled', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store, threads, notify } = createMemoryPersistence([foreignInFlight()], true, true);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.abort());
+      threads.set('fresh', {
+        ...persisted('fresh', [userMsg('u1', 'q')]),
+        updatedAt: Date.now() + 1,
+      });
+      await act(async () => notify());
+
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      expect(result.current.canAbort).toBe(false);
+      expect(result.current.messages.map((m) => m.id)).toEqual(['u1']);
+    });
+
+    it('settles the answer itself when no tab answers the request', async () => {
+      jest.useFakeTimers();
+      try {
+        const { client } = createMockCioClient({ events: [] });
+        const { store } = createMemoryPersistence([foreignInFlight()], true, true);
+        const { result } = renderWithPersistence(client, store);
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        act(() => result.current.abort());
+        act(() => {
+          jest.advanceTimersByTime(FOREIGN_ABORT_TIMEOUT_MS);
+        });
+
+        expect(result.current.isStreaming).toBe(false);
+        expect(result.current.messages[1]).toMatchObject({ status: 'error', interrupted: true });
+        await waitFor(() => expect(store.saveThread).toHaveBeenCalledTimes(1));
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('cannot stop an answer in another tab when the store has no way to ask it', async () => {
+      const { client } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([foreignInFlight()], true);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.canAbort).toBe(false);
+    });
+
+    it('stops its own answer when another tab asks for it', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store, threads, abortFromOtherTab } = createMemoryPersistence([], true, true);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await act(async () => {
+        pending.push(startEvent('t'));
+        pending.push({ type: 'message', data: { text: 'partial' } });
+      });
+      await waitFor(() => expect(result.current.messages[1]?.text).toBe('partial'));
+      const assistantId = result.current.messages[1].id;
+
+      act(() => abortFromOtherTab({ threadId: 't', messageId: 'someone-else' }));
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => abortFromOtherTab({ threadId: 't', messageId: assistantId }));
+
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.messages.map((m) => [m.text, m.status])).toEqual([
+        ['hello', 'done'],
+        ['partial', 'done'],
+      ]);
+      await waitFor(() =>
+        expect(threads.get('t')?.messages.map((m) => m.status)).toEqual(['done', 'done']),
+      );
+    });
+
+    it('stops an answer going on in the background when another tab asks for it', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const pending = createControllableStream();
+      getAgentResultsStream.mockReturnValueOnce(pending.stream);
+      const { store, threads, abortFromOtherTab, abortListeners } = createMemoryPersistence(
+        [],
+        true,
+        true,
+      );
+      const { result, unmount } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hello'));
+      await act(async () => pending.push(startEvent('t')));
+      const assistantId = result.current.messages[1].id;
+      unmount();
+      await waitFor(() => expect(threads.get('t')?.messages[1]?.status).toBe('loading'));
+
+      act(() => abortFromOtherTab({ threadId: 't', messageId: assistantId }));
+
+      // Nothing had streamed: the empty reply is dropped, as a cancel on screen would.
+      await waitFor(() => expect(threads.get('t')?.messages.map((m) => m.role)).toEqual(['user']));
+      expect(pending.cancelled()).toBe(true);
+      await waitFor(() => expect(abortListeners.size).toBe(0));
     });
   });
 

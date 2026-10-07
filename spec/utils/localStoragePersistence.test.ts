@@ -8,6 +8,7 @@ import {
 } from '../../src/utils/localStoragePersistence';
 import { IN_FLIGHT_GRACE_MS, PERSISTED_CHAT_VERSION, getTabId } from '../../src/utils/chatThreads';
 import { FakeStorage, chat, msg, turns } from './chatFixtures';
+import FakeBroadcastChannel from './fakeBroadcastChannel';
 
 describe('persistenceNamespace', () => {
   it('joins api key, domain and user id, encoding each part', () => {
@@ -951,5 +952,202 @@ describe('storage fallbacks', () => {
     } finally {
       Object.defineProperty(window, 'localStorage', original);
     }
+  });
+});
+
+describe('expired conversations of every shopper', () => {
+  const KEY = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+  const WEEK_AND_A_DAY_AGO = Date.now() - 8 * 24 * 60 * 60 * 1000;
+  let storage: FakeStorage;
+
+  const blob = (threads: ReturnType<typeof chat>[], deleted: Record<string, number> = {}) =>
+    JSON.stringify({
+      version: PERSISTED_CHAT_VERSION,
+      threads: Object.fromEntries(threads.map((t) => [t.threadId, t])),
+      deleted,
+    });
+  const storedIds = (key: string, s: Storage = storage) =>
+    Object.keys(JSON.parse(s.getItem(key) ?? '{}').threads ?? {});
+  const settle = () =>
+    new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+  beforeEach(() => {
+    storage = new FakeStorage();
+  });
+
+  it('drops the expired threads of a shopper who never signs in again, keeping fresh ones', async () => {
+    storage.poke(
+      `${KEY}:k:d:bob`,
+      blob([chat('old', turns(1), WEEK_AND_A_DAY_AGO), chat('fresh', turns(1))]),
+    );
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+
+    await store.listThreads();
+    await settle();
+
+    expect(storedIds(`${KEY}:k:d:bob`)).toEqual(['fresh']);
+  });
+
+  it('removes a key once nothing in it is left unexpired, tombstones included', async () => {
+    storage.poke(
+      `${KEY}:k:d:carol`,
+      blob([chat('old', turns(1), WEEK_AND_A_DAY_AGO)], { gone: WEEK_AND_A_DAY_AGO }),
+    );
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+
+    await store.getThread('any');
+    await settle();
+
+    expect(storage.getItem(`${KEY}:k:d:carol`)).toBeNull();
+  });
+
+  it('does not rewrite a record with nothing expired', async () => {
+    const raw = blob([chat('fresh', turns(1))], { gone: Date.now() });
+    storage.poke(`${KEY}:k:d:bob`, raw);
+    const setItem = jest.spyOn(storage, 'setItem');
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+
+    await store.listThreads();
+    await settle();
+
+    expect(storage.getItem(`${KEY}:k:d:bob`)).toBe(raw);
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it('leaves keys of other versions, other prefixes and unreadable values alone', async () => {
+    const expired = blob([chat('old', turns(1), WEEK_AND_A_DAY_AGO)]);
+    const untouched = {
+      'cio-asa:chat:v2:k:d:bob': expired,
+      [`${KEY}x:k:d:bob`]: expired,
+      [`${KEY}:k:d:dave`]: 'not json',
+      unrelated: expired,
+    };
+    Object.entries(untouched).forEach(([key, value]) => storage.poke(key, value));
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+
+    await store.listThreads();
+    await settle();
+
+    Object.entries(untouched).forEach(([key, value]) => expect(storage.getItem(key)).toBe(value));
+  });
+
+  it('follows the store key and ttl', async () => {
+    storage.poke(
+      'my-chat:v1:k:d:bob',
+      blob([chat('old', turns(1), Date.now() - 5000), chat('new', turns(1))]),
+    );
+    const store = createLocalStoragePersistence({ storage, key: 'my-chat', ttlMs: 1000 });
+
+    await store.listThreads();
+    await settle();
+
+    expect(storedIds('my-chat:v1:k:d:bob')).toEqual(['new']);
+  });
+
+  it('cleans localStorage when the store keeps a guest in sessionStorage', async () => {
+    window.localStorage.setItem(
+      `${KEY}:k:d:bob`,
+      blob([chat('old', turns(1), WEEK_AND_A_DAY_AGO)]),
+    );
+    try {
+      const store = createLocalStoragePersistence({ namespace: 'k:d', storageArea: 'session' });
+
+      await store.listThreads();
+      await settle();
+
+      expect(window.localStorage.getItem(`${KEY}:k:d:bob`)).toBeNull();
+    } finally {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    }
+  });
+
+  it('cleans once per store', async () => {
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    await store.listThreads();
+    await settle();
+
+    storage.poke(`${KEY}:k:d:bob`, blob([chat('old', turns(1), WEEK_AND_A_DAY_AGO)]));
+    await store.listThreads();
+    await settle();
+
+    expect(storedIds(`${KEY}:k:d:bob`)).toEqual(['old']);
+  });
+
+  it('still reads when the storage cannot list its keys', async () => {
+    jest.spyOn(storage, 'key').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    await store.saveThread(chat('t1', turns(1)));
+
+    await expect(store.listThreads()).resolves.toHaveLength(1);
+  });
+});
+
+describe('abort requests across tabs', () => {
+  const original = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+
+  beforeEach(() => {
+    (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = FakeBroadcastChannel;
+  });
+
+  afterEach(() => {
+    FakeBroadcastChannel.open.clear();
+    (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = original;
+  });
+
+  it('delivers a request to the other tabs of the same store', () => {
+    const storage = new FakeStorage();
+    const tabA = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    const tabB = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    const listener = jest.fn();
+    tabA.subscribeAbort!(listener);
+
+    tabB.requestAbort!('t1', 'm1');
+
+    expect(listener).toHaveBeenCalledWith({ threadId: 't1', messageId: 'm1' });
+  });
+
+  it('does not reach another shopper, or a listener that unsubscribed', () => {
+    const storage = new FakeStorage();
+    const alice = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    const bob = createLocalStoragePersistence({ storage, namespace: 'k:d:bob' });
+    const otherTab = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    const bobListener = jest.fn();
+    const aliceListener = jest.fn();
+    bob.subscribeAbort!(bobListener);
+    otherTab.subscribeAbort!(aliceListener)();
+
+    alice.requestAbort!('t1', 'm1');
+
+    expect(bobListener).not.toHaveBeenCalled();
+    expect(aliceListener).not.toHaveBeenCalled();
+  });
+
+  it('ignores messages that are not abort requests', () => {
+    const storage = new FakeStorage();
+    const store = createLocalStoragePersistence({ storage, namespace: 'k:d:alice' });
+    const listener = jest.fn();
+    store.subscribeAbort!(listener);
+
+    new FakeBroadcastChannel('cio-asa:chat:v1:k:d:alice:abort').postMessage({ messageId: 1 });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('offers no abort channel for sessionStorage, where no other tab can see the thread', () => {
+    const store = createLocalStoragePersistence({ namespace: 'k:d', storageArea: 'session' });
+    expect(store.requestAbort).toBeUndefined();
+    expect(store.subscribeAbort).toBeUndefined();
+  });
+
+  it('offers no abort channel without BroadcastChannel', () => {
+    (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = undefined;
+    const store = createLocalStoragePersistence({ storage: new FakeStorage() });
+    expect(store.requestAbort).toBeUndefined();
+    expect(store.subscribeAbort).toBeUndefined();
   });
 });

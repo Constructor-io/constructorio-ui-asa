@@ -9,6 +9,8 @@ export const DEFAULT_PERSISTENCE_KEY = 'cio-asa:chat';
 export const DEFAULT_PERSISTENCE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** How long a stored answer written by another tab is still shown as "typing" before it is settled. */
 export const IN_FLIGHT_GRACE_MS = 60 * 1000;
+/** How long to wait for the tab streaming an answer to store it stopped, before settling it here. */
+export const FOREIGN_ABORT_TIMEOUT_MS = 3 * 1000;
 /** Marks client-side thread ids, used before the server has assigned one. Never sent to the agent. */
 const LOCAL_THREAD_PREFIX = 'local-';
 /** Thread titles are the first question, cut to this many characters. */
@@ -114,6 +116,15 @@ export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
     const hasContent = Boolean(m.text) || Boolean(m.groups?.length) || Boolean(m.refinement);
     return hasContent ? { ...m, status: 'done' } : { ...m, status: 'error', interrupted: true };
+  });
+}
+
+/** `messages` with the cancelled reply settled: `done` when it has content, dropped otherwise. */
+export function settleCancelledReply(messages: ChatMessage[], assistantId: string): ChatMessage[] {
+  return messages.flatMap((m) => {
+    if (m.id !== assistantId) return [m];
+    if (!m.text && !m.groups?.length && !m.refinement) return [];
+    return [{ ...m, status: 'done' as const }];
   });
 }
 

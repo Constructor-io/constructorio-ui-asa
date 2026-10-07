@@ -106,6 +106,35 @@ describe('ChatInput', () => {
       expect(onAbort).toHaveBeenCalledTimes(1);
     });
 
+    it('tells an override whether onAbort can stop anything', () => {
+      const override = {
+        reactNode: ({ canAbort }: { canAbort: boolean }) => <span>{String(canAbort)}</span>,
+      };
+      const { rerender } = render(
+        <ChatInput
+          onSubmit={jest.fn()}
+          isStreaming
+          onAbort={jest.fn()}
+          componentOverrides={override}
+        />,
+      );
+      expect(screen.getByText('true')).toBeInTheDocument();
+
+      // Streaming somewhere this chat cannot stop: no stop control should be offered.
+      rerender(<ChatInput onSubmit={jest.fn()} isStreaming componentOverrides={override} />);
+      expect(screen.getByText('false')).toBeInTheDocument();
+
+      rerender(
+        <ChatInput
+          onSubmit={jest.fn()}
+          isStreaming={false}
+          onAbort={jest.fn()}
+          componentOverrides={override}
+        />,
+      );
+      expect(screen.getByText('false')).toBeInTheDocument();
+    });
+
     it('keeps the send button when no onAbort is wired up', () => {
       render(<ChatInput onSubmit={jest.fn()} isDisabled isStreaming showStopButton />);
       expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
