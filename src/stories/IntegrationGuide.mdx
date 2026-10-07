@@ -703,7 +703,7 @@ import { Button } from '@constructor-io/constructorio-ui-asa';
 When rendered inside a `CioAsaProvider`, `Button` sends one `ai_agent_button_click` behavioral event per
 click with `mode: 'chat'` and `agentDomain` set to the provider's `staticRequestConfigs.domain` (default
 `'chatbot'`). Pass `positionOnPage`, `pageType` and `instanceId` to tell placements apart in analytics. The
-optional `callbacks.onAgentButtonClick` fires with the same payload right after the beacon is sent. The event
+optional `callbacks.onAgentButtonClick` fires with the same payload alongside the beacon, even when the client skips it. The event
 needs `@constructor-io/constructorio-client-javascript` 2.94.0 or later; older clients skip it.
 
 ```jsx
