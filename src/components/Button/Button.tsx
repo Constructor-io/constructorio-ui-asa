@@ -3,9 +3,9 @@ import { Button as CioButton } from '@constructor-io/constructorio-ui-components
 import { ChatBubbleDarkIcon, ChatBubbleLightIcon } from '../icons';
 import { useCioAsaContext } from '../../hooks/useCioAsaContext';
 import useAsaTracking from '../../hooks/useAsaTracking';
-import { AgentButtonClickPlacement } from '../../types';
+import { AgentButtonClickMode, AgentButtonClickPlacement } from '../../types';
 
-const AGENT_BUTTON_CLICK_MODE = 'chat';
+const AGENT_BUTTON_CLICK_MODE: AgentButtonClickMode = 'chat';
 
 export interface ButtonProps extends AgentButtonClickPlacement {
   /** Color scheme: dark (for light backgrounds) or light (for dark backgrounds) */

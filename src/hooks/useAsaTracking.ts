@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
-import { AgentButtonClickPlacement, AssistantTrackedItem } from '../types';
+import { AgentButtonClickMode, AgentButtonClickPlacement, AssistantTrackedItem } from '../types';
 
 /**
  * The installed client (2.88.0) exposes the six `trackAssistant*` methods but its
@@ -14,7 +14,7 @@ import { AgentButtonClickPlacement, AssistantTrackedItem } from '../types';
  */
 interface AssistantTracker {
   trackAgentButtonClick?(params: {
-    mode: string;
+    mode: AgentButtonClickMode;
     agentDomain: string;
     positionOnPage?: string;
     pageType?: string;
@@ -113,7 +113,7 @@ export interface TrackSearchSubmitArgs {
 }
 
 export interface TrackAgentButtonClickArgs extends AgentButtonClickPlacement {
-  mode: string;
+  mode: AgentButtonClickMode;
   agentDomain: string;
 }
 

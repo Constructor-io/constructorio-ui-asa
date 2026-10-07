@@ -349,6 +349,14 @@ export interface AssistantTrackedItem {
   variationId?: string;
 }
 
+/** Agent mode a CTA opens or starts. */
+export type AgentButtonClickMode =
+  | 'chat'
+  | 'search'
+  | 'qna'
+  | 'recommendations'
+  | 'query_refinement';
+
 /** Page surface an agent CTA was clicked on. */
 export type AgentButtonClickPageType =
   | 'home'
@@ -376,7 +384,7 @@ export interface AgentButtonClickPlacement {
 export interface AsaCallbacks {
   /** A CTA that opens the assistant (the built-in `Button`) was clicked. */
   onAgentButtonClick?: (
-    payload: { mode: string; agentDomain: string } & AgentButtonClickPlacement,
+    payload: { mode: AgentButtonClickMode; agentDomain: string } & AgentButtonClickPlacement,
   ) => void;
   /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
