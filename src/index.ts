@@ -1,7 +1,9 @@
 // Components
+export { default as CioAsa } from './components/CioAsa/CioAsa';
+export type { CioAsaProps } from './components/CioAsa/CioAsa';
 export { default as CioAsaProvider } from './components/CioAsaProvider/CioAsaProvider';
 export { default as Chat } from './components/Chat/Chat';
-export type { ChatHandle } from './components/Chat/Chat';
+export type { ChatHandle, ChatProps } from './components/Chat/Chat';
 export { default as ResultsBlock } from './components/ResultsBlock/ResultsBlock';
 export type { AspectRatio } from './components/ResultsBlock/ResultsBlock';
 export { default as Button } from './components/Button/Button';
@@ -15,6 +17,7 @@ export type { UseAsaTrackingProps, UseAsaTrackingReturn } from './hooks/useAsaTr
 
 // Utils
 export { normalizeItemToProduct } from './utils/productNormalizer';
+export { clearPersistedConversations } from './utils/localStoragePersistence';
 export type { Product, NormalizeOptions } from './utils/productNormalizer';
 
 // Re-exported client value from the JS client (used to construct/type a cioClient)
@@ -26,6 +29,7 @@ export type {
   Nullable,
   // Provider configuration
   CioAsaProviderProps,
+  PersistConversationOptions,
   AsaContextValue,
   CioClientOptions,
   RequestConfigs,
@@ -38,11 +42,15 @@ export type {
   // Chat data model
   ChatMessage,
   ChatMessageStatus,
+  FollowUpRefinement,
   ResultGroup,
   ResultGroupMeta,
   SearchResultEventRequest,
   UseAsaResultsOptions,
   UseChatReturn,
+  // Persistence
+  ClearPersistedConversationsOptions,
+  ThreadSummary,
   // Behavioral tracking
   AsaCallbacks,
   AssistantSubmitSource,
@@ -64,6 +72,7 @@ export type {
   UserMessageRenderProps,
   AiMessageLoaderRenderProps,
   AiMessageTextRenderProps,
+  FollowUpRefinementRenderProps,
   ResultsGroupTitleRenderProps,
   ResultsViewMoreRenderProps,
 } from './types';

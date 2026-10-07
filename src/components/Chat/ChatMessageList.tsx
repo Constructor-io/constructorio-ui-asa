@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import {
   AiMessageOverrides,
+  AssistantSubmitSource,
   ChatMessage,
   ComponentOverrideProps,
   ResultGroupMeta,
@@ -13,6 +14,7 @@ import { Product, NormalizeOptions } from '../../utils/productNormalizer';
 import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
+import FollowUpRefinement from './FollowUpRefinement';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -28,6 +30,10 @@ interface ChatMessageListProps {
   userMessageOverrides?: ComponentOverrideProps<UserMessageRenderProps>;
   resultsBlockOverrides?: ResultsBlockOverrides;
   translations?: Translations;
+  /** Sends a refinement option as a follow-up message. Chips are hidden when omitted. */
+  onSend?: (text: string, source?: AssistantSubmitSource) => void;
+  /** Disables refinement chips while a response is streaming. */
+  isStreaming?: boolean;
 }
 
 export default function ChatMessageList({
@@ -44,6 +50,8 @@ export default function ChatMessageList({
   userMessageOverrides,
   resultsBlockOverrides,
   translations,
+  onSend,
+  isStreaming = false,
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -80,7 +88,7 @@ export default function ChatMessageList({
       aria-live='off'
       tabIndex={0}
       aria-label={translate('CioAsa.messageList.ariaLabel', translations)}>
-      {messages.map((message) => {
+      {messages.map((message, index) => {
         if (message.role === 'user') {
           return (
             <UserMessage
@@ -93,6 +101,8 @@ export default function ChatMessageList({
         }
 
         const hasGroups = !!message.groups?.length;
+        const isLatest = index === messages.length - 1;
+        const refinement = onSend ? message.refinement : undefined;
 
         return (
           <div key={message.id} className='cio-asa-ai-message-group'>
@@ -117,6 +127,15 @@ export default function ChatMessageList({
                 viewMoreText={viewMoreText}
                 saleBadgeText={translate('CioAsa.results.saleBadge', translations)}
                 componentOverrides={resultsBlockOverrides}
+              />
+            )}
+            {refinement && (
+              <FollowUpRefinement
+                refinement={refinement}
+                onOptionClick={(option) => onSend!(option, 'refinement')}
+                isDisabled={!isLatest || isStreaming}
+                translations={translations}
+                componentOverrides={aiMessageOverrides?.followUpRefinement}
               />
             )}
           </div>

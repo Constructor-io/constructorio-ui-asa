@@ -32,6 +32,12 @@ export interface AsaContextValue {
   urlHelpers: UrlHelpers;
   callbacks?: AsaCallbacks;
   section?: string;
+  /** Resolved chat persistence store, or `undefined` when persistence is off. */
+  persistence?: ChatPersistence;
+  /** Whose store `persistence` is: the guest's (per tab) or a signed-in shopper's (per browser). */
+  persistenceScope?: PersistenceScope;
+  /** Api key and domain `persistence` is scoped to; a login carries a conversation over only within one. */
+  persistenceIndex?: string;
 }
 
 export interface RequestConfigs extends IAgentParameters {
@@ -52,15 +58,63 @@ export interface UrlHelpers {
 // `cioClientOptions` is intentionally excluded: it is runtime state managed via
 // `setCioClientOptions`, not a provider input. Configure the client with `apiKey`
 // (optionally after instantiating your own `cioClient`).
-export interface CioAsaProviderProps
-  extends Omit<Partial<AsaContextValue>, 'setCioClientOptions' | 'cioClientOptions'> {
+interface CioAsaProviderBaseProps
+  extends Omit<
+    Partial<AsaContextValue>,
+    | 'setCioClientOptions'
+    | 'cioClientOptions'
+    | 'persistence'
+    | 'persistenceScope'
+    | 'persistenceIndex'
+  > {
   apiKey?: string;
+  /**
+   * A/B test cells to attach to tracking events, as `{ [testName]: cellName }`. Each entry is
+   * sent as an `ef-<testName>` parameter. Constructor's docs have the page set
+   * `window.cnstrc.testCell` to a bare cell name, so label it with your test name:
+   * `{ constructorio: window.cnstrc.testCell }`.
+   *
+   * Ignored when you supply your own `cioClient`: that client owns its own options, so set
+   * `testCells` there instead, as a `ConstructorIOClient` constructor option. Passing both
+   * logs a warning.
+   */
+  testCells?: Record<string, string>;
 }
+
+/** How conversations are kept in the browser. */
+export interface PersistConversationOptions {
+  /**
+   * Keep conversations across page loads: a signed-in shopper's in `localStorage` for 7 days,
+   * keyed by api key + domain + user id; a guest's in `sessionStorage`, ending with the tab.
+   */
+  enabled: boolean;
+}
+
+interface PersistentProviderProps {
+  persistConversation: PersistConversationOptions;
+  /**
+   * Whose history it is: the signed-in shopper's stable, non-personal id, or `null` for a guest.
+   * Change it on login and logout. With `apiKey` it is also set on the client.
+   */
+  userId: string | null;
+}
+
+interface EphemeralProviderProps {
+  /** Off, or omitted: the conversation lives in memory and is gone on the next page load. */
+  persistConversation?: PersistConversationOptions & { enabled: false };
+  /** The shopper's id; with `apiKey` it is set on the client. `null` for a guest. */
+  userId?: string | null;
+}
+
+export type CioAsaPersistenceProps = PersistentProviderProps | EphemeralProviderProps;
+
+export type CioAsaProviderProps = CioAsaProviderBaseProps & CioAsaPersistenceProps;
 
 export interface UseCioClientProps {
   apiKey?: string;
   cioClient?: Nullable<ConstructorIOClient>;
   cioClientOptions?: CioClientOptions;
+  testCells?: Record<string, string>;
 }
 
 export type DefaultQueryStringMap = {
@@ -96,6 +150,16 @@ export interface ChatMessage {
   intent?: string;
   intentResultId?: string;
   threadId?: string;
+  /** Narrowing question the agent asked at the end of this turn, from a `follow_up_refinement` event. */
+  refinement?: FollowUpRefinement;
+  /** The answer never arrived: the page was left or the shopper logged out mid-answer. Unset on a failure. */
+  interrupted?: boolean;
+}
+
+/** A narrowing question with selectable options, emitted by the agent as a `follow_up_refinement` event. */
+export interface FollowUpRefinement {
+  question: string;
+  options: string[];
 }
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
@@ -145,7 +209,10 @@ export interface ResultGroupMeta {
 
 export interface ResultGroup {
   group: ResultGroupMeta;
+  /** Raw items as the agent sent them; empty on a conversation restored from storage. */
   searchResults: Record<string, unknown>[];
+  /** The cards as `normalizeItem` made them; set on a conversation restored from storage. */
+  products?: Product[];
   searchResultId?: string;
   intentResultId?: string;
 }
@@ -153,23 +220,127 @@ export interface ResultGroup {
 export interface UseChatReturn {
   messages: ChatMessage[];
   sendMessage: (text: string, source?: AssistantSubmitSource) => void;
+  /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
+  /** True while this tab's own answer is streaming, the one `abort` can stop. */
+  canAbort: boolean;
+  /**
+   * Cancel the in-flight request, keeping the conversation. The partial reply is settled
+   * as `done` and the thread id is kept, so the next message continues the same
+   * conversation. No-op when nothing is streaming. Use `clearHistory` to reset instead.
+   */
+  abort: () => void;
   clearHistory: () => void;
+  /** True while a persisted conversation is being loaded. Always `false` when persistence is off. */
+  isHydrating: boolean;
+  /** Stored conversations, most recent first. Empty when persistence is off. */
+  threads: ThreadSummary[];
+  /** Id of the stored conversation currently shown, or `null` for an unsaved one. */
+  activeThreadId: string | null;
+  /** Start an empty conversation, keeping the current one in storage when persistence is on. */
+  newThread: () => void;
+  /** Load a stored conversation and continue it. No-op when persistence is off. */
+  switchThread: (threadId: string) => Promise<void>;
 }
 
 export interface UseAsaResultsOptions {
-  /** Seed the thread id (e.g. loaded from browser storage) to resume a prior conversation. Read once on mount. */
+  /**
+   * Seed the thread id to resume a prior conversation. Read once on mount. With persistence
+   * enabled, the matching stored transcript is restored too when one exists.
+   */
   initialThreadId?: string;
+  /** Makes the card stored for each product: the function `Chat` renders with. Defaults to `normalizeItemToProduct`. */
+  normalizeItem?: (item: any) => Product;
+}
+
+// --- Persistence ---
+
+/** Where conversations live: `'session'` ends with the tab, `'local'` survives it. */
+export type StorageArea = 'local' | 'session';
+/** Whose conversations a store holds. */
+export type PersistenceScope = 'guest' | 'user';
+
+/** A stored conversation. `threadId` is the server thread id, or a `local-` id for non-conversational domains. */
+export interface PersistedChat {
+  version: 1;
+  threadId: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+  /**
+   * Id of the browser tab that last wrote the record. Lets a reloaded tab tell its own
+   * interrupted answer (settled at once) from one still streaming in another tab.
+   */
+  owner?: string;
+}
+
+export interface ThreadSummary {
+  threadId: string;
+  /** First user message, truncated. */
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  /** True while the latest answer is still streaming (possibly in another tab). */
+  inFlight: boolean;
+}
+
+/** Storage contract the chat hook talks to; implemented by `createLocalStoragePersistence`. */
+export interface ChatPersistence {
+  /** Most recently updated first. */
+  listThreads(): Promise<ThreadSummary[]>;
+  getThread(threadId: string): Promise<PersistedChat | null>;
+  saveThread(chat: PersistedChat): Promise<void>;
+  deleteThread(threadId: string): Promise<void>;
+  /**
+   * Optional. Whether `threadId` was explicitly deleted (or the whole store was cleared), as
+   * opposed to expired or evicted. Without it, a thread that has gone missing is treated as deleted.
+   */
+  isThreadDeleted?(threadId: string): Promise<boolean>;
+  /**
+   * Optional. Write `chat` synchronously, retiring `staleIds` in the same step, for use while the
+   * page is unloading: an async write cannot finish there. Falls back to `saveThread` when absent.
+   */
+  saveThreadSync?(chat: PersistedChat, staleIds?: string[]): void;
+  /**
+   * Optional. Notify when stored threads change outside this hook instance (another tab).
+   * Returns an unsubscribe function.
+   */
+  subscribe?(listener: () => void): () => void;
+}
+
+/** Which stored history `clearPersistedConversations` deletes; mirror what the provider was given. */
+export interface ClearPersistedConversationsOptions {
+  /** The provider's `apiKey`, or the api key of the `cioClient` given to it. */
+  apiKey: string;
+  /** The `domain` from `staticRequestConfigs`. Default `'chatbot'`, the provider's default. */
+  domain?: string;
+  /** The shopper whose history to delete. Omit or pass `null` for the guest history. */
+  userId?: string | null;
+  /** Storage to clear instead of the default: `localStorage` for a shopper, `sessionStorage` for the guest. */
+  storage?: Storage;
+}
+
+export interface LocalStoragePersistenceOptions {
+  /** Storage key prefix. Default `'cio-asa:chat'`. */
+  key?: string;
+  /** Appended to the key to isolate conversations, e.g. per api key + domain. */
+  namespace?: string;
+  /** Threads idle longer than this are dropped on read. Default 7 days, matching server retention. */
+  ttlMs?: number;
+  /** Cap on user/assistant turns kept per thread. Unlimited by default. */
+  maxTurns?: number;
+  /** Cap on threads kept. Unlimited by default. */
+  maxThreads?: number;
+  /** Which browser storage to use. Default `'local'`. */
+  storageArea?: StorageArea;
+  /** Storage to use instead of the browser's; takes precedence over `storageArea`. */
+  storage?: Storage;
 }
 
 // --- Behavioral tracking ---
 
-/**
- * How an intent was submitted: typed input or a welcome-screen suggestion chip. Sent as
- * `source` on the `assistant_submit` beacon, so the values match the ones the
- * behavioral-actions API documents.
- */
-export type AssistantSubmitSource = 'input' | 'suggestion';
+/** How an intent was submitted: typed input, a welcome-screen suggestion chip, or a refinement chip. */
+export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement';
 
 /** An item within a viewed/clicked search_result pod. */
 export interface AssistantTrackedItem {
@@ -184,7 +355,7 @@ export interface AssistantTrackedItem {
  * so consumers can mirror ASA analytics into their own systems. All are optional.
  */
 export interface AsaCallbacks {
-  /** User submitted an intent (typed) or clicked a suggested question. */
+  /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */
   onResultLoadStart?: (payload: { intent: string; intentResultId?: string }) => void;
@@ -230,6 +401,7 @@ export type Translations = {
   'CioAsa.input.placeholder'?: string;
   'CioAsa.input.ariaLabel'?: string;
   'CioAsa.input.sendAriaLabel'?: string;
+  'CioAsa.input.stopAriaLabel'?: string;
   'CioAsa.welcome.title'?: string;
   'CioAsa.welcome.placeholder'?: string;
   'CioAsa.welcome.sendButton'?: string;
@@ -244,7 +416,9 @@ export type Translations = {
   'CioAsa.results.viewMore'?: string;
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
+  'CioAsa.refinement.ariaLabel'?: string;
   'CioAsa.error.message'?: string;
+  'CioAsa.error.interrupted'?: string;
 };
 
 // --- Component Override Render Props ---
@@ -260,6 +434,14 @@ export interface ChatInputRenderProps {
   onSubmit: () => void;
   placeholder: string;
   isDisabled: boolean;
+  /**
+   * Whether a reply is currently streaming. Pair it with `onAbort` to offer a cancel
+   * control while it is true — the built-in stop button is off by default, so an override
+   * is often the only way a user can cancel.
+   */
+  isStreaming: boolean;
+  /** Cancel the in-flight reply. Keeps the conversation and the thread. */
+  onAbort: () => void;
 }
 
 export interface WelcomeScreenTitleRenderProps {
@@ -291,6 +473,15 @@ export interface AiMessageTextRenderProps {
   text: string;
 }
 
+export interface FollowUpRefinementRenderProps {
+  question: string;
+  options: string[];
+  /** Sends the option as a follow-up message. No-op while `isDisabled`. */
+  onOptionClick: (option: string) => void;
+  /** True for earlier refinements and while a response is streaming. */
+  isDisabled: boolean;
+}
+
 export interface ResultsGroupTitleRenderProps {
   label: string;
 }
@@ -315,6 +506,7 @@ export interface ChatInputOverrides {
 export interface AiMessageOverrides {
   loader?: ComponentOverrideProps<AiMessageLoaderRenderProps>;
   text?: ComponentOverrideProps<AiMessageTextRenderProps>;
+  followUpRefinement?: ComponentOverrideProps<FollowUpRefinementRenderProps>;
 }
 
 export interface ResultsBlockOverrides {

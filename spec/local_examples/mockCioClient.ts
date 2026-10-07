@@ -29,6 +29,15 @@ export type StreamEvent =
       };
     }
   | { type: 'message'; data: { text: string } }
+  | {
+      type: 'follow_up_refinement';
+      data: {
+        intent_result_id?: string;
+        thread_id?: string;
+        question: string;
+        options: string[];
+      };
+    }
   | { type: 'server_error'; data?: Record<string, unknown> };
 
 export type MockTracker = {
@@ -71,20 +80,16 @@ export function createEventStream(events: StreamEvent[]): ReadableStream<StreamE
 }
 
 /**
- * Builds a stream that throws when read — used to exercise the catch/handleStreamError path.
+ * Builds a stream that errors when read — used to exercise the catch/handleStreamError path.
+ * A real errored stream, so that `cancel()` rejects with the stored error the way it does in a
+ * browser: the consumer has to swallow that rejection.
  */
 export function createErroringStream(): ReadableStream<StreamEvent> {
-  // A minimal stream-like object whose reader rejects on read. Using a real
-  // errored ReadableStream would surface an unhandled rejection during cancel().
-  return {
-    getReader() {
-      return {
-        read: () => Promise.reject(new Error('stream boom')),
-        cancel: () => Promise.resolve(),
-        releaseLock: () => {},
-      };
+  return new ReadableStream<StreamEvent>({
+    pull() {
+      throw new Error('stream boom');
     },
-  } as unknown as ReadableStream<StreamEvent>;
+  });
 }
 
 /**
@@ -107,6 +112,45 @@ export function createPendingStream(): {
   } as unknown as ReadableStream<StreamEvent>;
 
   return { stream, cancel };
+}
+
+/** A stream fed by hand: `push` queues an event, `end` closes it. */
+export function createControllableStream() {
+  const queue: StreamEvent[] = [];
+  let ended = false;
+  const waiting: Array<() => void> = [];
+  const notify = () => waiting.splice(0).forEach((wake) => wake());
+  const next = (): Promise<void> =>
+    new Promise((resolve) => {
+      waiting.push(resolve);
+    });
+  const stream = {
+    getReader() {
+      return {
+        read: async () => {
+          while (queue.length === 0 && !ended) {
+            // eslint-disable-next-line no-await-in-loop
+            await next();
+          }
+          if (queue.length > 0) return { done: false, value: queue.shift()! };
+          return { done: true, value: undefined };
+        },
+        cancel: () => Promise.resolve(),
+        releaseLock: () => {},
+      };
+    },
+  } as unknown as ReadableStream<StreamEvent>;
+  return {
+    stream,
+    push(event: StreamEvent) {
+      queue.push(event);
+      notify();
+    },
+    end() {
+      ended = true;
+      notify();
+    },
+  };
 }
 
 export interface MockCioClientOptions {

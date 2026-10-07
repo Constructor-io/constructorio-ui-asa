@@ -17,7 +17,7 @@ function omitInternalRequestFields(request: Record<string, unknown>): SearchResu
   ) as SearchResultEventRequest;
 }
 
-function updateMessageById(
+export function updateMessageById(
   setMessages: MessageUpdater,
   id: string,
   patch: (msg: ChatMessage) => ChatMessage,
@@ -66,6 +66,23 @@ export function handleMessage(data: any, assistantId: string, setMessages: Messa
     ...msg,
     status: 'streaming',
     text: (msg.text || '') + (data?.text || ''),
+  }));
+}
+
+export function handleFollowUpRefinement(
+  data: any,
+  assistantId: string,
+  setMessages: MessageUpdater,
+) {
+  const question = typeof data?.question === 'string' ? data.question.trim() : '';
+  const options = Array.isArray(data?.options)
+    ? data.options.filter((o: unknown): o is string => typeof o === 'string' && o.trim() !== '')
+    : [];
+  if (question === '' || options.length === 0) return;
+  updateMessageById(setMessages, assistantId, (msg) => ({
+    ...msg,
+    status: 'streaming',
+    refinement: { question, options },
   }));
 }
 

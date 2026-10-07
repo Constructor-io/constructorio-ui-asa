@@ -54,6 +54,46 @@ describe('ChatMessageList', () => {
     expect(screen.getByText('Shoes')).toBeInTheDocument();
   });
 
+  describe('follow-up refinements', () => {
+    const refinement = { question: 'Who are you shopping for?', options: ['Women', 'Men'] };
+    const aiWithRefinement: ChatMessage = { ...aiMsg, id: 'r1', refinement };
+
+    it('renders the refinement below the results of its turn', () => {
+      render(<ChatMessageList messages={[{ ...aiWithGroups, refinement }]} onSend={jest.fn()} />);
+      const group = screen.getByRole('group', { name: 'Refine your results' });
+      const results = document.querySelector('.cio-asa-results-block')!;
+      expect(results.nextElementSibling).toBe(group);
+    });
+
+    it('sends the clicked option as a refinement follow-up', () => {
+      const onSend = jest.fn();
+      render(<ChatMessageList messages={[aiWithRefinement]} onSend={onSend} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Men' }));
+      expect(onSend).toHaveBeenCalledWith('Men', 'refinement');
+    });
+
+    it('keeps only the latest refinement actionable', () => {
+      const older: ChatMessage = { ...aiWithRefinement, id: 'r0' };
+      const laterUser: ChatMessage = { ...userMsg, id: 'u2', text: 'Men' };
+      render(
+        <ChatMessageList messages={[older, laterUser, aiWithRefinement]} onSend={jest.fn()} />,
+      );
+      const [oldChip, newChip] = screen.getAllByRole('button', { name: 'Men' });
+      expect(oldChip).toBeDisabled();
+      expect(newChip).toBeEnabled();
+    });
+
+    it('disables the latest refinement while streaming', () => {
+      render(<ChatMessageList messages={[aiWithRefinement]} onSend={jest.fn()} isStreaming />);
+      expect(screen.getByRole('button', { name: 'Men' })).toBeDisabled();
+    });
+
+    it('hides refinements when no onSend handler is provided', () => {
+      render(<ChatMessageList messages={[aiWithRefinement]} />);
+      expect(screen.queryByRole('group', { name: 'Refine your results' })).not.toBeInTheDocument();
+    });
+  });
+
   describe('auto-scroll', () => {
     it('scrolls to the bottom when a new message arrives while near the bottom', () => {
       const { rerender } = render(<ChatMessageList messages={[userMsg]} />);
