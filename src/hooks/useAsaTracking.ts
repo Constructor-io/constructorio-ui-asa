@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
-import { AssistantSubmitSource, AssistantTrackedItem } from '../types';
+import { AgentButtonClickPayload, AssistantSubmitSource, AssistantTrackedItem } from '../types';
 
 export interface UseAsaTrackingProps {
   tracker?: Tracker;
@@ -48,7 +48,10 @@ export interface TrackSearchSubmitArgs {
   groupId?: string;
 }
 
+export type TrackAgentButtonClickArgs = AgentButtonClickPayload;
+
 export interface UseAsaTrackingReturn {
+  trackAgentButtonClick: (args: TrackAgentButtonClickArgs) => void;
   trackSubmit: (intent: string, source?: AssistantSubmitSource) => void;
   trackResultLoadStarted: (args: TrackResultLoadStartedArgs) => void;
   trackResultLoadFinished: (args: TrackResultLoadFinishedArgs) => void;
@@ -65,6 +68,7 @@ const BEACON_SUBMIT_SOURCES: Record<AssistantSubmitSource, string> = {
 };
 
 const NOOP_TRACKING: UseAsaTrackingReturn = {
+  trackAgentButtonClick: () => {},
   trackSubmit: () => {},
   trackResultLoadStarted: () => {},
   trackResultLoadFinished: () => {},
@@ -89,6 +93,20 @@ export default function useAsaTracking({
       ...(threadId && { threadId }),
     }),
     [section, threadId],
+  );
+
+  const trackAgentButtonClick = useCallback(
+    ({ mode, agentDomain, positionOnPage, pageType, instanceId }: TrackAgentButtonClickArgs) => {
+      tracker?.trackAgentButtonClick?.({
+        mode,
+        agentDomain,
+        ...(positionOnPage && { positionOnPage }),
+        ...(pageType && { pageType }),
+        ...(instanceId && { instanceId }),
+        ...(section && { section }),
+      });
+    },
+    [tracker, section],
   );
 
   const trackSubmit = useCallback(
@@ -192,6 +210,7 @@ export default function useAsaTracking({
   return useMemo(() => {
     if (!tracker) return NOOP_TRACKING;
     return {
+      trackAgentButtonClick,
       trackSubmit,
       trackResultLoadStarted,
       trackResultLoadFinished,
@@ -201,6 +220,7 @@ export default function useAsaTracking({
     };
   }, [
     tracker,
+    trackAgentButtonClick,
     trackSubmit,
     trackResultLoadStarted,
     trackResultLoadFinished,
