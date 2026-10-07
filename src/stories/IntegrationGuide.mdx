@@ -877,8 +877,8 @@ cioClient.tracker.trackAssistantSubmit({ intent: suggestion, source: 'suggestion
 cioClient.tracker.trackAssistantSubmit({ intent: option, source: 'follow_up', threadId });
 ```
 
-`source` needs a client version that forwards it on submit; older clients drop the field and the
-event is still recorded, just without attribution. On the API the field is optional and free-form —
+`source` is forwarded by `@constructor-io/constructorio-client-javascript` 2.94.0 and later; older
+clients drop the field and the event is still recorded, just without attribution. On the API the field is optional and free-form —
 an unrecognized value is stored rather than rejected — but stick to the beacon values above so
 reporting stays comparable across integrations. Pass the same `threadId` for every event in one
 conversation.
