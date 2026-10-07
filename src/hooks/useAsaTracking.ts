@@ -1,11 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
-import {
-  AgentButtonClickMode,
-  AgentButtonClickPageType,
-  AgentButtonClickPlacement,
-  AssistantTrackedItem,
-} from '../types';
+import { AgentButtonClickPayload, AssistantTrackedItem } from '../types';
 
 /**
  * The installed client (2.88.0) exposes the six `trackAssistant*` methods but its
@@ -18,14 +13,7 @@ import {
  * range still allows older clients, which simply skip the beacon.
  */
 interface AssistantTracker {
-  trackAgentButtonClick?(params: {
-    mode: AgentButtonClickMode;
-    agentDomain: string;
-    positionOnPage?: string;
-    pageType?: AgentButtonClickPageType;
-    instanceId?: number;
-    section?: string;
-  }): unknown;
+  trackAgentButtonClick?(params: AgentButtonClickPayload & { section?: string }): unknown;
   trackAssistantSubmit(params: { intent: string; section?: string; threadId?: string }): unknown;
   trackAssistantResultLoadStarted(params: {
     intent: string;
@@ -117,10 +105,7 @@ export interface TrackSearchSubmitArgs {
   groupId?: string;
 }
 
-export interface TrackAgentButtonClickArgs extends AgentButtonClickPlacement {
-  mode: AgentButtonClickMode;
-  agentDomain: string;
-}
+export type TrackAgentButtonClickArgs = AgentButtonClickPayload;
 
 export interface UseAsaTrackingReturn {
   trackAgentButtonClick: (args: TrackAgentButtonClickArgs) => void;

@@ -377,6 +377,13 @@ export interface AgentButtonClickPlacement {
   instanceId?: number;
 }
 
+/** Fields sent with `ai_agent_button_click` and passed to `onAgentButtonClick`. */
+export interface AgentButtonClickPayload extends AgentButtonClickPlacement {
+  mode: AgentButtonClickMode;
+  /** Agent experience the CTA opens, sent as `agent_domain`. */
+  agentDomain: string;
+}
+
 /**
  * Optional consumer callbacks fired alongside the built-in behavioral tracking.
  * Each fires immediately after its corresponding `trackAssistant*` beacon is sent,
@@ -384,9 +391,7 @@ export interface AgentButtonClickPlacement {
  */
 export interface AsaCallbacks {
   /** A CTA that opens the assistant (the built-in `Button`) was clicked. */
-  onAgentButtonClick?: (
-    payload: { mode: AgentButtonClickMode; agentDomain: string } & AgentButtonClickPlacement,
-  ) => void;
+  onAgentButtonClick?: (payload: AgentButtonClickPayload) => void;
   /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */

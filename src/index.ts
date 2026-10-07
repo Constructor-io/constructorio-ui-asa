@@ -60,6 +60,7 @@ export type {
   AssistantSubmitSource,
   AssistantTrackedItem,
   AgentButtonClickMode,
+  AgentButtonClickPayload,
   AgentButtonClickPageType,
   AgentButtonClickPlacement,
   // Customization via componentOverrides
