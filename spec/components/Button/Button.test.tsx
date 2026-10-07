@@ -96,6 +96,23 @@ describe('Button', () => {
       expect(onAgentButtonClick).toHaveBeenCalledTimes(1);
     });
 
+    it('fires the callback and onClick when the client predates trackAgentButtonClick', async () => {
+      const { client, tracker } = createMockCioClient();
+      delete (tracker as Partial<typeof tracker>).trackAgentButtonClick;
+      const onClick = jest.fn();
+      const onAgentButtonClick = jest.fn();
+      render(
+        <CioAsaProvider cioClient={client} callbacks={{ onAgentButtonClick }}>
+          <Button onClick={onClick} />
+        </CioAsaProvider>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+
+      expect(onAgentButtonClick).toHaveBeenCalledTimes(1);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
     it('still calls onClick without tracking when rendered outside a provider', async () => {
       const onClick = jest.fn();
       render(<Button onClick={onClick} positionOnPage='header' />);
