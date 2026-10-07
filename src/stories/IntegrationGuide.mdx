@@ -727,7 +727,7 @@ function CustomLauncher({ onOpen }) {
       onClick={() => {
         trackAgentButtonClick({
           mode: 'chat',
-          agentDomain: 'chatbot',
+          agentDomain: context?.staticRequestConfigs?.domain ?? 'chatbot',
           positionOnPage: 'plp_sidebar',
           pageType: 'plp',
         });
