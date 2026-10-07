@@ -56,6 +56,7 @@ describe('Button', () => {
         instanceId: 1,
         section: 'Products',
       });
+      expect(tracker.trackAgentButtonClick).toHaveBeenCalledTimes(1);
       expect(onClick).toHaveBeenCalledTimes(1);
     });
 
@@ -92,13 +93,14 @@ describe('Button', () => {
         agentDomain: 'chatbot',
         positionOnPage: 'search_bar',
       });
+      expect(onAgentButtonClick).toHaveBeenCalledTimes(1);
     });
 
     it('still calls onClick without tracking when rendered outside a provider', async () => {
       const onClick = jest.fn();
       render(<Button onClick={onClick} positionOnPage='header' />);
 
-      await expect(userEvent.click(screen.getByRole('button'))).resolves.not.toThrow();
+      await userEvent.click(screen.getByRole('button'));
       expect(onClick).toHaveBeenCalledTimes(1);
     });
   });
