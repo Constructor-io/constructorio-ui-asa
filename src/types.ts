@@ -362,6 +362,7 @@ export type AgentButtonClickPageType =
   | 'home'
   | 'plp'
   | 'pdp'
+  | 'search'
   | 'collection'
   | 'email_campaign'
   | 'cart';

@@ -688,15 +688,15 @@ import { Button } from '@constructor-io/constructorio-ui-asa';
 <Button theme='dark' size='lg' label='Shopping assistant' onClick={() => setIsOpen(true)} />;
 ```
 
-| Prop             | Type                                                                     | Default                | Description                                                                              |
-| ---------------- | ------------------------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------------------------- |
-| `theme`          | `'dark' \| 'light'`                                                      | `'dark'`               | `dark` for light backgrounds, `light` for dark backgrounds                               |
-| `size`           | `'sm' \| 'lg'`                                                           | `'sm'`                 | Button size                                                                              |
-| `label`          | `string`                                                                 | `'Shopping assistant'` | Button text                                                                              |
-| `onClick`        | `() => void`                                                             | —                      | Click handler                                                                            |
-| `positionOnPage` | `string`                                                                 | —                      | Stable label for where the CTA sits, e.g. `'header'`, `'search_bar'`, `'pdp_above_fold'` |
-| `pageType`       | `'home' \| 'plp' \| 'pdp' \| 'collection' \| 'email_campaign' \| 'cart'` | —                      | Page surface the CTA is rendered on                                                      |
-| `instanceId`     | `number`                                                                 | —                      | 1-based index when several CTAs share the same position on one page                      |
+| Prop             | Type                                                                                 | Default                | Description                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------ | ---------------------- | ---------------------------------------------------------------------------------------- |
+| `theme`          | `'dark' \| 'light'`                                                                  | `'dark'`               | `dark` for light backgrounds, `light` for dark backgrounds                               |
+| `size`           | `'sm' \| 'lg'`                                                                       | `'sm'`                 | Button size                                                                              |
+| `label`          | `string`                                                                             | `'Shopping assistant'` | Button text                                                                              |
+| `onClick`        | `() => void`                                                                         | —                      | Click handler                                                                            |
+| `positionOnPage` | `string`                                                                             | —                      | Stable label for where the CTA sits, e.g. `'header'`, `'search_bar'`, `'pdp_above_fold'` |
+| `pageType`       | `'home' \| 'plp' \| 'pdp' \| 'search' \| 'collection' \| 'email_campaign' \| 'cart'` | —                      | Page surface the CTA is rendered on                                                      |
+| `instanceId`     | `number`                                                                             | —                      | 1-based index when several CTAs share the same position on one page                      |
 
 #### Tracking CTA clicks
 

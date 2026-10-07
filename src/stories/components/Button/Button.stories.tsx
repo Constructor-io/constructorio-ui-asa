@@ -48,7 +48,7 @@ const meta = {
     },
     pageType: {
       control: 'select',
-      options: ['home', 'plp', 'pdp', 'collection', 'email_campaign', 'cart'],
+      options: ['home', 'plp', 'pdp', 'search', 'collection', 'email_campaign', 'cart'],
       description:
         'Page surface the CTA is rendered on. Sent with the `ai_agent_button_click` event.',
       table: { category: 'Tracking' },
