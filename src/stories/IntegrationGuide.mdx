@@ -821,9 +821,11 @@ Every event carries the provider's `section` (default `'Products'`) and the conv
 once the agent has assigned one, so the first `assistant_submit` of a new conversation goes out
 without it.
 
-Each event has a matching entry in the provider's `callbacks` prop, fired right after the beacon
-with that event's data (without `section` and `threadId`), so you can mirror ASA analytics into
-your own systems:
+Each event has a matching entry in the provider's `callbacks` prop, fired right after the beacon,
+so you can mirror ASA analytics into your own systems. Callbacks carry the event's data in their
+own shape, typed by `AsaCallbacks`, not the beacon parameters: they have no `section` or
+`threadId`, `onResultClick` nests the product under `item`, and `onAssistantSubmit` reports a
+refinement click as `refinement` where the beacon sends `follow_up`.
 
 | Event                           | Callback             | Fired when                                                                       |
 | ------------------------------- | -------------------- | -------------------------------------------------------------------------------- |
