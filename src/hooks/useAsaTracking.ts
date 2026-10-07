@@ -1,57 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
-import { AgentButtonClickPayload, AssistantTrackedItem } from '../types';
-
-/**
- * Narrowed view of the tracker covering the shapes we send. `trackAgentButtonClick` is
- * optional because the peer range still allows clients older than 2.94.0.
- */
-interface AssistantTracker {
-  trackAgentButtonClick?(params: AgentButtonClickPayload & { section?: string }): unknown;
-  trackAssistantSubmit(params: { intent: string; section?: string; threadId?: string }): unknown;
-  trackAssistantResultLoadStarted(params: {
-    intent: string;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantResultLoadFinished(params: {
-    intent: string;
-    searchResultCount: number;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantResultClick(params: {
-    intent: string;
-    searchResultId: string;
-    itemId?: string;
-    itemName?: string;
-    variationId?: string;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantResultView(params: {
-    intent: string;
-    searchResultId: string;
-    numResultsViewed: number;
-    items?: AssistantTrackedItem[];
-    intentResultId?: string;
-    section?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantSearchSubmit(params: {
-    intent: string;
-    searchTerm: string;
-    userInput: string;
-    searchResultId: string;
-    groupId?: string;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-}
+import { AgentButtonClickPayload, AssistantSubmitSource, AssistantTrackedItem } from '../types';
 
 export interface UseAsaTrackingProps {
   tracker?: Tracker;
@@ -103,13 +52,20 @@ export type TrackAgentButtonClickArgs = AgentButtonClickPayload;
 
 export interface UseAsaTrackingReturn {
   trackAgentButtonClick: (args: TrackAgentButtonClickArgs) => void;
-  trackSubmit: (intent: string) => void;
+  trackSubmit: (intent: string, source?: AssistantSubmitSource) => void;
   trackResultLoadStarted: (args: TrackResultLoadStartedArgs) => void;
   trackResultLoadFinished: (args: TrackResultLoadFinishedArgs) => void;
   trackResultClick: (args: TrackResultClickArgs) => void;
   trackResultView: (args: TrackResultViewArgs) => void;
   trackSearchSubmit: (args: TrackSearchSubmitArgs) => void;
 }
+
+/** Beacon `source` values, aligned with the ones the behavioral-actions API documents. */
+const BEACON_SUBMIT_SOURCES: Record<AssistantSubmitSource, string> = {
+  input: 'input',
+  suggestion: 'suggestion',
+  refinement: 'follow_up',
+};
 
 const NOOP_TRACKING: UseAsaTrackingReturn = {
   trackAgentButtonClick: () => {},
@@ -131,8 +87,6 @@ export default function useAsaTracking({
   section,
   threadId,
 }: UseAsaTrackingProps): UseAsaTrackingReturn {
-  const assistant = tracker as unknown as AssistantTracker | undefined;
-
   const base = useMemo(
     () => ({
       ...(section && { section }),
@@ -143,7 +97,7 @@ export default function useAsaTracking({
 
   const trackAgentButtonClick = useCallback(
     ({ mode, agentDomain, positionOnPage, pageType, instanceId }: TrackAgentButtonClickArgs) => {
-      assistant?.trackAgentButtonClick?.({
+      tracker?.trackAgentButtonClick?.({
         mode,
         agentDomain,
         ...(positionOnPage && { positionOnPage }),
@@ -152,25 +106,29 @@ export default function useAsaTracking({
         ...(section && { section }),
       });
     },
-    [assistant, section],
+    [tracker, section],
   );
 
   const trackSubmit = useCallback(
-    (intent: string) => {
-      assistant?.trackAssistantSubmit({ intent, ...base });
+    (intent: string, source?: AssistantSubmitSource) => {
+      tracker?.trackAssistantSubmit({
+        intent,
+        ...(source && { source: BEACON_SUBMIT_SOURCES[source] }),
+        ...base,
+      });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultLoadStarted = useCallback(
     ({ intent, intentResultId }: TrackResultLoadStartedArgs) => {
-      assistant?.trackAssistantResultLoadStarted({
+      tracker?.trackAssistantResultLoadStarted({
         intent,
         ...(intentResultId && { intentResultId }),
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultLoadFinished = useCallback(
@@ -180,7 +138,7 @@ export default function useAsaTracking({
       intentResultId,
       threadId: turnThreadId,
     }: TrackResultLoadFinishedArgs) => {
-      assistant?.trackAssistantResultLoadFinished({
+      tracker?.trackAssistantResultLoadFinished({
         intent,
         searchResultCount,
         ...(intentResultId && { intentResultId }),
@@ -188,7 +146,7 @@ export default function useAsaTracking({
         ...(turnThreadId && { threadId: turnThreadId }),
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultClick = useCallback(
@@ -200,7 +158,7 @@ export default function useAsaTracking({
       itemName,
       variationId,
     }: TrackResultClickArgs) => {
-      assistant?.trackAssistantResultClick({
+      tracker?.trackAssistantResultClick({
         intent,
         searchResultId,
         ...(intentResultId && { intentResultId }),
@@ -210,12 +168,12 @@ export default function useAsaTracking({
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultView = useCallback(
     ({ intent, searchResultId, numResultsViewed, intentResultId, items }: TrackResultViewArgs) => {
-      assistant?.trackAssistantResultView({
+      tracker?.trackAssistantResultView({
         intent,
         searchResultId,
         numResultsViewed,
@@ -224,7 +182,7 @@ export default function useAsaTracking({
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackSearchSubmit = useCallback(
@@ -236,7 +194,7 @@ export default function useAsaTracking({
       intentResultId,
       groupId,
     }: TrackSearchSubmitArgs) => {
-      assistant?.trackAssistantSearchSubmit({
+      tracker?.trackAssistantSearchSubmit({
         intent,
         searchTerm,
         userInput,
@@ -246,11 +204,11 @@ export default function useAsaTracking({
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   return useMemo(() => {
-    if (!assistant) return NOOP_TRACKING;
+    if (!tracker) return NOOP_TRACKING;
     return {
       trackAgentButtonClick,
       trackSubmit,
@@ -261,7 +219,7 @@ export default function useAsaTracking({
       trackSearchSubmit,
     };
   }, [
-    assistant,
+    tracker,
     trackAgentButtonClick,
     trackSubmit,
     trackResultLoadStarted,

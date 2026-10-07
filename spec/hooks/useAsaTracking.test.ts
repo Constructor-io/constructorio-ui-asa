@@ -27,7 +27,7 @@ describe('useAsaTracking', () => {
     }).not.toThrow();
   });
 
-  it('forwards trackSubmit with merged section and threadId', () => {
+  it('forwards trackSubmit with merged section, threadId and source', () => {
     const tracker = createMockTracker();
     const { result } = renderHook(() =>
       useAsaTracking({
@@ -37,22 +37,36 @@ describe('useAsaTracking', () => {
       }),
     );
 
-    result.current.trackSubmit('shoes');
+    result.current.trackSubmit('shoes', 'suggestion');
 
     expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({
       intent: 'shoes',
       section: 'Products',
       threadId: 't-1',
+      source: 'suggestion',
     });
   });
 
-  it('omits section and threadId when not provided', () => {
+  it('sends a refinement submit with the API `follow_up` source', () => {
+    const tracker = createMockTracker();
+    const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
+
+    result.current.trackSubmit('Men', 'refinement');
+
+    expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({
+      intent: 'Men',
+      source: 'follow_up',
+    });
+  });
+
+  it('omits section, threadId and source when not provided', () => {
     const tracker = createMockTracker();
     const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
 
     result.current.trackSubmit('shoes');
 
     expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({ intent: 'shoes' });
+    expect(tracker.trackAssistantSubmit.mock.calls[0][0]).not.toHaveProperty('source');
   });
 
   it('forwards trackResultLoadStarted with optional intentResultId', () => {
