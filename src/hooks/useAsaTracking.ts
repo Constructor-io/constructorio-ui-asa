@@ -14,8 +14,8 @@ import {
  * `threadId` — and call through this narrowed view of the tracker so the extra field
  * compiles now and flows through once the client types catch up.
  *
- * `trackAgentButtonClick` is likewise ahead of the installed client and is optional
- * here so older clients simply skip the beacon.
+ * `trackAgentButtonClick` ships in client 2.94.0; it is optional here because the peer
+ * range still allows older clients, which simply skip the beacon.
  */
 interface AssistantTracker {
   trackAgentButtonClick?(params: {
