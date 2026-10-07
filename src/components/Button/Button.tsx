@@ -28,17 +28,17 @@ export default function Button({
   instanceId,
 }: ButtonProps) {
   const context = useCioAsaContext();
-  const domain = context?.staticRequestConfigs?.domain;
+  const agentDomain = context?.staticRequestConfigs?.domain;
   const tracking = useAsaTracking({
     tracker: context?.cioClient?.tracker ?? undefined,
     section: context?.section,
   });
 
   const handleClick = useCallback(() => {
-    if (domain) {
+    if (agentDomain) {
       const payload = {
         mode: AGENT_BUTTON_CLICK_MODE,
-        domain,
+        agentDomain,
         ...(positionOnPage && { positionOnPage }),
         ...(pageType && { pageType }),
         ...(instanceId && { instanceId }),
@@ -47,7 +47,7 @@ export default function Button({
       context?.callbacks?.onAgentButtonClick?.(payload);
     }
     onClick?.();
-  }, [domain, positionOnPage, pageType, instanceId, tracking, context, onClick]);
+  }, [agentDomain, positionOnPage, pageType, instanceId, tracking, context, onClick]);
 
   return (
     <CioButton

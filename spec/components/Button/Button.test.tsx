@@ -37,7 +37,7 @@ describe('Button', () => {
   });
 
   describe('tracking', () => {
-    it('sends ai_agent_button_click with the provider domain and placement props', async () => {
+    it('sends ai_agent_button_click with the provider domain as agentDomain and placement props', async () => {
       const { client, tracker } = createMockCioClient();
       const onClick = jest.fn();
       render(
@@ -50,7 +50,7 @@ describe('Button', () => {
 
       expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({
         mode: 'chat',
-        domain: 'explorer',
+        agentDomain: 'explorer',
         positionOnPage: 'header',
         pageType: 'pdp',
         instanceId: 1,
@@ -71,7 +71,7 @@ describe('Button', () => {
 
       expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({
         mode: 'chat',
-        domain: 'chatbot',
+        agentDomain: 'chatbot',
         section: 'Products',
       });
     });
@@ -89,7 +89,7 @@ describe('Button', () => {
 
       expect(onAgentButtonClick).toHaveBeenCalledWith({
         mode: 'chat',
-        domain: 'chatbot',
+        agentDomain: 'chatbot',
         positionOnPage: 'search_bar',
       });
     });

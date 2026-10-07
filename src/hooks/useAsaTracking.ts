@@ -15,7 +15,7 @@ import { AgentButtonClickPlacement, AssistantTrackedItem } from '../types';
 interface AssistantTracker {
   trackAgentButtonClick?(params: {
     mode: string;
-    domain: string;
+    agentDomain: string;
     positionOnPage?: string;
     pageType?: string;
     instanceId?: number;
@@ -114,7 +114,7 @@ export interface TrackSearchSubmitArgs {
 
 export interface TrackAgentButtonClickArgs extends AgentButtonClickPlacement {
   mode: string;
-  domain: string;
+  agentDomain: string;
 }
 
 export interface UseAsaTrackingReturn {
@@ -158,10 +158,10 @@ export default function useAsaTracking({
   );
 
   const trackAgentButtonClick = useCallback(
-    ({ mode, domain, positionOnPage, pageType, instanceId }: TrackAgentButtonClickArgs) => {
+    ({ mode, agentDomain, positionOnPage, pageType, instanceId }: TrackAgentButtonClickArgs) => {
       assistant?.trackAgentButtonClick?.({
         mode,
-        domain,
+        agentDomain,
         ...(positionOnPage && { positionOnPage }),
         ...(pageType && { pageType }),
         ...(instanceId && { instanceId }),

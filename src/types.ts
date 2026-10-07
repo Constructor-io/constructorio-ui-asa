@@ -376,7 +376,7 @@ export interface AgentButtonClickPlacement {
 export interface AsaCallbacks {
   /** A CTA that opens the assistant (the built-in `Button`) was clicked. */
   onAgentButtonClick?: (
-    payload: { mode: string; domain: string } & AgentButtonClickPlacement,
+    payload: { mode: string; agentDomain: string } & AgentButtonClickPlacement,
   ) => void;
   /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
