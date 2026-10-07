@@ -142,18 +142,6 @@ const meta: Meta<typeof Chat> = {
         defaultValue: { summary: 'undefined' },
       },
     },
-    initialPrompt: {
-      description:
-        'A prompt sent once on mount, after any stored conversation loads, e.g. one the shopper ' +
-        'clicked elsewhere on the page before the chat opened. Goes into `initialThreadId` when ' +
-        'set. For a chat that is already mounted, call `sendMessage(text, { threadId })` on the ref.',
-      control: false,
-      table: {
-        category: 'Content',
-        type: { summary: 'string' },
-        defaultValue: { summary: 'undefined' },
-      },
-    },
     translations: {
       description:
         'Translation overrides for internationalizing UI strings. All keys are optional.\n\n' +

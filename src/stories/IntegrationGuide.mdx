@@ -236,7 +236,6 @@ The `Chat` component accepts:
 | `translations`       | `Translations`                                | Override UI strings (see Translations section)                                                                                                                                                |
 | `componentOverrides` | `ChatComponentOverrides`                      | Override any sub-component (see Component Overrides section)                                                                                                                                  |
 | `initialThreadId`    | `string`                                      | Resume a specific agent thread. With `persistConversation` on, its stored transcript is restored too (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page)  |
-| `initialPrompt`      | `string`                                      | A prompt sent once on mount, after any stored conversation loads. Goes into `initialThreadId` when set (see Opening the chat with a prompt)                                                   |
 | `onThreadsChange`    | `(threads, activeThreadId) => void`           | Fires when the list of stored conversations or the active one changes. Requires `persistConversation` (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
 
 `Chat` also exposes methods through a `ref` (`ChatHandle`):
@@ -256,15 +255,8 @@ conversation it belongs to as `threadId` to continue that conversation; with `pe
 on, a stored transcript for it is shown, otherwise the chat starts empty and the agent still
 continues the thread. Omit it to send into the conversation on screen.
 
-If you mount `Chat` when it opens, pass the prompt as props:
-
-```jsx
-{
-  isOpen && <Chat initialPrompt={prompt} initialThreadId={threadId} onClose={close} />;
-}
-```
-
-If `Chat` stays mounted, use the ref:
+Call `sendMessage` on the `Chat` ref. `Chat` must already be mounted, so keep it mounted and
+hide it while closed rather than rendering it only when open:
 
 ```jsx
 const chatRef = useRef(null);
@@ -275,7 +267,7 @@ function onPromptClick(prompt, threadId) {
 }
 ```
 
-Either way the submit reaches `onAssistantSubmit` with `source: 'external'`.
+The submit reaches `onAssistantSubmit` with `source: 'external'`.
 
 ### Follow-up refinements
 
