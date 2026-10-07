@@ -46,6 +46,18 @@ describe('useAsaTracking', () => {
     });
   });
 
+  it('sends a refinement submit with the API `follow_up` source', () => {
+    const tracker = createMockTracker();
+    const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
+
+    result.current.trackSubmit('Men', 'refinement');
+
+    expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({
+      intent: 'Men',
+      source: 'follow_up',
+    });
+  });
+
   it('omits section, threadId and source when not provided', () => {
     const tracker = createMockTracker();
     const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));

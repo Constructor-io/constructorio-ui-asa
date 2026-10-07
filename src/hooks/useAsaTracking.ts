@@ -14,7 +14,7 @@ interface AssistantTracker {
     intent: string;
     section?: string;
     threadId?: string;
-    source?: AssistantSubmitSource;
+    source?: string;
   }): unknown;
   trackAssistantResultLoadStarted(params: {
     intent: string;
@@ -115,6 +115,13 @@ export interface UseAsaTrackingReturn {
   trackSearchSubmit: (args: TrackSearchSubmitArgs) => void;
 }
 
+/** Beacon `source` values, aligned with the ones the behavioral-actions API documents. */
+const BEACON_SUBMIT_SOURCES: Record<AssistantSubmitSource, string> = {
+  input: 'input',
+  suggestion: 'suggestion',
+  refinement: 'follow_up',
+};
+
 const NOOP_TRACKING: UseAsaTrackingReturn = {
   trackSubmit: () => {},
   trackResultLoadStarted: () => {},
@@ -146,7 +153,11 @@ export default function useAsaTracking({
 
   const trackSubmit = useCallback(
     (intent: string, source?: AssistantSubmitSource) => {
-      assistant?.trackAssistantSubmit({ intent, ...(source && { source }), ...base });
+      assistant?.trackAssistantSubmit({
+        intent,
+        ...(source && { source: BEACON_SUBMIT_SOURCES[source] }),
+        ...base,
+      });
     },
     [assistant, base],
   );

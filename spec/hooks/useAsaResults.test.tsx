@@ -549,6 +549,17 @@ describe('useAsaResults', () => {
       );
     });
 
+    it('fires trackAssistantSubmit with the `follow_up` source for refinement chips', () => {
+      const { client, tracker } = createMockCioClient({ events: [] });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage("Men's styles", 'refinement'));
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: "Men's styles", source: 'follow_up' }),
+      );
+    });
+
     it('fires load-start once and load-finish with the group count', async () => {
       const events: StreamEvent[] = [
         { type: 'start', data: { thread_id: 'thread-1', intent_result_id: 'ir-1' } },
