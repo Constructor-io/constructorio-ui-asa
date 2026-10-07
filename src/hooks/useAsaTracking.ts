@@ -2,64 +2,6 @@ import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
 import { AssistantSubmitSource, AssistantTrackedItem } from '../types';
 
-/**
- * The installed client (2.91.0) exposes the six `trackAssistant*` methods but its
- * published types don't yet include `source` on submit (that lands with the next client
- * release). We describe the parameter shapes we send here — including `source` — and call
- * through this narrowed view of the tracker so the extra field compiles now and flows
- * through once the client types catch up.
- */
-interface AssistantTracker {
-  trackAssistantSubmit(params: {
-    intent: string;
-    section?: string;
-    threadId?: string;
-    source?: string;
-  }): unknown;
-  trackAssistantResultLoadStarted(params: {
-    intent: string;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantResultLoadFinished(params: {
-    intent: string;
-    searchResultCount: number;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantResultClick(params: {
-    intent: string;
-    searchResultId: string;
-    itemId?: string;
-    itemName?: string;
-    variationId?: string;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantResultView(params: {
-    intent: string;
-    searchResultId: string;
-    numResultsViewed: number;
-    items?: AssistantTrackedItem[];
-    intentResultId?: string;
-    section?: string;
-    threadId?: string;
-  }): unknown;
-  trackAssistantSearchSubmit(params: {
-    intent: string;
-    searchTerm: string;
-    userInput: string;
-    searchResultId: string;
-    groupId?: string;
-    section?: string;
-    intentResultId?: string;
-    threadId?: string;
-  }): unknown;
-}
-
 export interface UseAsaTrackingProps {
   tracker?: Tracker;
   section?: string;
@@ -141,8 +83,6 @@ export default function useAsaTracking({
   section,
   threadId,
 }: UseAsaTrackingProps): UseAsaTrackingReturn {
-  const assistant = tracker as unknown as AssistantTracker | undefined;
-
   const base = useMemo(
     () => ({
       ...(section && { section }),
@@ -153,24 +93,24 @@ export default function useAsaTracking({
 
   const trackSubmit = useCallback(
     (intent: string, source?: AssistantSubmitSource) => {
-      assistant?.trackAssistantSubmit({
+      tracker?.trackAssistantSubmit({
         intent,
         ...(source && { source: BEACON_SUBMIT_SOURCES[source] }),
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultLoadStarted = useCallback(
     ({ intent, intentResultId }: TrackResultLoadStartedArgs) => {
-      assistant?.trackAssistantResultLoadStarted({
+      tracker?.trackAssistantResultLoadStarted({
         intent,
         ...(intentResultId && { intentResultId }),
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultLoadFinished = useCallback(
@@ -180,7 +120,7 @@ export default function useAsaTracking({
       intentResultId,
       threadId: turnThreadId,
     }: TrackResultLoadFinishedArgs) => {
-      assistant?.trackAssistantResultLoadFinished({
+      tracker?.trackAssistantResultLoadFinished({
         intent,
         searchResultCount,
         ...(intentResultId && { intentResultId }),
@@ -188,7 +128,7 @@ export default function useAsaTracking({
         ...(turnThreadId && { threadId: turnThreadId }),
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultClick = useCallback(
@@ -200,7 +140,7 @@ export default function useAsaTracking({
       itemName,
       variationId,
     }: TrackResultClickArgs) => {
-      assistant?.trackAssistantResultClick({
+      tracker?.trackAssistantResultClick({
         intent,
         searchResultId,
         ...(intentResultId && { intentResultId }),
@@ -210,12 +150,12 @@ export default function useAsaTracking({
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackResultView = useCallback(
     ({ intent, searchResultId, numResultsViewed, intentResultId, items }: TrackResultViewArgs) => {
-      assistant?.trackAssistantResultView({
+      tracker?.trackAssistantResultView({
         intent,
         searchResultId,
         numResultsViewed,
@@ -224,7 +164,7 @@ export default function useAsaTracking({
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   const trackSearchSubmit = useCallback(
@@ -236,7 +176,7 @@ export default function useAsaTracking({
       intentResultId,
       groupId,
     }: TrackSearchSubmitArgs) => {
-      assistant?.trackAssistantSearchSubmit({
+      tracker?.trackAssistantSearchSubmit({
         intent,
         searchTerm,
         userInput,
@@ -246,11 +186,11 @@ export default function useAsaTracking({
         ...base,
       });
     },
-    [assistant, base],
+    [tracker, base],
   );
 
   return useMemo(() => {
-    if (!assistant) return NOOP_TRACKING;
+    if (!tracker) return NOOP_TRACKING;
     return {
       trackSubmit,
       trackResultLoadStarted,
@@ -260,7 +200,7 @@ export default function useAsaTracking({
       trackSearchSubmit,
     };
   }, [
-    assistant,
+    tracker,
     trackSubmit,
     trackResultLoadStarted,
     trackResultLoadFinished,
