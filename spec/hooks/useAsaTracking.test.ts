@@ -196,7 +196,10 @@ describe('useAsaTracking', () => {
 
     result.current.trackAgentButtonClick({ mode: 'chat', agentDomain: 'chatbot' });
 
-    expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({ mode: 'chat', agentDomain: 'chatbot' });
+    expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({
+      mode: 'chat',
+      agentDomain: 'chatbot',
+    });
   });
 
   it('does not throw when the tracker predates trackAgentButtonClick', () => {
