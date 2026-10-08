@@ -87,7 +87,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       if (!intent || session.isStreaming || session.foreignInFlight) return;
       beginTurn();
 
-      trackingRef.current.trackSubmit(intent);
+      trackingRef.current.trackSubmit(intent, source);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
 
       const userMessage: ChatMessage = {

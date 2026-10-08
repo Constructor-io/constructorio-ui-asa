@@ -309,6 +309,62 @@ describe('Chat', () => {
     });
   });
 
+  describe('submit tracking', () => {
+    function renderTrackedChat(
+      events: StreamEvent[],
+      props: React.ComponentProps<typeof Chat> = {},
+    ) {
+      const { client, tracker } = createMockCioClient({ events });
+      render(
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+          <Chat {...props} />
+        </CioAsaProvider>,
+      );
+      return tracker;
+    }
+
+    it('tracks a typed intent with the `input` source', async () => {
+      const tracker = renderTrackedChat([{ type: 'message', data: { text: 'An answer' } }]);
+
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'shoes', source: 'input' }),
+      );
+    });
+
+    it('tracks a welcome-screen suggestion click with the `suggestion` source', async () => {
+      const tracker = renderTrackedChat([{ type: 'message', data: { text: 'An answer' } }], {
+        initialSuggestions: ['Help me find a gift'],
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Help me find a gift' }));
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'Help me find a gift', source: 'suggestion' }),
+      );
+    });
+
+    it('tracks a refinement option click with the `follow_up` source', async () => {
+      const tracker = renderTrackedChat([
+        { type: 'message', data: { text: 'Here are some picks' } },
+        {
+          type: 'follow_up_refinement',
+          data: { question: 'Who are you shopping for?', options: ["Men's styles"] },
+        },
+      ]);
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+      const chip = await screen.findByRole('button', { name: "Men's styles" });
+      await waitFor(() => expect(chip).toBeEnabled());
+
+      await userEvent.click(chip);
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ intent: "Men's styles", source: 'follow_up' }),
+      );
+    });
+  });
+
   it('has no accessibility violations on the welcome screen', async () => {
     const { container } = renderChat({ onClose: jest.fn(), initialSuggestions: ['A'] });
     expect(await axe(container)).toHaveNoViolations();
