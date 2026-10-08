@@ -1,0 +1,17 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title='Components & Utilities/Utilities' />
+
+# Utilities
+
+## `normalizeItemToProduct(item, options?)`
+
+The default mapping from a raw search result to the `Product` a card renders. Extend it in your own `normalizeItem`. See [Product Results](?path=/docs/guides-product-results--variants#mapping-product-data).
+
+## `clearPersistedConversations({ apiKey, domain?, userId? })`
+
+Deletes stored conversations in every tab, for example on logout. Resolves once recorded. `domain` defaults to `'chatbot'`; without `userId` it clears the current tab's guest history. See [Conversations](?path=/docs/guides-conversations--variants#login-and-logout).
+
+## `ConstructorIOClient`
+
+Re-exported from `@constructor-io/constructorio-client-javascript`, to build a client for the provider's `cioClient`.

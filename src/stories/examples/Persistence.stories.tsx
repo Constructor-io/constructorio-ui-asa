@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import Chat, { ChatHandle } from '../../../components/Chat/Chat';
-import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
-import { DEMO_API_KEY } from '../../../constants';
+import Chat, { ChatHandle } from '../../components/Chat/Chat';
+import CioAsaProvider from '../../components/CioAsaProvider/CioAsaProvider';
+import { DEMO_API_KEY } from '../../constants';
 import {
   clearPersistedConversations,
   persistenceNamespace,
   storageAreaFor,
-} from '../../../utils/localStoragePersistence';
-import { getTabId } from '../../../utils/chatThreads';
-import type { ThreadSummary } from '../../../types';
+} from '../../utils/localStoragePersistence';
+import { getTabId } from '../../utils/chatThreads';
+import type { ThreadSummary } from '../../types';
 
 type StorageName = 'localStorage' | 'sessionStorage';
 
@@ -437,9 +437,10 @@ function PersistentChatPlayground() {
 }
 
 const meta = {
-  title: 'Components/Chat/Persistent Chat',
+  title: 'Examples/Persistent Chat',
   component: Chat,
   parameters: { layout: 'padded' },
+  tags: ['!dev'],
 } satisfies Meta<typeof Chat>;
 
 export default meta;

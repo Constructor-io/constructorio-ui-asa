@@ -1,0 +1,143 @@
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as ChatStories from '../examples/Chat.stories';
+
+<Meta title='Guides/Integration Guide' />
+
+# Integration Guide
+
+Steps 1–4 are all you need. Everything after is optional, and each step links to its own guide.
+
+## 1. Install
+
+```bash
+npm install @constructor-io/constructorio-ui-asa
+```
+
+npm 7+ installs the peer dependencies for you. With yarn, pnpm or npm 6, or on an `unmet peer dependency` warning, install the missing ones. Upgrade any that are below the required version.
+
+<Markdown>
+  {`
+| Package | Version |
+|---|---|
+| \`@constructor-io/constructorio-client-javascript\` | \`^2.93.1\` |
+| \`@constructor-io/constructorio-ui-components\` | \`^1.6.0\` |
+| \`react\`, \`react-dom\` | \`>=16.12.0\` |
+| \`tslib\` | \`^2.4.0\` |
+`}
+</Markdown>
+
+Building requires Node.js >= 20. The components themselves run in the browser only.
+
+## 2. Import the styles
+
+Once, at your app's entry point:
+
+```jsx
+import '@constructor-io/constructorio-ui-asa/styles.css';
+```
+
+## 3. Add the provider
+
+`CioAsaProvider` holds the Constructor client and configuration. Wrap your app, or the part that renders the assistant.
+
+```jsx
+import { CioAsaProvider } from '@constructor-io/constructorio-ui-asa';
+
+<CioAsaProvider apiKey='YOUR_API_KEY'>{/* your app */}</CioAsaProvider>;
+```
+
+`apiKey` is your Constructor index key, from the dashboard. Already have a `ConstructorIOClient`? Pass it as `cioClient` instead. See [CioAsaProvider](?path=/docs/components-utilities-cioasaprovider--variants) for every prop.
+
+## 4. Render the chat
+
+`Chat` fills its container. It has no launcher and no open state: you decide when it is mounted and where it sits. `Button` is a ready-made launcher.
+
+```jsx
+import { useState } from 'react';
+import { Chat, Button } from '@constructor-io/constructorio-ui-asa';
+
+function ShoppingAssistant() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <Button onClick={() => setIsOpen(true)} />
+      {isOpen && (
+        <>
+          <div className='cio-asa-chat-overlay' onClick={() => setIsOpen(false)} />
+          <div className='cio-asa-chat-panel'>
+            <Chat onClose={() => setIsOpen(false)} />
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+```
+
+<Canvas of={ChatStories.Integration} />
+
+Optional positioning classes, all in `styles.css`:
+
+<Markdown>
+  {`
+| Class | |
+|---|---|
+| \`cio-asa-chat-overlay\` | Fixed full-screen backdrop (\`z-index: 999\`) |
+| \`cio-asa-chat-panel\` | Fixed 420px panel docked right, slides in (\`z-index: 1000\`) |
+| \`cio-asa-chat-fullscreen\` | Fills the nearest positioned ancestor |
+| \`cio-asa-chat-fullscreen--right\` | Fullscreen variant docked to a 504px right column |
+`}
+</Markdown>
+
+Using Next.js or another SSR framework? Render the chat client-side only. See the [FAQ](?path=/docs/guides-faq--variants).
+
+**Not using React?** The bundle mounts [`CioAsa`](?path=/docs/components-utilities-cioasa--variants) into an element. It takes every `CioAsa` prop, plus `selector` and `includeCSS` (default `true`):
+
+```js
+import CioAsa from '@constructor-io/constructorio-ui-asa/constructorio-ui-asa-bundled';
+
+CioAsa({ selector: '#asa-container', apiKey: 'YOUR_API_KEY' });
+```
+
+## 5. Handle product results
+
+Product clicks, add to cart, "View more" links and catalog field mapping.
+
+→ [Product Results](?path=/docs/guides-product-results--variants)
+
+## 6. Use the chat features
+
+Suggestions, opening the chat with a prompt, follow-up refinements, a stop button, errors.
+
+→ [Chat Features](?path=/docs/guides-chat-features--variants)
+
+## 7. Connect your analytics
+
+Constructor tracking is automatic. Add `callbacks` to mirror it, and tag your launchers.
+
+→ [Callbacks & Tracking](?path=/docs/guides-callbacks-tracking--variants)
+
+## 8. Match your site
+
+Styles, translations, and replacing any part of the chat.
+
+→ [Customization](?path=/docs/guides-customization--variants)
+
+## 9. Keep conversations across page loads
+
+→ [Conversations](?path=/docs/guides-conversations--variants)
+
+## 10. Run an A/B test
+
+→ [AB Testing](?path=/docs/guides-ab-testing--variants)
+
+## 11. Build your own UI
+
+Skip `Chat` and drive the conversation with `useAsaResults`.
+
+→ [Custom UI](?path=/docs/guides-custom-ui--variants)
+
+## 12. Check it works
+
+In the network tab, filter on `cnstrc`: asking a question sends `assistant_submit`. For problems, see the [FAQ](?path=/docs/guides-faq--variants).

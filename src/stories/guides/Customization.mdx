@@ -1,0 +1,278 @@
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as OverridesStories from '../examples/ComponentOverrides.stories';
+import * as RefinementStories from '../examples/FollowUpRefinements.stories';
+
+<Meta title='Guides/Customization' />
+
+# Customization
+
+## Styling
+
+Import `@constructor-io/constructorio-ui-asa/styles.css`, or only part of it: `components/Chat/styles.css` or `components/ResultsBlock/styles.css` from the same package. Without a stylesheet, the components render unstyled, so you can style from scratch.
+
+Every element has a `cio-asa-`-prefixed BEM class. `Chat` also takes `className`.
+
+```css
+.cio-asa-chat {}                          /* chat container, fills its parent */
+.cio-asa-welcome-screen__title {}
+.cio-asa-ai-message__bubble {}
+.cio-asa-ai-message__bubble--error {}     /* error state */
+.cio-asa-product-card {}
+.cio-asa-follow-up-refinement__chip {}    /* :disabled for earlier ones */
+```
+
+## Translations
+
+Every UI string is a key in `translations`. Omitted keys fall back to English.
+
+```jsx
+<Chat translations={{ 'CioAsa.welcome.title': 'Style Advisor', 'CioAsa.results.addToCart': 'Add to bag' }} />
+```
+
+<Markdown>
+  {`
+| Key | Default |
+|---|---|
+| \`CioAsa.header.title\` | Shopping Assistant |
+| \`CioAsa.header.close\` | Close |
+| \`CioAsa.welcome.title\` | Shopping Assistant |
+| \`CioAsa.welcome.placeholder\` | Ask anything |
+| \`CioAsa.welcome.sendButton\` | Chat |
+| \`CioAsa.welcome.inputAriaLabel\` | Type your question |
+| \`CioAsa.welcome.suggestionsAriaLabel\` | Suggested questions |
+| \`CioAsa.input.placeholder\` | Ask a question about this product |
+| \`CioAsa.input.ariaLabel\` | Type your message |
+| \`CioAsa.input.sendAriaLabel\` | Send message |
+| \`CioAsa.input.stopAriaLabel\` | Stop response |
+| \`CioAsa.messageList.ariaLabel\` | Chat messages |
+| \`CioAsa.typingIndicator.ariaLabel\` | Assistant is typing |
+| \`CioAsa.userMessage.ariaLabel\` | You said |
+| \`CioAsa.aiMessage.ariaLabel\` | Assistant said |
+| \`CioAsa.results.viewMore\` | View more products |
+| \`CioAsa.results.addToCart\` | Add to cart |
+| \`CioAsa.results.saleBadge\` | Sale |
+| \`CioAsa.refinement.ariaLabel\` | Refine your results |
+| \`CioAsa.error.message\` | I can't assist you with that request. |
+| \`CioAsa.error.interrupted\` | The answer was interrupted. Please send your question again. |
+`}
+</Markdown>
+
+## Component overrides
+
+`componentOverrides` replaces any part of `Chat`. Each slot takes `{ reactNode }`: a node to replace the part outright, or a function that receives the props below.
+
+<Markdown>
+  {`
+| Slot | Receives |
+|---|---|
+| \`header\` | \`{ title, onClose? }\` |
+| \`input\` | \`{ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }\` |
+| \`userMessage\` | \`{ text }\` |
+| \`aiMessage.loader\` | \`{ translations? }\` |
+| \`aiMessage.text\` | \`{ text }\` (also renders the error message) |
+| \`aiMessage.followUpRefinement\` | \`{ question, options, onOptionClick, isDisabled }\` |
+| \`welcomeScreen.title\` | \`{ text }\` |
+| \`welcomeScreen.input\` | \`{ value, onChange, onSubmit, placeholder, isDisabled }\` |
+| \`welcomeScreen.suggestedQuestions\` | \`{ suggestions, onSuggestionClick }\` |
+| \`resultsBlock.groupTitle\` | \`{ label }\` |
+| \`resultsBlock.viewMore\` | \`{ group, onClick }\` |
+| \`resultsBlock.carousel\` | Carousel overrides: \`previous\`, \`next\`, \`item\` |
+| \`resultsBlock.carousel.item.productCard\` | Parts of the default product card |
+`}
+</Markdown>
+
+### Header
+
+```jsx
+componentOverrides={{
+  header: {
+    reactNode: ({ title, onClose }) => (
+      <div className='my-header'>
+        <h2>{title}</h2>
+        <button onClick={onClose}>×</button>
+      </div>
+    ),
+  },
+}}
+```
+
+<Canvas of={OverridesStories.CustomHeader} />
+
+### Input
+
+`isStreaming` and `onAbort` let you add a stop button.
+
+```jsx
+componentOverrides={{
+  input: {
+    reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }) => (
+      <div className='my-input'>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
+          placeholder={placeholder}
+          disabled={isDisabled}
+        />
+        {isStreaming ? (
+          <button onClick={onAbort}>Stop</button>
+        ) : (
+          <button onClick={onSubmit} disabled={isDisabled}>Send</button>
+        )}
+      </div>
+    ),
+  },
+}}
+```
+
+<Canvas of={OverridesStories.CustomInput} />
+
+### Messages
+
+```jsx
+componentOverrides={{
+  userMessage: { reactNode: ({ text }) => <div className='my-user-msg'>{text}</div> },
+  aiMessage: {
+    loader: { reactNode: () => <div className='my-loader'>Thinking...</div> },
+    text: { reactNode: ({ text }) => <div className='my-ai-bubble'>{text}</div> },
+  },
+}}
+```
+
+<Canvas of={OverridesStories.CustomUserMessage} />
+<Canvas of={OverridesStories.CustomLoader} />
+<Canvas of={OverridesStories.CustomText} />
+
+### Follow-up refinements
+
+`isDisabled` is true for earlier refinements and while an answer streams.
+
+```jsx
+componentOverrides={{
+  aiMessage: {
+    followUpRefinement: {
+      reactNode: ({ question, options, onOptionClick, isDisabled }) => (
+        <div>
+          <p>{question}</p>
+          {options.map((option) => (
+            <button key={option} type='button' disabled={isDisabled} onClick={() => onOptionClick(option)}>
+              {option}
+            </button>
+          ))}
+        </div>
+      ),
+    },
+  },
+}}
+```
+
+<Canvas of={RefinementStories.CustomRendering} />
+
+### Welcome screen
+
+```jsx
+componentOverrides={{
+  welcomeScreen: {
+    title: { reactNode: ({ text }) => <h1 className='my-title'>{text}</h1> },
+    suggestedQuestions: {
+      reactNode: ({ suggestions, onSuggestionClick }) => (
+        <ul className='my-suggestions'>
+          {suggestions.map((s) => (
+            <li key={s}>
+              <button onClick={() => onSuggestionClick(s)}>{s}</button>
+            </li>
+          ))}
+        </ul>
+      ),
+    },
+  },
+}}
+```
+
+<Canvas of={OverridesStories.CustomWelcomeTitle} />
+<Canvas of={OverridesStories.CustomSuggestedQuestions} />
+
+### Results
+
+Ask a question to see products. `group` carries `data.request`; see [Product Results](?path=/docs/guides-product-results--variants).
+
+```jsx
+componentOverrides={{
+  resultsBlock: {
+    viewMore: {
+      reactNode: ({ group, onClick }) => (
+        <button type='button' className='my-view-more' onClick={onClick}>
+          See all {group.display_name} →
+        </button>
+      ),
+    },
+    carousel: {
+      item: {
+        productCard: {
+          content: {
+            price: { reactNode: ({ product }) => <span className='my-price'>${product?.price}</span> },
+          },
+          footer: {
+            addToCartButton: {
+              reactNode: ({ product, onAddToCart }) => (
+                <button onClick={(e) => onAddToCart?.(e, product)}>Add to bag</button>
+              ),
+            },
+          },
+        },
+      },
+    },
+  },
+}}
+```
+
+<Canvas of={OverridesStories.CustomViewMore} />
+<Canvas of={OverridesStories.CustomProductCard} />
+
+Prefer `productCard` part overrides, as above: the card keeps its click tracking and `onProductClick`. A `viewMore` override is tracked as long as you call its `onClick`.
+
+### A whole product card
+
+`resultsBlock.carousel.item.reactNode` replaces the entire card, including its click handler. **Clicks on it are not tracked and don't call `onProductClick`**, and its render props (`{ item, index }`) don't carry the pod's tracking ids. Send the click through the SDK yourself, with the ids from the provider's `onResultView` callback, which fires before any product in a pod can be clicked:
+
+```jsx
+import { CioAsaProvider, Chat, useCioAsaContext } from '@constructor-io/constructorio-ui-asa';
+
+// Which pod each product was shown in, from the view event.
+const podOf = new Map();
+
+function MyCard({ product }) {
+  const context = useCioAsaContext();
+
+  const onClick = () => {
+    const pod = podOf.get(product.id);
+    if (pod) {
+      context?.cioClient?.tracker?.trackAssistantResultClick({
+        ...pod,
+        itemId: product.id,
+        itemName: product.name,
+        section: context.section ?? 'Products',
+      });
+    }
+    window.location.href = product.url;
+  };
+
+  // data-slot and full width keep the carousel's slide sizing.
+  return (
+    <div data-slot='carousel-item' style={{ width: '100%' }} className='my-card'>
+      <button type='button' onClick={onClick}>{product.name}</button>
+    </div>
+  );
+}
+
+<CioAsaProvider
+  apiKey='YOUR_API_KEY'
+  callbacks={{
+    onResultView: ({ intent, searchResultId, intentResultId, items }) =>
+      items?.forEach((i) => podOf.set(i.itemId, { intent, searchResultId, intentResultId })),
+  }}>
+  <Chat componentOverrides={{ resultsBlock: { carousel: { item: { reactNode: ({ item }) => <MyCard product={item} /> } } } }} />
+</CioAsaProvider>;
+```
+
+Callbacks carry no `threadId`, so these clicks are recorded without a thread. If a product appears in two pods, the last one viewed wins.

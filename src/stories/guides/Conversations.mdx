@@ -1,0 +1,110 @@
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as PersistenceStories from '../examples/Persistence.stories';
+
+<Meta title='Guides/Conversations' />
+
+# Conversations
+
+A conversation lives in memory and is gone on the next page load. With `persistConversation` it's kept in the browser: after navigating, reloading or opening another tab, the shopper finds it where they left it, and the agent continues the same thread.
+
+## Turn it on
+
+```jsx
+<CioAsaProvider apiKey='YOUR_API_KEY' persistConversation={{ enabled: true }} userId={user?.id ?? null}>
+  <Chat />
+</CioAsaProvider>
+```
+
+`enabled` can be a feature flag. `userId` is required with it: the signed-in shopper's id, or `null` for a guest. In JavaScript, leaving it out means guest. Use the same stable, non-personal id you give Constructor for personalization, never an email: it becomes part of a `localStorage` key any script on the page can read.
+
+With `apiKey`, `userId` is also set on the client. With your own `cioClient`, set the same `userId` on it too. Storage is scoped by the client's api key; if it can't be read from your client, nothing is stored until you also pass `apiKey`.
+
+<Markdown>
+  {`
+| | Guest (\`userId: null\`) | Signed-in |
+|---|---|---|
+| Stored in | \`sessionStorage\` | \`localStorage\` |
+| Survives | reloads in the tab | reloads, closing the browser, other tabs |
+| Ends | when the tab closes | after 7 days idle, or when deleted |
+| Other tabs | each tab is its own guest; a duplicated tab starts with a copy | all tabs share it and stay in sync |
+| Visible to | nobody else | the same \`userId\` on that browser |
+`}
+</Markdown>
+
+Try it below: pick a guest or a shopper, ask something, reload, open a second tab, and watch storage in the side panel.
+
+<Canvas of={PersistenceStories.Playground} />
+
+## Login and logout
+
+Change `userId`; the rest follows.
+
+- **Login** moves every guest conversation into the shopper's history. The one on screen continues, even mid-answer.
+- **Logout**, or another id, clears the screen and loads that shopper's history, in every tab. A key belonging to another id is never read.
+- **A login that reloads the page** doesn't carry the guest conversation over. Carry-over needs `userId` to change on a mounted provider.
+
+Nothing is deleted on logout. The history stays on the device for 7 days, as plain data in `localStorage`. To delete it:
+
+```js
+import { clearPersistedConversations } from '@constructor-io/constructorio-ui-asa';
+
+await clearPersistedConversations({ apiKey: 'YOUR_API_KEY', domain: 'chatbot', userId: user.id });
+```
+
+It resolves once the deletion is recorded, in every tab. Without `userId`, it deletes the current tab's guest history.
+
+## A list of conversations
+
+A signed-in shopper keeps every conversation until it expires. `Chat` doesn't draw the list; build it from `onThreadsChange` and the ref:
+
+```jsx
+function ChatWithHistory() {
+  const chatRef = useRef(null);
+  const [threads, setThreads] = useState([]);
+  const [activeThreadId, setActiveThreadId] = useState(null);
+
+  return (
+    <>
+      <aside>
+        <button onClick={() => chatRef.current?.newThread()}>New chat</button>
+        {threads.map((t) => (
+          <button
+            key={t.threadId}
+            aria-current={t.threadId === activeThreadId}
+            onClick={() => chatRef.current?.switchThread(t.threadId)}>
+            {t.title}
+            {t.inFlight && ' (typing…)'}
+          </button>
+        ))}
+        <button onClick={() => chatRef.current?.clearHistory()}>Delete this chat</button>
+      </aside>
+      <Chat
+        ref={chatRef}
+        onThreadsChange={(list, active) => {
+          setThreads(list);
+          setActiveThreadId(active);
+        }}
+      />
+    </>
+  );
+}
+```
+
+- **`newThread()`** opens an empty conversation and keeps the current one.
+- **`switchThread(threadId)`** loads a stored conversation and continues its thread.
+- **`clearHistory()`** deletes the conversation on screen.
+- **`onThreadsChange`** fires after the first load and on every change, including from other tabs. Each `ThreadSummary` has `threadId`, `title` (the first question, up to 80 characters), `createdAt`, `updatedAt` and `inFlight`.
+- **An answer keeps streaming** when its conversation leaves the screen or `Chat` unmounts. It's saved when complete, and `inFlight` is `true` meanwhile.
+- **`initialThreadId`** on `Chat` restores that conversation instead of the latest. If it isn't stored, the id still goes to the agent, which remembers the thread for 7 days.
+
+## Details
+
+- **Tabs:** two tabs on one conversation see each other's turns. While one streams, the other shows a typing indicator and locks its input, for up to 60 seconds. Writes are merged under a Web Lock; without Web Locks (Safari before 15.4), two writes in the same instant can lose one.
+- **Interrupted answers:** leaving mid-answer keeps the turn. Text that had arrived is kept as the answer. If none had, the question is kept with the `CioAsa.error.interrupted` message, and asking again continues the thread.
+- **Keys:** `cio-asa:chat:v1:<apiKey>:<domain>:<userId>` (shopper) and `cio-asa:chat:v1:<apiKey>:<domain>` (guest). One key holds all of that shopper's conversations.
+- **Content:** messages, the agent's `thread_id`, and each product as the card rendered it, through your `normalizeItem` or the default. A restored group has `groups[].products` and an empty `searchResults`, which matters only if you render messages from `useAsaResults` yourself.
+- **Saves:** when an answer starts, completes or fails, when its conversation leaves the screen, and on `pagehide`. Never per chunk.
+- **Loading:** the latest conversation is restored before anything renders, so there is no welcome-screen flash. `isHydrating` from `useAsaResults` is `true` meanwhile.
+- **Retention:** 7 days idle, matching the agent's memory. A deleted conversation leaves its id behind for 7 days so a stale tab can't write it back.
+- **Storage full:** the oldest conversations go first, then the oldest turns of this one. A turn is stored whole or not at all. A conversation is about 10 KB; browsers allow about 5 MB.
+- **Storage blocked:** the chat works as if persistence were off. Storage stays on the device; another browser starts fresh.

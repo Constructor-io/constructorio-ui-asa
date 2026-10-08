@@ -1,0 +1,40 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title='Guides/AB Testing' />
+
+# A/B Testing
+
+Your A/B system assigns cells; the library doesn't. Pass the shopper's cells as `testCells` on `CioAsaProvider` (or `CioAsa`), and every event the agent sends carries an `ef-<testName>` parameter per cell.
+
+```jsx
+<CioAsaProvider apiKey='YOUR_API_KEY' testCells={{ constructorio: window.cnstrc.testCell }}>
+  {children}
+</CioAsaProvider>
+```
+
+`testCells` is `{ [testName]: cellName }`, with your own test names. A shopper in several tests carries every cell:
+
+```jsx
+testCells={{ constructorio: 'variant_a', checkout_flow: 'b' }}
+```
+
+- `window.cnstrc.testCell` is a bare cell name, so label it with your test name as above. A `window.cnstrc.testCells` map can be passed straight through.
+- Empty or non-string values are dropped, so a cell read from a global that is `undefined` isn't sent.
+
+## Your own `cioClient`
+
+Set the cells on the client instead. `testCells` on the provider is then ignored, with a warning.
+
+```jsx
+const cioClient = new ConstructorIOClient({
+  apiKey: 'YOUR_API_KEY',
+  sendTrackingEvents: true,
+  testCells: { constructorio: window.cnstrc.testCell },
+});
+
+<CioAsaProvider cioClient={cioClient}>{children}</CioAsaProvider>;
+```
+
+## Verify
+
+In the network tab, filter on `cnstrc`. The agent's tracking requests should carry `ef-<testName>=<cellName>` for each cell.

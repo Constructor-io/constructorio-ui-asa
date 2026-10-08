@@ -1,0 +1,133 @@
+import { Meta, Canvas } from '@storybook/blocks';
+import * as HookStories from '../examples/UseAsaResults.stories';
+
+<Meta title='Guides/Custom UI' />
+
+# Custom UI
+
+To build your own chat, use `useAsaResults` instead of `Chat`. It must render inside a `CioAsaProvider`, which supplies the client and `domain`.
+
+```jsx
+import { useAsaResults, ResultsBlock } from '@constructor-io/constructorio-ui-asa';
+
+function CustomChat() {
+  const { messages, sendMessage, isStreaming, canAbort, abort, clearHistory } = useAsaResults();
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong> {msg.text}
+          {msg.groups?.length > 0 && (
+            <ResultsBlock
+              groups={msg.groups}
+              intent={msg.intent} // required for result tracking
+              intentResultId={msg.intentResultId}
+              threadId={msg.threadId}
+              currency='$'
+              onProductClick={(p) => (window.location.href = p.url)}
+            />
+          )}
+        </div>
+      ))}
+      <button onClick={() => sendMessage('Show me running shoes')} disabled={isStreaming}>Send</button>
+      <button onClick={abort} disabled={!canAbort}>Stop</button>
+      <button onClick={clearHistory}>Reset</button>
+    </div>
+  );
+}
+```
+
+<Canvas of={HookStories.Primary} />
+
+The thread id is tracked across turns until `clearHistory()`. To resume a thread you stored yourself, pass `useAsaResults({ initialThreadId })`, read once on mount. Every return value is on the [Hooks](?path=/docs/components-utilities-hooks--variants) page.
+
+## Messages
+
+```ts
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  groups?: ResultGroup[]; // assistant messages with products
+  refinement?: { question: string; options: string[] }; // a follow-up refinement
+  status: 'idle' | 'loading' | 'streaming' | 'done' | 'error';
+}
+
+interface ResultGroup {
+  group: { display_name: string; value?: string };
+  searchResults: Record<string, unknown>[]; // raw product items
+}
+```
+
+Render `groups` yourself, or pass them to `ResultsBlock` for Constructor's carousel and cards. It takes the same results props as `Chat` (see [Product Results](?path=/docs/guides-product-results--variants)), plus layout props `minCardWidth`, `gap` and `showTitle`.
+
+## Stopping an answer
+
+`abort()` keeps the partial reply and the thread; `clearHistory()` starts over. Gate a stop button on `canAbort`: `isStreaming` is also true while another tab streams on the same thread, which this tab can't stop. For a timeout:
+
+```jsx
+useEffect(() => {
+  if (!canAbort) return undefined;
+  const timer = setTimeout(abort, 15000);
+  return () => clearTimeout(timer);
+}, [canAbort, abort]);
+```
+
+## Tracking
+
+The hook sends the conversation events: `assistant_submit`, `assistant_result_load_start` and `assistant_result_load_finish`.
+
+The result events (`assistant_search_result_view`, `assistant_search_result_click`, `assistant_search_submit`) come from `ResultsBlock`, and **only when you pass it `intent`**, as in the snippet above. Without it, no result events are sent.
+
+### Your own product cards
+
+Without `ResultsBlock`, send the result events yourself through `useAsaTracking`, which calls the SDK's `trackAssistant*` methods. Every id is on the message and its groups:
+
+```jsx
+import { useEffect, useRef } from 'react';
+import { useAsaTracking, useCioAsaContext, normalizeItemToProduct } from '@constructor-io/constructorio-ui-asa';
+
+function Pod({ msg, group }) {
+  const context = useCioAsaContext();
+  const tracking = useAsaTracking({
+    tracker: context?.cioClient?.tracker ?? undefined,
+    section: context?.section,
+    threadId: msg.threadId,
+  });
+  const ids = { intent: msg.intent, searchResultId: group.searchResultId, intentResultId: msg.intentResultId };
+  const products = group.products ?? group.searchResults.map((item) => normalizeItemToProduct(item));
+  const term = group.group.value || group.group.display_name;
+
+  // View: once, when the pod scrolls into view.
+  const ref = useRef(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      tracking.trackResultView({
+        ...ids,
+        numResultsViewed: products.length,
+        items: products.map((p) => ({ itemId: p.id, itemName: p.name })),
+      });
+      observer.disconnect();
+    }, { threshold: 0.5 });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {products.map((p) => (
+        <button key={p.id} onClick={() => tracking.trackResultClick({ ...ids, itemId: p.id, itemName: p.name })}>
+          {p.name}
+        </button>
+      ))}
+      <button onClick={() => tracking.trackSearchSubmit({ ...ids, searchTerm: term, userInput: term })}>
+        View more
+      </button>
+    </div>
+  );
+}
+```
+
+Only send these when `msg.intent` and `group.searchResultId` are set. See [Callbacks & Tracking](?path=/docs/guides-callbacks-tracking--variants).

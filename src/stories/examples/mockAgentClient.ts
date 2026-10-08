@@ -1,4 +1,4 @@
-import type { ConstructorIOClient } from '../../../types';
+import type { ConstructorIOClient } from '../../types';
 
 type StreamEvent = { type: string; data: Record<string, unknown> };
 

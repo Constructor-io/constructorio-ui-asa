@@ -33,7 +33,23 @@ const preview: Preview = {
     },
     options: {
       storySort: {
-        order: ['General', ['Introduction'], 'Components', 'Hooks'],
+        order: [
+          'Introduction',
+          'Guides',
+          [
+            'Integration Guide',
+            'Product Results',
+            'Chat Features',
+            'Callbacks & Tracking',
+            'Customization',
+            'Conversations',
+            'AB Testing',
+            'Custom UI',
+            'FAQ',
+          ],
+          'Components & Utilities',
+          ['CioAsa', 'CioAsaProvider', 'Chat', 'ResultsBlock', 'Button', 'Hooks', 'Utilities'],
+        ],
       },
     },
   },

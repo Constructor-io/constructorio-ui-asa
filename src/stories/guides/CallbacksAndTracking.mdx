@@ -1,0 +1,124 @@
+import { Meta, Markdown } from '@storybook/blocks';
+
+<Meta title='Guides/Callbacks & Tracking' />
+
+# Callbacks & Tracking
+
+## Built-in tracking
+
+Render `Chat` inside a provider with a client and every event below is sent for you. Each carries the provider's `section` (default `'Products'`), and the conversation's `threadId` once the agent has assigned one, so the first submit of a new conversation has none.
+
+Each event also fires a matching callback on the provider, right after the beacon, to mirror it into your own analytics:
+
+```jsx
+<CioAsaProvider
+  apiKey='YOUR_API_KEY'
+  callbacks={{
+    onAssistantSubmit: ({ intent, source }) => myAnalytics.track('asa_submit', { intent, source }),
+  }}>
+  {children}
+</CioAsaProvider>
+```
+
+<Markdown>
+  {`
+| Event | Callback | Fires when |
+|---|---|---|
+| \`assistant_submit\` | \`onAssistantSubmit\` | A question is typed, or a suggestion or refinement is clicked |
+| \`assistant_result_load_start\` | \`onResultLoadStart\` | The answer starts streaming |
+| \`assistant_result_load_finish\` | \`onResultLoadFinish\` | The answer completes; carries the number of pods |
+| \`assistant_search_result_view\` | \`onResultView\` | A pod enters the viewport |
+| \`assistant_search_result_click\` | \`onResultClick\` | A product in a pod is clicked |
+| \`assistant_search_submit\` | \`onSearchSubmit\` | "View more" opens a results page |
+| \`ai_agent_button_click\` | \`onAgentButtonClick\` | A launcher \`Button\` is clicked |
+`}
+</Markdown>
+
+Callbacks are typed by `AsaCallbacks` and don't mirror the beacon exactly: no `section` or `threadId`, `onResultClick` nests the product under `item`, and a refinement click is `source: 'refinement'` where the beacon sends `follow_up`.
+
+## Submit sources
+
+Every way a question is asked sends `assistant_submit`, so clicked questions count alongside typed ones:
+
+<Markdown>
+  {`
+| Beacon \`source\` | Callback \`source\` | Entry point |
+|---|---|---|
+| \`input\` | \`input\` | Typed, then Enter or send |
+| \`suggestion\` | \`suggestion\` | A welcome-screen chip (\`initialSuggestions\`) |
+| \`follow_up\` | \`refinement\` | A follow-up refinement option |
+| \`suggestion\` | \`external\` | Your page sent a prompt (\`initialPrompt\` or \`sendMessage\`) |
+`}
+</Markdown>
+
+## Launcher clicks
+
+Inside a provider, `Button` sends one `ai_agent_button_click` per click (`mode: 'chat'`, `agentDomain` from the provider's `domain`). Tell placements apart with:
+
+```jsx
+<Button positionOnPage='header' pageType='pdp' onClick={() => setIsOpen(true)} />
+```
+
+- **`positionOnPage`**: where it sits, e.g. `'header'`, `'search_bar'`, `'pdp_above_fold'`.
+- **`pageType`**: `'home'`, `'plp'`, `'pdp'`, `'search'`, `'collection'`, `'email_campaign'` or `'cart'`.
+- **`instanceId`**: 1, 2… when several share one position.
+
+Needs `@constructor-io/constructorio-client-javascript` 2.94.0 or later; older clients skip it, though `onAgentButtonClick` still fires.
+
+With your own launcher, send it through `useAsaTracking`. Send exactly one per intentional click.
+
+```jsx
+import { useAsaTracking, useCioAsaContext } from '@constructor-io/constructorio-ui-asa';
+
+function CustomLauncher({ onOpen }) {
+  const context = useCioAsaContext();
+  const { trackAgentButtonClick } = useAsaTracking({
+    tracker: context?.cioClient?.tracker ?? undefined,
+    section: context?.section,
+  });
+
+  return (
+    <button
+      onClick={() => {
+        trackAgentButtonClick({
+          mode: 'chat', // or 'search', 'qna', 'recommendations', 'query_refinement'
+          agentDomain: context?.staticRequestConfigs?.domain ?? 'chatbot',
+          positionOnPage: 'plp_sidebar',
+          pageType: 'plp',
+        });
+        onOpen();
+      }}>
+      Ask the assistant
+    </button>
+  );
+}
+```
+
+## Overrides and your own UI
+
+Result events are sent by `ResultsBlock`, inside `Chat` or on its own. What you replace decides what you have to send yourself:
+
+<Markdown>
+  {`
+| You replace | View | Click | View more |
+|---|---|---|---|
+| Parts of the card (\`carousel.item.productCard\`) | sent | sent | |
+| The View more button (\`viewMore\`) | sent | | sent if you call its \`onClick\` |
+| The whole card (\`carousel.item.reactNode\`) | sent | **you send it** ([how](?path=/docs/guides-customization--variants#a-whole-product-card)) | |
+| \`ResultsBlock\` itself, with \`useAsaResults\` | **you send it** ([how](?path=/docs/guides-custom-ui--variants#your-own-product-cards)) | **you send it** | **you send it** |
+`}
+</Markdown>
+
+Using `ResultsBlock` with `useAsaResults`? Pass it `intent`, or none of the result events are sent.
+
+## Without this library
+
+A custom web or native app has to send the same events through the Constructor client. The one most often missed is a submit from a **click**: a shopper who taps _"Help me find a gift"_ is never counted.
+
+```js
+cioClient.tracker.trackAssistantSubmit({ intent, source: 'input', threadId });
+cioClient.tracker.trackAssistantSubmit({ intent: suggestion, source: 'suggestion', threadId });
+cioClient.tracker.trackAssistantSubmit({ intent: option, source: 'follow_up', threadId });
+```
+
+`source` needs client 2.94.0 or later; older clients still record the event, without it. The API accepts any value, but stick to these for comparable reports. Send the first submit of a conversation without `threadId`, then the agent's `thread_id` on every later event.

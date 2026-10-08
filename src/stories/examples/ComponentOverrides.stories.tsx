@@ -1,8 +1,9 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import Chat from '../../../components/Chat/Chat';
-import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
-import { DEMO_API_KEY } from '../../../constants';
+import Chat from '../../components/Chat/Chat';
+import CioAsaProvider from '../../components/CioAsaProvider/CioAsaProvider';
+import { DEMO_API_KEY } from '../../constants';
+import { functionArgTypes } from '../fixtures';
 
 /* eslint-disable react/no-danger */
 function TermsText() {
@@ -26,13 +27,14 @@ const decorator = (Story: React.ComponentType) => (
 );
 
 const meta = {
-  title: 'Components/Chat/Component Overrides',
+  title: 'Examples/Component Overrides',
   component: Chat,
   parameters: {
     a11y: { test: 'error' },
     layout: 'centered',
   },
-  tags: [],
+  argTypes: functionArgTypes,
+  tags: ['!dev'],
   decorators: [decorator],
 } satisfies Meta<typeof Chat>;
 

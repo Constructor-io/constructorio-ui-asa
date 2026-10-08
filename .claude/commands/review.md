@@ -20,6 +20,7 @@ This is a published React component library. Two things follow from that:
 ## Accessibility
 
 If the diff touches JSX/TSX, HTML, or CSS, read `.claude/a11y.md` and apply its rules.
+If the diff touches MDX, stories, or the README, read `.claude/docs.md` and apply its rules.
 
 Report accessibility findings as **Important Issue** or **Suggestion** — never
 **Critical Issue**. The merge gate for accessibility is `npm run lint` (jsx-a11y)
