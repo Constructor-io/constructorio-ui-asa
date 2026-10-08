@@ -1,83 +1,25 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import Button from '../../../components/Button/Button';
-import '../../../styles.css';
+import Button from '../../components/Button/Button';
+import '../../styles.css';
 
 const meta = {
-  title: 'Components/Button',
+  title: 'Examples/Button',
   component: Button,
   parameters: {
     a11y: { test: 'error' },
-    layout: 'centered',
-    docs: {
-      description: {
-        component:
-          'Floating action button that opens the AI Shopping Assistant chat.\n\n' +
-          'Place it fixed in the corner of the viewport. Supports dark/light themes and two sizes.',
-      },
-    },
   },
-  tags: ['autodocs'],
-  argTypes: {
-    theme: {
-      control: 'radio',
-      options: ['dark', 'light'],
-      description: 'Color scheme: `dark` for light backgrounds, `light` for dark backgrounds.',
-      table: { category: 'Appearance' },
-    },
-    size: {
-      control: 'radio',
-      options: ['sm', 'lg'],
-      description: 'Button size: `sm` (small) or `lg` (large).',
-      table: { category: 'Appearance' },
-    },
-    onClick: {
-      description: 'Click handler. Use this to open the chat window.',
-      table: { category: 'Callbacks' },
-    },
-    label: {
-      control: 'text',
-      description: 'Button label text.',
-      table: { category: 'Appearance' },
-    },
-    positionOnPage: {
-      control: 'text',
-      description:
-        'Stable label for where the CTA sits (e.g. `header`, `search_bar`). Sent with the `ai_agent_button_click` event.',
-      table: { category: 'Tracking' },
-    },
-    pageType: {
-      control: 'select',
-      options: ['home', 'plp', 'pdp', 'search', 'collection', 'email_campaign', 'cart'],
-      description:
-        'Page surface the CTA is rendered on. Sent with the `ai_agent_button_click` event.',
-      table: { category: 'Tracking' },
-    },
-    instanceId: {
-      control: 'number',
-      description: '1-based index when several CTAs share the same position on one page.',
-      table: { category: 'Tracking' },
-    },
-  },
+  tags: ['!dev'],
 } satisfies Meta<typeof Button>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {
-  args: {
-    theme: 'dark',
-    size: 'sm',
-  },
-  tags: ['!autodocs'],
-};
 
 export const ThemeDark: Story = {
   args: {
     theme: 'dark',
   },
   name: 'theme - Dark',
-  tags: ['!dev'],
 };
 
 export const ThemeLight: Story = {
@@ -85,7 +27,6 @@ export const ThemeLight: Story = {
     theme: 'light',
   },
   name: 'theme - Light',
-  tags: ['!dev'],
 };
 
 export const SizeSmall: Story = {
@@ -93,7 +34,6 @@ export const SizeSmall: Story = {
     size: 'sm',
   },
   name: 'size - Small',
-  tags: ['!dev'],
 };
 
 export const SizeLarge: Story = {
@@ -101,7 +41,6 @@ export const SizeLarge: Story = {
     size: 'lg',
   },
   name: 'size - Large',
-  tags: ['!dev'],
 };
 
 export const CustomLabel: Story = {
@@ -109,7 +48,6 @@ export const CustomLabel: Story = {
     label: 'Style Advisor',
   },
   name: 'label - Custom',
-  tags: ['!dev'],
 };
 
 export const PlacementDesktop: Story = {
@@ -139,7 +77,6 @@ export const PlacementDesktop: Story = {
       </div>
     </div>
   ),
-  tags: ['!dev'],
 };
 
 export const PlacementMobile: Story = {
@@ -175,5 +112,4 @@ export const PlacementMobile: Story = {
       </div>
     </div>
   ),
-  tags: ['!dev'],
 };

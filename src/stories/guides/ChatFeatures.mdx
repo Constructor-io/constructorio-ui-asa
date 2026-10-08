@@ -1,0 +1,100 @@
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as ChatStories from '../examples/Chat.stories';
+import * as RefinementStories from '../examples/FollowUpRefinements.stories';
+
+<Meta title='Guides/Chat Features' />
+
+# Chat Features
+
+## Welcome screen
+
+`initialSuggestions` adds clickable chips; without them the row is hidden. `termsText` (a `ReactNode`) adds legal text below the input.
+
+```jsx
+<Chat
+  initialSuggestions={['Show me summer dresses', 'Best running shoes under $100']}
+  termsText={<>By chatting you agree to our <a href='/terms'>Terms</a>.</>}
+/>
+```
+
+<Canvas of={ChatStories.WithCustomSuggestions} />
+
+## Methods on the ref
+
+<Markdown>
+  {`
+| \`ChatHandle\` method | |
+|---|---|
+| \`sendMessage(text, { threadId }?)\` | Send a prompt from outside the chat. With \`threadId\`, into that conversation. Skipped while an answer streams |
+| \`abort()\` | Stop the answer that is streaming. Keeps the partial reply and the thread |
+| \`clearHistory()\` | Start over. With \`persistConversation\`, also deletes the conversation from storage |
+| \`newThread()\`, \`switchThread(threadId)\` | Manage stored conversations. See [Conversations](?path=/docs/guides-conversations--variants) |
+`}
+</Markdown>
+
+## Opening the chat with a prompt
+
+For a prompt clicked elsewhere on the page, such as a suggested question next to a product. Pass the conversation's `thread_id` as `threadId` to continue it, or omit it to send into the conversation on screen.
+
+If you mount `Chat` when it opens, pass props:
+
+```jsx
+{isOpen && <Chat initialPrompt={prompt} initialThreadId={threadId} onClose={close} />}
+```
+
+If `Chat` stays mounted, use the ref:
+
+```jsx
+const chatRef = useRef(null);
+
+function onPromptClick(prompt, threadId) {
+  setIsOpen(true);
+  chatRef.current?.sendMessage(prompt, { threadId });
+}
+```
+
+`initialPrompt` is sent once on mount, after any stored conversation loads. Either way the submit reaches `onAssistantSubmit` with `source: 'external'`.
+
+## Follow-up refinements
+
+The agent can end a turn with a narrowing question and options, such as _"Who are you shopping for?"_ → _Women's / Men's / Kids_. They render as chips under that turn's products.
+
+<Canvas of={RefinementStories.Default} />
+
+- A click sends the option as a normal follow-up in the same thread.
+- Only the latest refinement is clickable, and not while an answer streams. Earlier ones stay visible, disabled.
+- Several in one turn: the last one wins.
+- Restyle with the `aiMessage.followUpRefinement` override and the `CioAsa.refinement.ariaLabel` translation. With `useAsaResults` it is `message.refinement` (`{ question, options }`).
+
+## Stop button
+
+`showStopButton` turns the send button into a stop button while an answer streams. It is off by default. `abort()` on the ref does the same, for your own button or a timeout:
+
+```jsx
+const chatRef = useRef(null);
+
+<Chat ref={chatRef} showStopButton />
+<button onClick={() => chatRef.current?.abort()}>Stop</button>
+```
+
+<Canvas of={ChatStories.CancellingAResponse} />
+
+The partial reply and the thread are kept, so the next question continues the conversation. No beacon is sent for a stopped answer, so it leaves an `assistant_result_load_start` without a matching finish.
+
+## Errors
+
+A server error or a failed stream marks the answer `status: 'error'`, shown inline as a normal bubble. There is no separate error UI.
+
+- Text that had already arrived is kept.
+- Otherwise the bubble shows `CioAsa.error.message` (_"I can't assist you with that request."_).
+- An answer cut off before anything arrived, because the page was left or the shopper logged out with `persistConversation` on, is marked `interrupted: true` and shows `CioAsa.error.interrupted` (_"The answer was interrupted. Please send your question again."_).
+- The bubble gets the `cio-asa-ai-message__bubble--error` class.
+
+```jsx
+<Chat
+  translations={{
+    'CioAsa.error.message': 'Sorry, something went wrong. Please try again.',
+    'CioAsa.error.interrupted': 'That answer got cut off. Please ask again.',
+  }}
+/>
+```

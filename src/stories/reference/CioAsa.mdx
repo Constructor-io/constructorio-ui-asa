@@ -1,0 +1,17 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title='Components & Utilities/CioAsa' />
+
+# CioAsa
+
+`CioAsaProvider` and `Chat` in one component. It takes every prop of both, and forwards a `ref` to `Chat`.
+
+```jsx
+import { CioAsa } from '@constructor-io/constructorio-ui-asa';
+
+<CioAsa apiKey='YOUR_API_KEY' onClose={close} currency='$' />;
+```
+
+Use it when the chat is the only ASA component on the page. To place `Chat` inside your own tree, or render several components against one client, use [CioAsaProvider](?path=/docs/components-utilities-cioasaprovider--variants) and [Chat](?path=/docs/components-utilities-chat--variants) directly.
+
+The JavaScript bundle mounts `CioAsa`; see the [Integration Guide](?path=/docs/guides-integration-guide--variants).

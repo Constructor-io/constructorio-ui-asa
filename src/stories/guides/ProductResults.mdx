@@ -1,0 +1,105 @@
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as ResultsStories from '../examples/ResultsBlock.stories';
+
+<Meta title='Guides/Product Results' />
+
+# Product Results
+
+Answers can carry groups of products ("pods"), each rendered as a carousel of product cards.
+
+```jsx
+<Chat
+  onProductClick={(product) => (window.location.href = product.url)}
+  onAddToCart={(product) => addToCart(product)}
+  onViewMore={(group) => goToListing(group)}
+  aspectRatio='3:4'
+  currency='$'
+/>
+```
+
+- **`onAddToCart` and `onViewMore` are opt-in.** Without them, the "Add to cart" button and "View more" link aren't rendered.
+- **`aspectRatio`**: `1:1` (default) for square images, `3:4` or `9:16` for portrait (apparel), `4:3` or `16:9` for landscape (electronics).
+
+<Canvas of={ResultsStories.Portrait3x4} />
+
+## "View more" URLs
+
+`onViewMore` receives the group. **Don't build the URL from `group.value` or `display_name`.**
+
+- **Pod types look the same.** Keyword, category, recommendation and bestseller pods all arrive as the same event. A keyword pod needs a search page; a category pod needs a category page.
+- **`group.value` isn't a safe query.** For a category pod it's the pod's heading, so `/search?q=${group.value}` searches for the heading and lands on a near-empty page.
+
+The difference is only in `group.data.request`, the request the agent used to build the pod. Branch on `term`, and carry the filters and sort across:
+
+```jsx
+<Chat
+  onViewMore={(group) => {
+    const req = group.data?.request;
+    if (!req) return;
+    const { term, filters, filter_match_types, sort_by, sort_order, browse_filter_value } = req;
+
+    // Keyword pod: `term` is set. Category pod: `term` is '' and it browses on browse_filter_value.
+    window.location.href = term
+      ? buildSearchUrl({ term, filters, filter_match_types, sort_by, sort_order })
+      : buildCategoryUrl({ id: browse_filter_value, filters, filter_match_types, sort_by, sort_order });
+  }}
+/>
+```
+
+<Canvas of={ResultsStories.ViewMoreUrlBuilding} />
+
+<Markdown>
+  {`
+| \`data.request\` field | |
+|---|---|
+| \`term\` | Set on keyword pods, \`''\` on category pods |
+| \`browse_filter_name\` / \`browse_filter_value\` | The facet a category pod browses, e.g. \`group_id\` / \`cat100260235\` |
+| \`filters\` / \`filter_match_types\` | e.g. \`{ event: ['wedding'] }\` / \`{ event: 'any' }\` |
+| \`sort_by\` / \`sort_order\` | e.g. \`relevance\` / \`descending\` |
+| \`ids\` | The exact products in the pod |
+| \`pre_filter_expression\` | When configured on the provider |
+| \`section\`, \`page\`, \`num_results_per_page\`, \`fmt_options\` | As issued |
+`}
+</Markdown>
+
+**Always carry `filters`.** One answer often has several pods on the same category that differ only by filters, such as three blackout-curtain pods on `cat100260235`, one adding a sale filter. Built from `browse_filter_value` alone, all three links go to the same page, with no error.
+
+**Filters may still not be enough.** Two pods can share category and filters, and differ only in meaning ("patterned" vs "solid"), which isn't in the request. Either accept one destination, or use `ids` to land on that pod's exact products.
+
+These are your own index's identifiers, so they usually map straight onto your category URLs: `browse_filter_value` is the category id, and each `filters` key is a facet name you can emit as a query parameter. A typical shape is `/g/<slug>?<facet>=<value>&id=<browse_filter_value>`, with the slug derived from `display_name` if your routes need one.
+
+`data.request` is passed through whole, so new backend fields reach you without an upgrade. Only `features` and `feature_variants` (internal A/B configuration) are removed.
+
+## Mapping product data
+
+Each raw result is mapped to the `Product` shape the card renders:
+
+```ts
+interface Product {
+  id: string;
+  name: string;
+  url?: string;
+  imageUrl?: string;
+  price?: string | number;
+  salePrice?: string | number;
+  description?: string;
+  badge?: string;
+}
+```
+
+The default, `normalizeItemToProduct`, reads Constructor's standard metadata fields. If yours differ, images or prices come up empty: pass `normalizeItem` to `Chat` or `ResultsBlock`. It receives the raw item and `{ saleBadgeText }`.
+
+```jsx
+import { normalizeItemToProduct } from '@constructor-io/constructorio-ui-asa';
+
+<Chat
+  normalizeItem={(item, options) => ({
+    ...normalizeItemToProduct(item, options),
+    imageUrl: item.data.thumbnail, // your field name
+  })}
+/>;
+```
+
+## Prices
+
+`formatters.formatPrice` on the provider formats every price. It's merged over the default.

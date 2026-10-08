@@ -1,0 +1,28 @@
+import { Meta, Markdown } from '@storybook/blocks';
+
+<Meta title='Components & Utilities/CioAsaProvider' />
+
+# CioAsaProvider
+
+Holds the Constructor client and configuration for every ASA component and hook inside it. See the [Integration Guide](?path=/docs/guides-integration-guide--variants).
+
+```jsx
+<CioAsaProvider apiKey='YOUR_API_KEY'>{children}</CioAsaProvider>
+```
+
+<Markdown>
+  {`
+| Prop | Type | |
+|---|---|---|
+| \`apiKey\` | \`string\` | Your Constructor index key. Required unless you pass \`cioClient\` |
+| \`cioClient\` | \`ConstructorIOClient\` | Your own client, e.g. for \`serviceUrl\`, \`segments\` or \`userId\` options. Replaces \`apiKey\` |
+| \`staticRequestConfigs\` | \`RequestConfigs\` | Sent with every agent request. Default \`{ domain: 'chatbot' }\`; your own must include \`domain\` |
+| \`callbacks\` | \`AsaCallbacks\` | One per tracking event. See [Callbacks & Tracking](?path=/docs/guides-callbacks-tracking--variants) |
+| \`section\` | \`string\` | Index section on every tracking event. Default \`'Products'\` |
+| \`testCells\` | \`Record<string, string>\` | A/B cells for tracking. Ignored with \`cioClient\`. See [AB Testing](?path=/docs/guides-ab-testing--variants) |
+| \`persistConversation\` | \`{ enabled: boolean }\` | Keep conversations across page loads. Off by default. See [Conversations](?path=/docs/guides-conversations--variants) |
+| \`userId\` | \`string \\| null\` | Whose conversations: the signed-in shopper's id, or \`null\` for a guest. Required with \`persistConversation\` |
+| \`formatters\` | \`Formatters\` | e.g. \`formatPrice\`. Merged over the defaults |
+| \`urlHelpers\` | \`UrlHelpers\` | URL read/write helpers. Merged over the defaults |
+`}
+</Markdown>

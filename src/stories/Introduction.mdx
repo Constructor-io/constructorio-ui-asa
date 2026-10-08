@@ -5,7 +5,7 @@ import colors from '../../.storybook/assets/colors.svg';
 import codeBrackets from '../../.storybook/assets/code-brackets.svg';
 import conversation from '../../.storybook/assets/conversation.svg';
 
-<Meta title="General/Introduction" />
+<Meta title="Introduction" />
 
 <style>
 {`
@@ -35,15 +35,6 @@ import conversation from '../../.storybook/assets/conversation.svg';
     color: #1a1a2e;
   }
 
-  .section-title {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #6b7280;
-    margin-bottom: 16px;
-    margin-top: 48px;
-  }
 
   .cards-grid {
     display: grid;
@@ -109,77 +100,62 @@ import conversation from '../../.storybook/assets/conversation.svg';
     color: #6b7280;
   }
 
-  .divider {
-    border: none;
-    border-top: 1px solid #e5e7eb;
-    margin: 48px 0 0;
-  }
 `}
 </style>
 
 <div className="intro-wrapper">
 
-# Welcome to Constructor's AI Shopping Assistant UI
+# Constructor AI Shopping Assistant UI
 
-Integration with Constructor's APIs has never been easier with **comprehensive components** that take care of both the tracking and results retrieval, allowing you to focus on developing your own unique site experience.
+React components for a conversational shopping assistant. They handle the agent requests, the rendering and the tracking.
 
-<div className="section-title">Getting Started</div>
+```bash
+npm install @constructor-io/constructorio-ui-asa
+```
+
+## How these docs are organised
+
+- **Guides** show how to do something. Start with the [Integration Guide](./?path=/docs/guides-integration-guide--variants).
+- **Components & Utilities** is the reference for everything the package exports: components, hooks and helper functions.
 
 <div className="cards-grid">
-  <a className="card" target="_top" href="./?path=/docs/general-integration-guide--variants">
-    <div className="card-icon"><img src={flow} alt="Integration Guide" /></div>
+  <a className="card" target="_top" href="./?path=/docs/guides-integration-guide--variants">
+    <div className="card-icon"><img src={flow} alt="" /></div>
     <div className="card-content">
       <div className="card-title">Integration Guide</div>
-      <div className="card-description">Step-by-step setup: installation, provider configuration, and rendering</div>
+      <div className="card-description">Step by step, start here</div>
+    </div>
+  </a>
+  <a className="card" target="_top" href="./?path=/docs/guides-chat-features--variants">
+    <div className="card-icon"><img src={conversation} alt="" /></div>
+    <div className="card-content">
+      <div className="card-title">Chat Features</div>
+      <div className="card-description">Prompts, refinements, stop button, errors</div>
+    </div>
+  </a>
+  <a className="card" target="_top" href="./?path=/docs/guides-customization--variants">
+    <div className="card-icon"><img src={colors} alt="" /></div>
+    <div className="card-content">
+      <div className="card-title">Customization</div>
+      <div className="card-description">Styles, translations, overrides</div>
+    </div>
+  </a>
+  <a className="card" target="_top" href="./?path=/docs/components-utilities-chat--variants">
+    <div className="card-icon"><img src={codeBrackets} alt="" /></div>
+    <div className="card-content">
+      <div className="card-title">Components & Utilities</div>
+      <div className="card-description">Every prop and export</div>
+    </div>
+  </a>
+  <a className="card" target="_top" href="./?path=/docs/guides-faq--variants">
+    <div className="card-icon"><img src={comments} alt="" /></div>
+    <div className="card-content">
+      <div className="card-title">FAQ</div>
+      <div className="card-description">Errors and troubleshooting</div>
     </div>
   </a>
 </div>
 
-<div className="section-title">Components</div>
-
-<div className="cards-grid">
-  <a className="card" target="_top" href="./?path=/docs/components-chat--variants">
-    <div className="card-icon"><img src={comments} alt="Chat" /></div>
-    <div className="card-content">
-      <div className="card-title">Chat</div>
-      <div className="card-description">A full-featured conversational UI with multi-turn chat interactions and product results</div>
-    </div>
-  </a>
-  <a className="card" target="_top" href="./?path=/docs/components-chat-dialogue--variants">
-    <div className="card-icon"><img src={conversation} alt="Dialogue" /></div>
-    <div className="card-content">
-      <div className="card-title">Dialogue</div>
-      <div className="card-description">A conversation component that enables continuous multi-turn chat interactions on items</div>
-    </div>
-  </a>
-  <a className="card" target="_top" href="./?path=/docs/components-resultsblock--variants">
-    <div className="card-icon"><img src={colors} alt="ResultsBlock" /></div>
-    <div className="card-content">
-      <div className="card-title">ResultsBlock</div>
-      <div className="card-description">Renders grouped product results in a carousel layout with customizable cards</div>
-    </div>
-  </a>
-  <a className="card" target="_top" href="./?path=/docs/components-button--variants">
-    <div className="card-icon"><img src={codeBrackets} alt="Button" /></div>
-    <div className="card-content">
-      <div className="card-title">Button</div>
-      <div className="card-description">A flexible button component with theme variants and size options</div>
-    </div>
-  </a>
-</div>
-
-<div className="section-title">Hooks</div>
-
-<div className="cards-grid">
-  <a className="card" target="_top" href="./?path=/docs/hooks-useasaresults--variants">
-    <div className="card-icon"><img src={codeBrackets} alt="useAsaResults" /></div>
-    <div className="card-content">
-      <div className="card-title">useAsaResults</div>
-      <div className="card-description">Core hook for managing chat state, streaming SSE responses, and handling product results</div>
-    </div>
-  </a>
-</div>
-
-<hr className="divider" />
+Stuck on a use case? Contact your Constructor representative.
 
 </div>
