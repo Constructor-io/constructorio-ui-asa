@@ -217,9 +217,19 @@ export interface ResultGroup {
   intentResultId?: string;
 }
 
+export interface SendMessageOptions {
+  /**
+   * Conversation to send into, e.g. one started elsewhere on the page. The chat moves to it
+   * first: loaded from storage when persistence has it, otherwise continued on the server
+   * with an empty screen. Omit to send into the conversation on screen.
+   */
+  threadId?: string;
+}
+
 export interface UseChatReturn {
   messages: ChatMessage[];
-  sendMessage: (text: string, source?: AssistantSubmitSource) => void;
+  /** Skipped while another answer streams. */
+  sendMessage: (text: string, source?: AssistantSubmitSource, options?: SendMessageOptions) => void;
   /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
   /** True while this tab's own answer is streaming, the one `abort` can stop. */
@@ -339,8 +349,11 @@ export interface LocalStoragePersistenceOptions {
 
 // --- Behavioral tracking ---
 
-/** How an intent was submitted: typed input, a welcome-screen suggestion chip, or a refinement chip. */
-export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement';
+/**
+ * How an intent was submitted: typed input, a welcome-screen suggestion chip, a refinement chip,
+ * or the host page (`ChatHandle.sendMessage` or the `initialPrompt` prop).
+ */
+export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement' | 'external';
 
 /** An item within a viewed/clicked search_result pod. */
 export interface AssistantTrackedItem {

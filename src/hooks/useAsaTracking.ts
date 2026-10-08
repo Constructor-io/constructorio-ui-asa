@@ -65,6 +65,8 @@ const BEACON_SUBMIT_SOURCES: Record<AssistantSubmitSource, string> = {
   input: 'input',
   suggestion: 'suggestion',
   refinement: 'follow_up',
+  // A prompt the host page sent, typically a suggested question clicked outside the chat.
+  external: 'suggestion',
 };
 
 const NOOP_TRACKING: UseAsaTrackingReturn = {

@@ -202,6 +202,56 @@ describe('Chat', () => {
     expect(screen.getByText('Partial ans')).toBeInTheDocument();
   });
 
+  describe('prompts from the host page', () => {
+    it('initialPrompt is sent once on mount, into initialThreadId, even under StrictMode', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'message', data: { text: 'An answer' } }],
+      });
+      const onAssistantSubmit = jest.fn();
+      render(
+        <React.StrictMode>
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            callbacks={{ onAssistantSubmit }}>
+            <Chat initialPrompt='Is this waterproof?' initialThreadId='thread-ext' />
+          </CioAsaProvider>
+        </React.StrictMode>,
+      );
+
+      expect(await screen.findByText('An answer')).toBeInTheDocument();
+      expect(getAgentResultsStream).toHaveBeenCalledTimes(1);
+      expect(getAgentResultsStream).toHaveBeenCalledWith('Is this waterproof?', {
+        domain: 'chatbot',
+        threadId: 'thread-ext',
+      });
+      expect(onAssistantSubmit).toHaveBeenCalledWith({
+        intent: 'Is this waterproof?',
+        source: 'external',
+      });
+    });
+
+    it('ref.sendMessage sends a prompt into the given thread', async () => {
+      const ref = createRef<ChatHandle>();
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'message', data: { text: 'An answer' } }],
+      });
+      render(
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+          <Chat ref={ref} />
+        </CioAsaProvider>,
+      );
+
+      act(() => ref.current!.sendMessage('Compare these', { threadId: 'thread-ext' }));
+
+      expect(await screen.findByText('An answer')).toBeInTheDocument();
+      expect(getAgentResultsStream).toHaveBeenCalledWith('Compare these', {
+        domain: 'chatbot',
+        threadId: 'thread-ext',
+      });
+    });
+  });
+
   describe('follow-up refinements', () => {
     const refinementEvents: StreamEvent[] = [
       { type: 'message', data: { text: 'Here are some picks' } },

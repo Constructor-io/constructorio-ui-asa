@@ -238,15 +238,46 @@ The `Chat` component accepts:
 | `translations`       | `Translations`                                | Override UI strings (see Translations section)                                                                                                                                                |
 | `componentOverrides` | `ChatComponentOverrides`                      | Override any sub-component (see Component Overrides section)                                                                                                                                  |
 | `initialThreadId`    | `string`                                      | Resume a specific agent thread. With `persistConversation` on, its stored transcript is restored too (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page)  |
+| `initialPrompt`      | `string`                                      | A prompt sent once on mount, after any stored conversation loads. Goes into `initialThreadId` when set (see Opening the chat with a prompt)                                                   |
 | `onThreadsChange`    | `(threads, activeThreadId) => void`           | Fires when the list of stored conversations or the active one changes. Requires `persistConversation` (see the [Persistent Chat](?path=/docs/components-chat-persistent-chat--variants) page) |
 
 `Chat` also exposes methods through a `ref` (`ChatHandle`):
 
-| Method                   | Description                                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `clearHistory()`         | Reset the conversation and, with `persistConversation` on, delete it from storage               |
-| `newThread()`            | Start an empty conversation and keep the current one in storage. Requires `persistConversation` |
-| `switchThread(threadId)` | Load a stored conversation and continue it. Requires `persistConversation`                      |
+| Method                             | Description                                                                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `clearHistory()`                   | Reset the conversation and, with `persistConversation` on, delete it from storage                                                                  |
+| `newThread()`                      | Start an empty conversation and keep the current one in storage. Requires `persistConversation`                                                    |
+| `switchThread(threadId)`           | Load a stored conversation and continue it. Requires `persistConversation`                                                                         |
+| `sendMessage(text, { threadId }?)` | Send a prompt from outside the chat. With `threadId`, send it into that conversation instead of the one on screen. Skipped while an answer streams |
+
+### Opening the chat with a prompt
+
+When a shopper clicks a prompt somewhere else on the page (for example a suggested question
+next to a product), open the chat and send that prompt into it. Pass the `thread_id` of the
+conversation it belongs to as `threadId` to continue that conversation; with `persistConversation`
+on, a stored transcript for it is shown, otherwise the chat starts empty and the agent still
+continues the thread. Omit it to send into the conversation on screen.
+
+If you mount `Chat` when it opens, pass the prompt as props:
+
+```jsx
+{
+  isOpen && <Chat initialPrompt={prompt} initialThreadId={threadId} onClose={close} />;
+}
+```
+
+If `Chat` stays mounted, use the ref:
+
+```jsx
+const chatRef = useRef(null);
+
+function onPromptClick(prompt, threadId) {
+  setIsOpen(true);
+  chatRef.current?.sendMessage(prompt, { threadId });
+}
+```
+
+Either way the submit reaches `onAssistantSubmit` with `source: 'external'`.
 
 ### Follow-up refinements
 
@@ -259,8 +290,9 @@ options (for example _"Who are you shopping for?"_ with _Women's styles / Men's 
   refinements stay visible but disabled, so the thread reads back as a history of what was offered.
 - If the agent sends several `follow_up_refinement` events in one turn, the last one wins.
 - Refinement clicks reach `onAssistantSubmit` with `source: 'refinement'` (welcome-screen chips use
-  `'suggestion'`, typed input uses `'input'`). The `assistant_submit` beacon carries `source: 'follow_up'`
-  for them instead, the value the behavioral-actions API documents (see Behavioral Tracking).
+  `'suggestion'`, typed input uses `'input'`, prompts sent by the host page use `'external'`). The
+  `assistant_submit` beacon carries `source: 'follow_up'` for refinement clicks instead, the value the
+  behavioral-actions API documents (see Behavioral Tracking).
 
 Customize the rendering via the `aiMessage.followUpRefinement` override slot and the label via the
 `CioAsa.refinement.ariaLabel` translation key. When using `useAsaResults` directly, the payload is
@@ -568,18 +600,18 @@ function CustomChat() {
 
 The hook returns:
 
-| Return value     | Type                                                                       | Description                                                                                                                                   |
-| ---------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `messages`       | `ChatMessage[]`                                                            | Full conversation, user and assistant messages in order                                                                                       |
-| `sendMessage`    | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement') => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. |
-| `isStreaming`    | `boolean`                                                                  | Whether a response is currently streaming                                                                                                     |
-| `abort`          | `() => void`                                                               | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle.                                                      |
-| `clearHistory`   | `() => void`                                                               | Cancel any active stream, reset messages and the thread                                                                                       |
-| `isHydrating`    | `boolean`                                                                  | Whether a stored conversation is still being loaded. Always `false` when persistence is off                                                   |
-| `threads`        | `ThreadSummary[]`                                                          | Stored conversations, most recent first. Empty when persistence is off                                                                        |
-| `activeThreadId` | `string \| null`                                                           | Id of the stored conversation on screen, `null` for an unsaved one                                                                            |
-| `newThread`      | `() => void`                                                               | Start an empty conversation and keep the current one in storage. No-op when persistence is off                                                |
-| `switchThread`   | `(threadId: string) => Promise<void>`                                      | Load a stored conversation and continue it. No-op when persistence is off                                                                     |
+| Return value     | Type                                                                                                                      | Description                                                                                                                                                                                                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `messages`       | `ChatMessage[]`                                                                                                           | Full conversation, user and assistant messages in order                                                                                                                                                                                                                           |
+| `sendMessage`    | `(text: string, source?: 'input' \| 'suggestion' \| 'refinement' \| 'external', options?: { threadId?: string }) => void` | Send a message to the AI agent. No-op while streaming or if `text` is empty. `source` (default `'input'`) is reported to `onAssistantSubmit`. With `options.threadId`, the message goes into that conversation instead of the one on screen (see Opening the chat with a prompt). |
+| `isStreaming`    | `boolean`                                                                                                                 | Whether a response is currently streaming                                                                                                                                                                                                                                         |
+| `abort`          | `() => void`                                                                                                              | Cancel the in-flight response, keeping the conversation and the thread. No-op when idle.                                                                                                                                                                                          |
+| `clearHistory`   | `() => void`                                                                                                              | Cancel any active stream, reset messages and the thread                                                                                                                                                                                                                           |
+| `isHydrating`    | `boolean`                                                                                                                 | Whether a stored conversation is still being loaded. Always `false` when persistence is off                                                                                                                                                                                       |
+| `threads`        | `ThreadSummary[]`                                                                                                         | Stored conversations, most recent first. Empty when persistence is off                                                                                                                                                                                                            |
+| `activeThreadId` | `string \| null`                                                                                                          | Id of the stored conversation on screen, `null` for an unsaved one                                                                                                                                                                                                                |
+| `newThread`      | `() => void`                                                                                                              | Start an empty conversation and keep the current one in storage. No-op when persistence is off                                                                                                                                                                                    |
+| `switchThread`   | `(threadId: string) => Promise<void>`                                                                                     | Load a stored conversation and continue it. No-op when persistence is off                                                                                                                                                                                                         |
 
 **Cancelling a response.** `abort()` keeps the partial reply and the thread, so the next message continues the same conversation; `clearHistory()` starts over.
 
@@ -898,11 +930,12 @@ refinement click as `refinement` where the beacon sends `follow_up`.
 Every one of them sends `assistant_submit`, tagged with where it came from, so engagement reports
 count clicked questions alongside typed ones and can still tell them apart:
 
-| `source` on the beacon | `source` in `onAssistantSubmit` | Entry point                                                             |
-| ---------------------- | ------------------------------- | ----------------------------------------------------------------------- |
-| `input`                | `input`                         | Shopper typed the intent and pressed Enter / clicked send               |
-| `suggestion`           | `suggestion`                    | Shopper clicked a welcome-screen suggestion chip (`initialSuggestions`) |
-| `follow_up`            | `refinement`                    | Shopper clicked an option of a follow-up refinement question            |
+| `source` on the beacon | `source` in `onAssistantSubmit` | Entry point                                                                                                                               |
+| ---------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `input`                | `input`                         | Shopper typed the intent and pressed Enter / clicked send                                                                                 |
+| `suggestion`           | `suggestion`                    | Shopper clicked a welcome-screen suggestion chip (`initialSuggestions`)                                                                   |
+| `follow_up`            | `refinement`                    | Shopper clicked an option of a follow-up refinement question                                                                              |
+| `suggestion`           | `external`                      | The host page sent a prompt (`initialPrompt` or `sendMessage` on the `Chat` ref), e.g. a suggested question clicked elsewhere on the page |
 
 `onAssistantSubmit` receives the source too, so your own analytics get the same attribution:
 

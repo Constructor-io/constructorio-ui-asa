@@ -332,6 +332,49 @@ describe('useAsaResults', () => {
       });
     });
 
+    it('sends into a given threadId, starting from an empty screen', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'start', data: { thread_id: 'thread-own' } }],
+      });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('first'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+      act(() =>
+        result.current.sendMessage('from the page', 'external', { threadId: 'thread-ext' }),
+      );
+
+      await waitFor(() =>
+        expect(getAgentResultsStream).toHaveBeenNthCalledWith(2, 'from the page', {
+          domain: 'chatbot',
+          threadId: 'thread-ext',
+        }),
+      );
+      expect(result.current.messages.filter((m) => m.role === 'user').map((m) => m.text)).toEqual([
+        'from the page',
+      ]);
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
+    it('keeps the conversation when the given threadId is the current one', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'start', data: { thread_id: 'thread-xyz' } }],
+      });
+      const { result } = renderUseAsaResults(client);
+
+      act(() => result.current.sendMessage('first'));
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+      act(() => result.current.sendMessage('second', 'external', { threadId: 'thread-xyz' }));
+
+      expect(getAgentResultsStream).toHaveBeenNthCalledWith(2, 'second', {
+        domain: 'chatbot',
+        threadId: 'thread-xyz',
+      });
+      expect(result.current.messages.filter((m) => m.role === 'user')).toHaveLength(2);
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
     it('ignores a second send while a stream is already in flight', () => {
       const { stream } = createPendingStream();
       const { client, getAgentResultsStream } = createMockCioClient({ stream });

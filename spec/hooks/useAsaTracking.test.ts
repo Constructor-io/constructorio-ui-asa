@@ -59,6 +59,18 @@ describe('useAsaTracking', () => {
     });
   });
 
+  it('sends a prompt from the host page as a `suggestion` submit', () => {
+    const tracker = createMockTracker();
+    const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
+
+    result.current.trackSubmit('Is this waterproof?', 'external');
+
+    expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith({
+      intent: 'Is this waterproof?',
+      source: 'suggestion',
+    });
+  });
+
   it('omits section, threadId and source when not provided', () => {
     const tracker = createMockTracker();
     const { result } = renderHook(() => useAsaTracking({ tracker: tracker as unknown as Tracker }));
