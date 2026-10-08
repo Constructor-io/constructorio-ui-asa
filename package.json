@@ -82,7 +82,7 @@
     "@babel/preset-env": "^7.28.3",
     "@babel/preset-react": "^7.27.1",
     "@babel/preset-typescript": "^7.27.1",
-    "@constructor-io/constructorio-client-javascript": "2.93.1",
+    "@constructor-io/constructorio-client-javascript": "2.94.0",
     "@constructor-io/constructorio-ui-components": "^1.6.0",
     "@cspell/eslint-plugin": "^6.18.1",
     "@storybook/addon-a11y": "^8.6.14",

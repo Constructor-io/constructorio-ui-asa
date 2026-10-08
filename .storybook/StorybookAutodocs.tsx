@@ -1,13 +1,13 @@
 import React from 'react';
-import { Title, Controls, Stories, Primary } from '@storybook/blocks';
+import { Title, Description, Controls, Primary } from '@storybook/blocks';
 
 export default function StorybookAutodocs() {
   return (
     <>
       <Title />
+      <Description />
       <Primary />
       <Controls />
-      <Stories />
     </>
   );
 }

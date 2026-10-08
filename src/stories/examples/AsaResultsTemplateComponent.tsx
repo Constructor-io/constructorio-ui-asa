@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import useAsaResults from '../../../hooks/useAsaResults';
-import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
-import { DEMO_API_KEY } from '../../../constants';
+import useAsaResults from '../../hooks/useAsaResults';
+import CioAsaProvider from '../../components/CioAsaProvider/CioAsaProvider';
+import { DEMO_API_KEY } from '../../constants';
 
 interface AsaResultsDisplayProps {
   defaultPrompt: string;

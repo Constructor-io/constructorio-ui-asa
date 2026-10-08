@@ -21,6 +21,7 @@ const groupData: ResultGroup = {
 
 function createTracking() {
   return {
+    trackAgentButtonClick: jest.fn(),
     trackSubmit: jest.fn(),
     trackResultLoadStarted: jest.fn(),
     trackResultLoadFinished: jest.fn(),

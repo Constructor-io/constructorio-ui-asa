@@ -1,225 +1,25 @@
 /* eslint-disable react/no-danger */
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import Chat from '../../../components/Chat/Chat';
-import Button from '../../../components/Button/Button';
-import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
-import { DEMO_API_KEY } from '../../../constants';
-
-const defaultTermsHtml =
-  'By submitting a search via the virtual style assistant, you agree to the information being processed according to our <a href="https://example.com/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> and <a href="https://example.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</a>.';
+import Chat from '../../components/Chat/Chat';
+import Button from '../../components/Button/Button';
+import { Default } from '../reference/Chat.stories';
+import { chatDecorator, defaultTermsHtml, functionArgTypes } from '../fixtures';
 
 const meta: Meta<typeof Chat> = {
-  title: 'Components/Chat',
+  title: 'Examples/Chat',
   component: Chat,
   parameters: {
     a11y: { test: 'error' },
     layout: 'centered',
-    docs: {
-      description: {
-        component:
-          'AI Shopping Assistant chat dialog.\n\n' +
-          'The component fills its container (`width: 100%; height: 100%`). ' +
-          'Control the layout (sidebar, fullscreen, panel) by styling the parent wrapper or using the `className` prop.\n\n' +
-          '**Content** — You can swap the sections for a customized version of the AI Chat dialog component.\n\n' +
-          '**Results** — Product results are rendered using the <a href="./?path=/docs/components-resultsblock--variants" target="_top">ResultsBlock</a> component internally. ' +
-          'See its documentation for available layout and display options (`aspectRatio`, `minCardWidth`, `gap`, `showTitle`, etc.).\n\n' +
-          "**Cancelling** — while a reply streams, the input's send button becomes a stop button that " +
-          'calls `abort()` — opt in with `showStopButton`, it is off by default. ' +
-          'Attach a `ref` to reach the same ' +
-          '`abort()` plus `clearHistory()` (cancel, then reset everything) programmatically — for a ' +
-          'UI-side timeout, say. See the "Cancelling a Response" story.',
-      },
-    },
   },
-  tags: ['autodocs'],
-  argTypes: {
-    initialSuggestions: {
-      description:
-        'Static suggestion chips shown on the welcome screen. If the array is empty or not provided, the suggestions section is hidden.',
-      control: 'object',
-      table: { category: 'Content' },
-    },
-    termsText: {
-      description:
-        'Legal disclaimer content shown at the bottom of the welcome screen. `Chat` accepts a ReactNode; in this story you can provide an HTML string which is rendered via dangerouslySetInnerHTML.',
-      control: 'text',
-      table: { category: 'Content' },
-    },
-    aspectRatio: {
-      control: 'select',
-      options: ['1:1', '3:4', '9:16', '4:3', '16:9'],
-      description: 'Image aspect ratio for product cards in results.',
-      table: { category: 'Results' },
-    },
-    currency: {
-      control: 'text',
-      description:
-        'Currency symbol for product prices. For additional results layout options see <a href="./?path=/docs/components-resultsblock--variants" target="_top">ResultsBlock</a>.',
-      table: { category: 'Results' },
-    },
-    normalizeItem: {
-      description:
-        'Map a raw search-result item to the product-card shape (`Product`). Override this when your index metadata uses non-default field names (e.g. `thumbnail` instead of `image_url`).',
-      control: false,
-      table: {
-        category: 'Results',
-        type: { summary: '(item, options?) => Product' },
-        defaultValue: { summary: 'normalizeItemToProduct' },
-      },
-    },
-    onClose: {
-      description:
-        'Called when the close button (✕) is clicked. The consumer controls component visibility.',
-      table: { category: 'Callbacks' },
-    },
-    onThreadsChange: {
-      description:
-        'Fires with the stored conversations (`ThreadSummary[]`) and the active thread id whenever ' +
-        'either changes, including changes made in another tab. Requires `persistConversation` on the ' +
-        'provider. See Components/Chat/Persistent Chat.',
-      table: { category: 'Callbacks' },
-    },
-    onProductClick: {
-      description: 'Called when a product card is clicked in results.',
-      table: { category: 'Callbacks' },
-    },
-    onAddToCart: {
-      description:
-        'Called when "Add to cart" button is clicked. If not provided, the button is hidden.',
-      table: { category: 'Callbacks' },
-    },
-    onViewMore: {
-      description:
-        'Called when "View more" link is clicked. If not provided, the link is hidden. ' +
-        'The `group` argument carries the echoed CIO request under `data.request` for building a destination URL.',
-      table: { category: 'Callbacks' },
-    },
-    componentOverrides: {
-      description:
-        'Override any sub-component with custom render props or React nodes.\n\n' +
-        '- `header` — Replace the chat header\n' +
-        '- `welcomeScreen.title` — Replace the welcome title\n' +
-        '- `welcomeScreen.input` — Replace the welcome input\n' +
-        '- `welcomeScreen.suggestedQuestions` — Replace suggestion chips\n' +
-        '- `input` — Replace the chat input\n' +
-        '- `userMessage` — Replace user message bubbles\n' +
-        '- `aiMessage.loader` — Replace the typing indicator\n' +
-        '- `aiMessage.text` — Replace AI response text\n' +
-        '- `resultsBlock.groupTitle` — Replace group titles\n' +
-        '- `resultsBlock.viewMore` — Replace view more buttons\n' +
-        '- `resultsBlock.carousel` — Override carousel sub-components',
-      control: false,
-      table: {
-        category: 'Overrides',
-        type: { summary: 'ChatComponentOverrides' },
-        defaultValue: { summary: 'undefined' },
-      },
-    },
-    showStopButton: {
-      description:
-        "Whether the input's send button becomes a stop button while a reply streams. " +
-        'Off by default, so the packaged UI is unchanged unless you opt in. While it is off, ' +
-        'cancelling is only reachable via `abort()` on the ref, or from your own ' +
-        '`componentOverrides.input`.',
-      control: 'boolean',
-      table: {
-        category: 'Content',
-        type: { summary: 'boolean' },
-        defaultValue: { summary: 'false' },
-      },
-    },
-    initialThreadId: {
-      description:
-        'Resume a specific agent thread. Read once on mount; the thread id is then tracked ' +
-        'internally across turns. `abort()` on the chat handle keeps it; `clearHistory()` resets ' +
-        'it. With `persistConversation` enabled on the provider, the stored transcript of that ' +
-        'thread is restored too.',
-      control: 'text',
-      table: {
-        category: 'Content',
-        type: { summary: 'string' },
-        defaultValue: { summary: 'undefined' },
-      },
-    },
-    translations: {
-      description:
-        'Translation overrides for internationalizing UI strings. All keys are optional.\n\n' +
-        '- `CioAsa.header.title`\n' +
-        '- `CioAsa.header.close`\n' +
-        '- `CioAsa.input.placeholder`\n' +
-        '- `CioAsa.input.ariaLabel`\n' +
-        '- `CioAsa.input.sendAriaLabel`\n' +
-        '- `CioAsa.input.stopAriaLabel`\n' +
-        '- `CioAsa.welcome.title`\n' +
-        '- `CioAsa.welcome.placeholder`\n' +
-        '- `CioAsa.welcome.sendButton`\n' +
-        '- `CioAsa.welcome.inputAriaLabel`\n' +
-        '- `CioAsa.welcome.suggestionsAriaLabel`\n' +
-        '- `CioAsa.messageList.ariaLabel`\n' +
-        '- `CioAsa.typingIndicator.ariaLabel`\n' +
-        '- `CioAsa.userMessage.ariaLabel`\n' +
-        '- `CioAsa.aiMessage.ariaLabel`\n' +
-        '- `CioAsa.results.viewMore`\n' +
-        '- `CioAsa.results.addToCart`\n' +
-        '- `CioAsa.results.saleBadge`\n' +
-        '- `CioAsa.error.message`\n' +
-        '- `CioAsa.error.interrupted`',
-      control: 'object',
-      table: {
-        category: 'Translations',
-        type: { summary: 'Translations' },
-      },
-    },
-  },
-  decorators: [
-    (Story, context) => {
-      const { termsText: html, ...rest } = context.args;
-      const args = {
-        ...rest,
-        ...(html && { termsText: <span dangerouslySetInnerHTML={{ __html: html }} /> }),
-      };
-      return (
-        <CioAsaProvider apiKey={DEMO_API_KEY}>
-          <div style={{ height: '800px', padding: '30px 0' }}>
-            <Story args={args} />
-          </div>
-        </CioAsaProvider>
-      );
-    },
-  ],
+  argTypes: functionArgTypes,
+  decorators: [chatDecorator],
+  tags: ['!dev'],
 };
 
 export default meta;
 type Story = StoryObj<typeof Chat>;
-
-export const Default: Story = {
-  parameters: {
-    layout: 'fullscreen',
-  },
-  decorators: [
-    (Story) => (
-      <div style={{ width: '504px', height: '100%', margin: '0 auto' }}>
-        <Story />
-      </div>
-    ),
-  ],
-  args: {
-    onClose: () => alert('Close clicked'),
-    onProductClick: (product) => alert(`Product clicked: ${product.name}`),
-    onAddToCart: (product) => alert(`Add to cart: ${product.name}`),
-    onViewMore: (group) => alert(`View more: ${group.display_name}`),
-    aspectRatio: '3:4',
-    currency: '$',
-    initialSuggestions: [
-      'I need luggage suitable for holiday travel',
-      "I'm looking for stylish gifts that fit my budget",
-      "What's good, quality watch to invest in?",
-      'What should I wear to a holiday party?',
-    ],
-    termsText: defaultTermsHtml,
-  },
-};
 
 export const Desktop: Story = {
   name: 'Desktop - Sidebar',

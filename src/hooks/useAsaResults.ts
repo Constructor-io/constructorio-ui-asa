@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCioAsaContext } from './useCioAsaContext';
-import { AssistantSubmitSource, ChatMessage, UseAsaResultsOptions, UseChatReturn } from '../types';
+import {
+  AssistantSubmitSource,
+  ChatMessage,
+  SendMessageOptions,
+  UseAsaResultsOptions,
+  UseChatReturn,
+} from '../types';
 import useAsaTracking from './useAsaTracking';
 import useChatPersistence from './persistence/useChatPersistence';
 import { LiveTurn, startTurn } from './agentStream';
 import { ChatSession, createChatSession, nextMessageId } from '../utils/chatSession';
 import { normalizeItemToProduct } from '../utils/productNormalizer';
-import { settleCancelledReply } from '../utils/chatThreads';
+import { isLocalThreadId, settleCancelledReply } from '../utils/chatThreads';
 import useLatest from './useLatest';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
@@ -87,13 +93,13 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
 
   useEffect(() => cancelStream, [cancelStream]);
 
-  const sendMessage = useCallback(
-    (text: string, source: AssistantSubmitSource = 'input') => {
+  const sendToCurrentThread = useCallback(
+    (text: string, source: AssistantSubmitSource) => {
       const intent = text.trim();
       if (!intent || session.isStreaming || session.foreignInFlight) return;
       beginTurn();
 
-      trackingRef.current.trackSubmit(intent);
+      trackingRef.current.trackSubmit(intent, source);
       callbacksRef.current?.onAssistantSubmit?.({ intent, source });
 
       const userMessage: ChatMessage = {
@@ -149,6 +155,40 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     ],
   );
 
+  const { newThread, switchThread } = store;
+
+  /**
+   * Sends `text`. With `threadId`, first moves to that conversation, loading it from storage
+   * when persistence has it and otherwise continuing it on the server with an empty screen.
+   */
+  const sendMessage = useCallback(
+    (
+      text: string,
+      source: AssistantSubmitSource = 'input',
+      { threadId }: SendMessageOptions = {},
+    ) => {
+      if (
+        !threadId ||
+        threadId === session.serverThreadId ||
+        threadId === session.storageThreadId
+      ) {
+        sendToCurrentThread(text, source);
+        return;
+      }
+      (async () => {
+        if (persistence) await switchThread(threadId);
+        else newThread();
+        // A turn that started meanwhile (or one still streaming in the background) owns the screen.
+        if (session.isStreaming || session.foreignInFlight) return;
+        if (!session.serverThreadId && !isLocalThreadId(threadId)) {
+          session.serverThreadId = threadId;
+        }
+        sendToCurrentThread(text, source);
+      })();
+    },
+    [session, persistence, newThread, switchThread, sendToCurrentThread],
+  );
+
   /**
    * Cancels the in-flight request while keeping the conversation: the partial reply is
    * settled as `done` (so the typing indicator stops and streamed text survives) and the
@@ -181,7 +221,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
     isHydrating: store.isHydrating,
     threads: store.threads,
     activeThreadId: store.activeThreadId,
-    newThread: store.newThread,
-    switchThread: store.switchThread,
+    newThread,
+    switchThread,
   };
 }

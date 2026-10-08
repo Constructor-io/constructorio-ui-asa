@@ -2,7 +2,7 @@ import { Meta, StoryObj } from '@storybook/react';
 import AsaResultsTemplateComponent from './AsaResultsTemplateComponent';
 
 const meta = {
-  title: 'Hooks/useAsaResults',
+  title: 'Examples/useAsaResults',
   component: AsaResultsTemplateComponent,
   parameters: {
     a11y: { test: 'error' },
@@ -23,7 +23,7 @@ const meta = {
       },
     },
   },
-  tags: ['autodocs'],
+  tags: ['!dev'],
   argTypes: {
     defaultPrompt: {
       description: 'Message pre-filled into the input for the demo.',

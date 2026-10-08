@@ -1,0 +1,37 @@
+import { Meta, Markdown } from '@storybook/blocks';
+
+<Meta title='Components & Utilities/Hooks' />
+
+# Hooks
+
+All three must render inside a `CioAsaProvider`. For usage, see [Custom UI](?path=/docs/guides-custom-ui--variants).
+
+## `useAsaResults(options?)`
+
+The conversation, without `Chat`'s UI. Options: `initialThreadId` (resume a thread, read once on mount) and `normalizeItem` (how products are stored with `persistConversation`; defaults to `normalizeItemToProduct`).
+
+<Markdown>
+  {`
+| Returns | Type | |
+|---|---|---|
+| \`messages\` | \`ChatMessage[]\` | The conversation, in order |
+| \`sendMessage\` | \`(text, source?, { threadId }?) => void\` | Send a message. \`source\`: \`'input'\` (default), \`'suggestion'\`, \`'refinement'\` or \`'external'\`. With \`threadId\`, into that conversation. Skipped while streaming or when \`text\` is empty |
+| \`isStreaming\` | \`boolean\` | An answer is streaming, here or, with persistence, in another tab on the same thread |
+| \`canAbort\` | \`boolean\` | \`abort\` can stop the answer now: this tab's own, or one streaming in another tab |
+| \`abort\` | \`() => void\` | Stop the answer, keeping the partial reply and the thread |
+| \`clearHistory\` | \`() => void\` | Stop any answer and reset messages and the thread |
+| \`isHydrating\` | \`boolean\` | A stored conversation is loading. Always \`false\` without persistence |
+| \`threads\` | \`ThreadSummary[]\` | Stored conversations, newest first. Empty without persistence |
+| \`activeThreadId\` | \`string \\| null\` | The stored conversation on screen, \`null\` for an unsaved one |
+| \`newThread\` | \`() => void\` | Start an empty conversation, keeping the current one stored |
+| \`switchThread\` | \`(threadId) => Promise<void>\` | Load and continue a stored conversation. No-op without persistence |
+`}
+</Markdown>
+
+## `useAsaTracking({ tracker, section?, threadId? })`
+
+Sends ASA behavioral events yourself, for a custom launcher or custom results. Pass `useCioAsaContext()?.cioClient?.tracker`. Returns `trackAgentButtonClick`, `trackSubmit(intent, source?)`, `trackResultLoadStarted`, `trackResultLoadFinished`, `trackResultView`, `trackResultClick` and `trackSearchSubmit`. Without a `tracker`, they do nothing. See [Callbacks & Tracking](?path=/docs/guides-callbacks-tracking--variants#launcher-clicks).
+
+## `useCioAsaContext()`
+
+The provider's context (`AsaContextValue`): `cioClient`, `staticRequestConfigs`, `formatters`, `urlHelpers`, `callbacks`, `section`. `null` outside a provider.

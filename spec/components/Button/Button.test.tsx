@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import Button from '../../../src/components/Button/Button';
+import CioAsaProvider from '../../../src/components/CioAsaProvider/CioAsaProvider';
+import { createMockCioClient } from '../../local_examples/mockCioClient';
 
 describe('Button', () => {
   it('renders the default label', () => {
@@ -32,5 +34,91 @@ describe('Button', () => {
   it('has no accessibility violations', async () => {
     const { container } = render(<Button />);
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  describe('tracking', () => {
+    it('sends ai_agent_button_click with the provider domain as agentDomain and placement props', async () => {
+      const { client, tracker } = createMockCioClient();
+      const onClick = jest.fn();
+      render(
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'explorer' }}>
+          <Button onClick={onClick} positionOnPage='header' pageType='pdp' instanceId={1} />
+        </CioAsaProvider>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+
+      expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({
+        mode: 'chat',
+        agentDomain: 'explorer',
+        positionOnPage: 'header',
+        pageType: 'pdp',
+        instanceId: 1,
+        section: 'Products',
+      });
+      expect(tracker.trackAgentButtonClick).toHaveBeenCalledTimes(1);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the default chatbot domain and omits placement when not provided', async () => {
+      const { client, tracker } = createMockCioClient();
+      render(
+        <CioAsaProvider cioClient={client}>
+          <Button />
+        </CioAsaProvider>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+
+      expect(tracker.trackAgentButtonClick).toHaveBeenCalledWith({
+        mode: 'chat',
+        agentDomain: 'chatbot',
+        section: 'Products',
+      });
+    });
+
+    it('fires the onAgentButtonClick callback with the tracked payload', async () => {
+      const { client } = createMockCioClient();
+      const onAgentButtonClick = jest.fn();
+      render(
+        <CioAsaProvider cioClient={client} callbacks={{ onAgentButtonClick }}>
+          <Button positionOnPage='search_bar' />
+        </CioAsaProvider>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+
+      expect(onAgentButtonClick).toHaveBeenCalledWith({
+        mode: 'chat',
+        agentDomain: 'chatbot',
+        positionOnPage: 'search_bar',
+      });
+      expect(onAgentButtonClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires the callback and onClick when the client predates trackAgentButtonClick', async () => {
+      const { client, tracker } = createMockCioClient();
+      delete (tracker as Partial<typeof tracker>).trackAgentButtonClick;
+      const onClick = jest.fn();
+      const onAgentButtonClick = jest.fn();
+      render(
+        <CioAsaProvider cioClient={client} callbacks={{ onAgentButtonClick }}>
+          <Button onClick={onClick} />
+        </CioAsaProvider>,
+      );
+
+      await userEvent.click(screen.getByRole('button'));
+
+      expect(onAgentButtonClick).toHaveBeenCalledTimes(1);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('still calls onClick without tracking when rendered outside a provider', async () => {
+      const onClick = jest.fn();
+      render(<Button onClick={onClick} positionOnPage='header' />);
+
+      await userEvent.click(screen.getByRole('button'));
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
   });
 });

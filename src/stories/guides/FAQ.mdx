@@ -1,0 +1,52 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title='Guides/FAQ' />
+
+# FAQ
+
+## Agent requests return errors
+
+The AI Shopping Assistant must be enabled for your account. Contact your Constructor representative.
+
+## "useAsaResults requires a configured cioClient and domain"
+
+Either no client exists yet (see the next question), or you passed `staticRequestConfigs` without `domain`. It defaults to `{ domain: 'chatbot' }`; if you pass your own, include `domain: 'chatbot'` unless Constructor tells you otherwise.
+
+## Server-side rendering (Next.js)
+
+The client exists only in the browser, and `Chat` and `useAsaResults` throw without it, so render them client-side only. With the App Router, add `'use client'` and wait until mounted, or load the component with `next/dynamic` and `{ ssr: false }`:
+
+```jsx
+'use client';
+import { useEffect, useState } from 'react';
+import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
+import '@constructor-io/constructorio-ui-asa/styles.css';
+
+export default function ShoppingAssistant() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return (
+    <CioAsaProvider apiKey='YOUR_API_KEY'>
+      <Chat onClose={() => {}} />
+    </CioAsaProvider>
+  );
+}
+```
+
+## "Module parse failed: Unexpected token"
+
+The ESM build targets ESNext. For older toolchains, import the CommonJS build, which targets ES2015:
+
+```js
+import { Chat } from '@constructor-io/constructorio-ui-asa/cjs';
+```
+
+## ESLint: "Unable to resolve path to module '…/styles.css'"
+
+`eslint-plugin-import` can't resolve package `exports` ([#1868](https://github.com/import-js/eslint-plugin-import/issues/1868), [#1810](https://github.com/import-js/eslint-plugin-import/issues/1810)). Add `// eslint-disable-line` on the import.
+
+## Product images or prices are empty
+
+Your catalog uses different metadata field names. Map them with `normalizeItem`; see [Product Results](?path=/docs/guides-product-results--variants#mapping-product-data).

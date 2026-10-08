@@ -1,21 +1,21 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import UserMessage from '../../../components/Chat/UserMessage';
-import AiMessage from '../../../components/Chat/AiMessage';
-import ChatMessageList from '../../../components/Chat/ChatMessageList';
-import ResultsBlock from '../../../components/ResultsBlock/ResultsBlock';
-import '../../../components/Chat/UserMessage.css';
-import '../../../components/Chat/AiMessage.css';
-import '../../../components/Chat/TypingIndicator.css';
-import '../../../components/Chat/ChatMessageList.css';
-import '../../../components/ResultsBlock/ResultsBlock.css';
-import { ChatMessage } from '../../../types';
+import UserMessage from '../../components/Chat/UserMessage';
+import AiMessage from '../../components/Chat/AiMessage';
+import ChatMessageList from '../../components/Chat/ChatMessageList';
+import ResultsBlock from '../../components/ResultsBlock/ResultsBlock';
+import '../../components/Chat/UserMessage.css';
+import '../../components/Chat/AiMessage.css';
+import '../../components/Chat/TypingIndicator.css';
+import '../../components/Chat/ChatMessageList.css';
+import '../../components/ResultsBlock/ResultsBlock.css';
+import { ChatMessage } from '../../types';
 
 const PRODUCT_IMAGE =
   'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
 
 const meta: Meta = {
-  title: 'Components/Chat/Dialogue',
+  title: 'Internal/Dialogue',
   parameters: {
     a11y: { test: 'error' },
     layout: 'centered',
@@ -37,7 +37,7 @@ const meta: Meta = {
       },
     },
   },
-  tags: ['autodocs'],
+  tags: ['!dev'],
   decorators: [
     (Story) => (
       <div

@@ -3,225 +3,28 @@
 [![npm](https://img.shields.io/npm/v/@constructor-io/constructorio-ui-asa)](https://www.npmjs.com/package/@constructor-io/constructorio-ui-asa)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Constructor-io/constructorio-ui-asa/blob/main/LICENSE)
 
-A UI library that provides React components to manage the fetching and rendering logic for [Constructor.io's AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/). TypeScript support is available.
+React components for [Constructor.io's AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/): a conversational shopping assistant.
 
-A UI Library that provides React components to manage the fetching and rendering logic for [AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/) powered by Constructor.io. Typescript support is available.
+**[Documentation →](https://constructor-io.github.io/constructorio-ui-asa/)**
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Customization](#customization)
-- [Troubleshooting](#troubleshooting)
-- [Local Development](#local-development)
-- [Publishing New Versions](#publishing-new-versions)
-- [Supporting Docs](#supporting-docs)
-- [Related Libraries](#related-libraries)
-- [License](#license)
-
-## Overview
-
-[Constructor.io's AI Shopping Agent](https://constructor.com/solutions/ai-shopping-agent/) is a conversational shopping experience that helps shoppers discover products through natural-language chat. This UI library simplifies the integration process by providing React components that handle the fetching and rendering logic for the AI Shopping Agent.
-
-[Our Storybook Docs](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/general-introduction--variants) are the best place to explore the behavior and the available configuration options for this UI library.
-
-## Installation
+## Install
 
 ```bash
 npm i @constructor-io/constructorio-ui-asa
 ```
 
-### Prerequisites
-
-This library declares the following as peer dependencies, so they must be present in your project:
-
-| Package                                           | Version     |
-| ------------------------------------------------- | ----------- |
-| `@constructor-io/constructorio-client-javascript` | `^2.93.1`   |
-| `@constructor-io/constructorio-ui-components`     | `^1.6.0`    |
-| `react`                                           | `>=16.12.0` |
-| `react-dom`                                       | `>=16.12.0` |
-| `tslib`                                           | `^2.4.0`    |
-
-On npm 7+ these are installed automatically. If your package manager doesn't install peer dependencies automatically (yarn, pnpm, npm 6 and below), install any that are missing:
-
-```bash
-npm install \
-  @constructor-io/constructorio-client-javascript \
-  @constructor-io/constructorio-ui-components \
-  react react-dom tslib
-```
-
 ## Usage
-
-### Using the React Components
-
-Wrap your application (or the relevant subtree) with `CioAsaProvider` to supply the Constructor client and configuration, then render the `Chat` component for a full conversational UI.
 
 ```jsx
 import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
 import '@constructor-io/constructorio-ui-asa/styles.css';
 
-function ShoppingAgent() {
-  return (
-    <CioAsaProvider apiKey='YOUR_API_KEY'>
-      <Chat
-        onClose={() => {}}
-        onProductClick={(product) => (window.location.href = product.url)}
-        currency='$'
-        initialSuggestions={['Show me summer dresses', 'Best running shoes under $100']}
-      />
-    </CioAsaProvider>
-  );
-}
+<CioAsaProvider apiKey='YOUR_API_KEY'>
+  <Chat onClose={() => setIsOpen(false)} />
+</CioAsaProvider>;
 ```
 
-`CioAsaProvider` accepts:
-
-| Prop                   | Type                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ---------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apiKey`               | `string`                 | Your Constructor index key. Required unless you pass your own `cioClient`.                                                                                                                                                                                                                                                                                                                                                                            |
-| `cioClient`            | `ConstructorIOClient`    | A pre-configured Constructor client. Provide this instead of `apiKey` when you need to customize client options (e.g. `serviceUrl`, `segments`, `userId`).                                                                                                                                                                                                                                                                                            |
-| `testCells`            | `Record<string, string>` | A/B test cells to attach to tracking events, as `{ [testName]: cellName }`. See [A/B Testing](#ab-testing).                                                                                                                                                                                                                                                                                                                                           |
-| `staticRequestConfigs` | `RequestConfigs`         | Request-level config passed to the ASA agent. Defaults to `{ domain: 'chatbot' }`.                                                                                                                                                                                                                                                                                                                                                                    |
-| `formatters`           | `Formatters`             | Override built-in formatters (e.g. `formatPrice`). Merged over the defaults.                                                                                                                                                                                                                                                                                                                                                                          |
-| `urlHelpers`           | `UrlHelpers`             | Override built-in URL read/write helpers. Merged over the defaults.                                                                                                                                                                                                                                                                                                                                                                                   |
-| `persistConversation`  | `{ enabled: boolean }`   | Off by default; pass `{ enabled: true }` to keep the conversation across page loads: in `localStorage` for a signed-in shopper (keyed by api key, domain and user id), in `sessionStorage` for a guest, so it ends with the tab. Off when omitted, and off when no api key can be read from a custom `cioClient`. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants). |
-| `userId`               | `string` or `null`       | Whose conversation this is, required with `persistConversation`. Pass the signed-in shopper's id on login and `null` on logout or for a guest, so each shopper only ever sees their own history. Use the same stable, non-personal id you give Constructor for personalization. With `apiKey` it is also set on the client; with your own `cioClient`, set it there too.                                                                              |
-
-> **Login and logout.** History is stored per `userId`. Signing in moves the guest history into the shopper's history, and the conversation on screen continues; changing to another id or logging out switches the chat to that history in every open tab. Nothing is deleted on logout by default: the old history stays on the device for 7 days and returns when that shopper signs in again. To delete it on logout, call `clearPersistedConversations({ apiKey, domain, userId })`. See [Persistent Chat](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/components-chat-persistent-chat--variants).
-
-> **Where do I get `apiKey`?** This is your Constructor index key (the same key used by other Constructor client integrations), available in your Constructor dashboard. The AI Shopping Agent must be enabled for your account — contact your Constructor representative if agent requests return errors.
-
-> **Server-side rendering.** The Constructor client is only instantiated in the browser, so `Chat` and `useAsaResults` must run client-side only. In Next.js App Router, add `'use client'` and defer rendering until mounted (or load with `next/dynamic` and `{ ssr: false }`). See the [Integration Guide](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/general-integration-guide--variants) for a full example.
-
-### A/B Testing
-
-Attach test cells so ASA's tracking events can be attributed to a cell. Each entry is sent as its
-own `ef-<testName>` parameter, so a shopper in several concurrent tests carries every cell:
-
-```jsx
-<CioAsa
-  apiKey='YOUR_API_KEY'
-  testCells={{ constructorio: 'variant_a', your_other_test: 'variant_b' }}
-/>
-```
-
-The keys are your own test names, not values Constructor defines. Constructor's docs have the page
-set `window.cnstrc.testCell` to a bare cell name, which carries no test name of its own, so label
-it with yours:
-
-```jsx
-<CioAsa apiKey='YOUR_API_KEY' testCells={{ constructorio: window.cnstrc.testCell }} />
-```
-
-Some integrations expose a `window.cnstrc.testCells` map instead, which you can pass straight
-through. Empty and non-string values are dropped, so a cell read from a global that resolves to
-`undefined` is simply not sent.
-
-If you supply your own `cioClient`, that client owns its own options: set `testCells` there
-instead, as a `ConstructorIOClient` constructor option. `testCells` is ignored in that case, and
-passing both logs a warning rather than dropping the value silently.
-
-### Using the Hook Directly
-
-For custom UI implementations, use the `useAsaResults` hook. All configuration comes from the surrounding `CioAsaProvider`; its options are `{ initialThreadId }` to resume a specific thread and `{ normalizeItem }` to control how raw result items are stored as product cards with `persistConversation` on.
-
-```jsx
-import { useAsaResults } from '@constructor-io/constructorio-ui-asa';
-
-function CustomChat() {
-  const { messages, sendMessage, isStreaming, clearHistory } = useAsaResults();
-
-  return (
-    <div>
-      {messages.map((msg) => (
-        <div key={msg.id}>
-          <strong>{msg.role}:</strong> {msg.text}
-        </div>
-      ))}
-      <button onClick={() => sendMessage('Show me running shoes')} disabled={isStreaming}>
-        Send
-      </button>
-      <button onClick={clearHistory}>Reset</button>
-    </div>
-  );
-}
-```
-
-The hook returns `messages` (the full conversation), `sendMessage(text)`, `isStreaming`, and `clearHistory()`. With `persistConversation` on it also returns `isHydrating`, `threads`, `activeThreadId`, `newThread()` and `switchThread(threadId)` for building a chat history UI. Product results arrive on assistant messages in `msg.groups` and can be rendered with the exported `ResultsBlock` component.
-
-## Customization
-
-### Styling
-
-By default, importing React components from this library does not pull any CSS into your project.
-
-If you wish to use the starter styles from this library, add an import statement similar to the example below:
-
-```js
-import '@constructor-io/constructorio-ui-asa/styles.css';
-```
-
-- These starter styles can be used as a foundation to build on top of, or just as a reference for you to replace completely.
-- To opt out of all default styling, do not import the `styles.css` stylesheet.
-- All components use BEM-style class names prefixed with `cio-asa-` for easy style overrides.
-
-### Translations
-
-All user-facing text can be customized via the `translations` prop for internationalization. Pass only the keys you want to override — all others fall back to English defaults.
-
-```jsx
-<Chat
-  translations={{
-    'CioAsa.welcome.title': 'Style Advisor',
-    'CioAsa.welcome.placeholder': 'What are you looking for?',
-    'CioAsa.results.addToCart': 'Add to bag',
-  }}
-/>
-```
-
-### Component Overrides
-
-You can override individual sub-components using the `componentOverrides` prop with render props. See our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/general-introduction--variants) for available override slots.
-
-```jsx
-<Chat
-  componentOverrides={{
-    header: {
-      reactNode: ({ title, onClose }) => (
-        <div className='my-header'>
-          <h1>{title}</h1>
-          <button onClick={onClose}>Close</button>
-        </div>
-      ),
-    },
-  }}
-/>
-```
-
-## Troubleshooting
-
-### Known Issues
-
-**Older JavaScript environments**
-
-The library provides two builds: CommonJS (cjs) and ECMAScript Modules (mjs).
-
-The ECMAScript Modules (mjs) build targets ESNext, which might not be supported by your environment. If your environment uses an older JavaScript version like ES6 (ES2015), you may get an error such as:
-
-`Module parse failed: Unexpected token`
-
-To solve this you can import the CommonJS (cjs) build, which supports ES6 (ES2015) syntax:
-
-`import { Chat } from '@constructor-io/constructorio-ui-asa/cjs'`
-
-**ESLint**
-
-There is a known issue with ESLint where it fails to resolve the paths exposed in the `exports` statement of NPM packages. If you receive an error like the one below, you can safely disable ESLint using `// eslint-disable-line` for that line.
-
-`Unable to resolve path to module '@constructor-io/constructorio-ui-asa/styles.css'`
-
-Relevant open issues: [Issue 1868](https://github.com/import-js/eslint-plugin-import/issues/1868), [Issue 1810](https://github.com/import-js/eslint-plugin-import/issues/1810)
+Peer dependencies, layout, product results, tracking, customization and every prop are in the [docs](https://constructor-io.github.io/constructorio-ui-asa/).
 
 ## Local Development
 
@@ -261,11 +64,6 @@ This workflow will automatically:
 
 #### Note: Please don't manually increase the package.json version or create new git tags.
 
-## Supporting Docs
-
-- [Storybook Docs](https://constructor-io.github.io/constructorio-ui-asa/?path=/docs/general-introduction--variants)
-- [Constructor.io API Documentation](https://docs.constructor.io/)
-
 ## Related Libraries
 
 - [@constructor-io/constructorio-client-javascript](https://github.com/Constructor-io/constructorio-client-javascript) - JavaScript client for Constructor.io API
@@ -278,7 +76,7 @@ This workflow will automatically:
 1. Fork the repo and create a new branch.
 2. Run `npm ci` to install dependencies.
 3. Make your changes.
-4. Run `npm run lint` and `npm run test` to verify.
+4. Run `npm run lint` and `npm run test` to verify. For docs changes, follow [`.claude/docs.md`](.claude/docs.md).
 5. Submit a PR for review.
 
 ## License

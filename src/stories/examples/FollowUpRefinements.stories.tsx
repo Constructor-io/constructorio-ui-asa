@@ -1,9 +1,10 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { userEvent, within, waitFor } from '@storybook/testing-library';
-import Chat from '../../../components/Chat/Chat';
-import CioAsaProvider from '../../../components/CioAsaProvider/CioAsaProvider';
+import Chat from '../../components/Chat/Chat';
+import CioAsaProvider from '../../components/CioAsaProvider/CioAsaProvider';
 import createMockAgentClient from './mockAgentClient';
+import { functionArgTypes } from '../fixtures';
 
 const mockClient = createMockAgentClient();
 
@@ -20,7 +21,7 @@ const decorator = (Story: React.ComponentType) => (
 );
 
 const meta = {
-  title: 'Components/Chat/Follow-up Refinements',
+  title: 'Examples/Follow-up Refinements',
   component: Chat,
   parameters: {
     a11y: { test: 'error' },
@@ -34,7 +35,8 @@ const meta = {
       },
     },
   },
-  tags: ['autodocs'],
+  argTypes: functionArgTypes,
+  tags: ['!dev'],
 } satisfies Meta<typeof Chat>;
 
 export default meta;

@@ -202,6 +202,56 @@ describe('Chat', () => {
     expect(screen.getByText('Partial ans')).toBeInTheDocument();
   });
 
+  describe('prompts from the host page', () => {
+    it('initialPrompt is sent once on mount, into initialThreadId, even under StrictMode', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'message', data: { text: 'An answer' } }],
+      });
+      const onAssistantSubmit = jest.fn();
+      render(
+        <React.StrictMode>
+          <CioAsaProvider
+            cioClient={client}
+            staticRequestConfigs={{ domain: 'chatbot' }}
+            callbacks={{ onAssistantSubmit }}>
+            <Chat initialPrompt='Is this waterproof?' initialThreadId='thread-ext' />
+          </CioAsaProvider>
+        </React.StrictMode>,
+      );
+
+      expect(await screen.findByText('An answer')).toBeInTheDocument();
+      expect(getAgentResultsStream).toHaveBeenCalledTimes(1);
+      expect(getAgentResultsStream).toHaveBeenCalledWith('Is this waterproof?', {
+        domain: 'chatbot',
+        threadId: 'thread-ext',
+      });
+      expect(onAssistantSubmit).toHaveBeenCalledWith({
+        intent: 'Is this waterproof?',
+        source: 'external',
+      });
+    });
+
+    it('ref.sendMessage sends a prompt into the given thread', async () => {
+      const ref = createRef<ChatHandle>();
+      const { client, getAgentResultsStream } = createMockCioClient({
+        events: [{ type: 'message', data: { text: 'An answer' } }],
+      });
+      render(
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+          <Chat ref={ref} />
+        </CioAsaProvider>,
+      );
+
+      act(() => ref.current!.sendMessage('Compare these', { threadId: 'thread-ext' }));
+
+      expect(await screen.findByText('An answer')).toBeInTheDocument();
+      expect(getAgentResultsStream).toHaveBeenCalledWith('Compare these', {
+        domain: 'chatbot',
+        threadId: 'thread-ext',
+      });
+    });
+  });
+
   describe('follow-up refinements', () => {
     const refinementEvents: StreamEvent[] = [
       { type: 'message', data: { text: 'Here are some picks' } },
@@ -256,6 +306,62 @@ describe('Chat', () => {
       await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
       await screen.findByRole('button', { name: "Men's styles" });
       expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
+  describe('submit tracking', () => {
+    function renderTrackedChat(
+      events: StreamEvent[],
+      props: React.ComponentProps<typeof Chat> = {},
+    ) {
+      const { client, tracker } = createMockCioClient({ events });
+      render(
+        <CioAsaProvider cioClient={client} staticRequestConfigs={{ domain: 'chatbot' }}>
+          <Chat {...props} />
+        </CioAsaProvider>,
+      );
+      return tracker;
+    }
+
+    it('tracks a typed intent with the `input` source', async () => {
+      const tracker = renderTrackedChat([{ type: 'message', data: { text: 'An answer' } }]);
+
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'shoes', source: 'input' }),
+      );
+    });
+
+    it('tracks a welcome-screen suggestion click with the `suggestion` source', async () => {
+      const tracker = renderTrackedChat([{ type: 'message', data: { text: 'An answer' } }], {
+        initialSuggestions: ['Help me find a gift'],
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Help me find a gift' }));
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'Help me find a gift', source: 'suggestion' }),
+      );
+    });
+
+    it('tracks a refinement option click with the `follow_up` source', async () => {
+      const tracker = renderTrackedChat([
+        { type: 'message', data: { text: 'Here are some picks' } },
+        {
+          type: 'follow_up_refinement',
+          data: { question: 'Who are you shopping for?', options: ["Men's styles"] },
+        },
+      ]);
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+      const chip = await screen.findByRole('button', { name: "Men's styles" });
+      await waitFor(() => expect(chip).toBeEnabled());
+
+      await userEvent.click(chip);
+
+      expect(tracker.trackAssistantSubmit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ intent: "Men's styles", source: 'follow_up' }),
+      );
     });
   });
 

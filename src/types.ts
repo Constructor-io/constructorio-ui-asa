@@ -217,9 +217,19 @@ export interface ResultGroup {
   intentResultId?: string;
 }
 
+export interface SendMessageOptions {
+  /**
+   * Conversation to send into, e.g. one started elsewhere on the page. The chat moves to it
+   * first: loaded from storage when persistence has it, otherwise continued on the server
+   * with an empty screen. Omit to send into the conversation on screen.
+   */
+  threadId?: string;
+}
+
 export interface UseChatReturn {
   messages: ChatMessage[];
-  sendMessage: (text: string, source?: AssistantSubmitSource) => void;
+  /** Skipped while another answer streams. */
+  sendMessage: (text: string, source?: AssistantSubmitSource, options?: SendMessageOptions) => void;
   /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
   /**
@@ -355,8 +365,11 @@ export interface LocalStoragePersistenceOptions {
 
 // --- Behavioral tracking ---
 
-/** How an intent was submitted: typed input, a welcome-screen suggestion chip, or a refinement chip. */
-export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement';
+/**
+ * How an intent was submitted: typed input, a welcome-screen suggestion chip, a refinement chip,
+ * or the host page (`ChatHandle.sendMessage` or the `initialPrompt` prop).
+ */
+export type AssistantSubmitSource = 'input' | 'suggestion' | 'refinement' | 'external';
 
 /** An item within a viewed/clicked search_result pod. */
 export interface AssistantTrackedItem {
@@ -365,12 +378,49 @@ export interface AssistantTrackedItem {
   variationId?: string;
 }
 
+/** Agent mode a CTA opens or starts. */
+export type AgentButtonClickMode =
+  | 'chat'
+  | 'search'
+  | 'qna'
+  | 'recommendations'
+  | 'query_refinement';
+
+/** Page surface an agent CTA was clicked on. */
+export type AgentButtonClickPageType =
+  | 'home'
+  | 'plp'
+  | 'pdp'
+  | 'search'
+  | 'collection'
+  | 'email_campaign'
+  | 'cart';
+
+/** Where an agent CTA sits on the page. All fields are optional. */
+export interface AgentButtonClickPlacement {
+  /** Stable label describing where the CTA is placed, e.g. `'header'` or `'search_bar'`. */
+  positionOnPage?: string;
+  /** Page surface where the CTA was clicked. */
+  pageType?: AgentButtonClickPageType;
+  /** 1-based index distinguishing CTA instances with the same mode and position during one page view. */
+  instanceId?: number;
+}
+
+/** Fields sent with `ai_agent_button_click` and passed to `onAgentButtonClick`. */
+export interface AgentButtonClickPayload extends AgentButtonClickPlacement {
+  mode: AgentButtonClickMode;
+  /** Agent experience the CTA opens, sent as `agent_domain`. */
+  agentDomain: string;
+}
+
 /**
  * Optional consumer callbacks fired alongside the built-in behavioral tracking.
  * Each fires immediately after its corresponding `trackAssistant*` beacon is sent,
  * so consumers can mirror ASA analytics into their own systems. All are optional.
  */
 export interface AsaCallbacks {
+  /** A CTA that opens the assistant (the built-in `Button`) was clicked. */
+  onAgentButtonClick?: (payload: AgentButtonClickPayload) => void;
   /** User submitted an intent (typed) or clicked a suggestion / refinement chip. */
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */

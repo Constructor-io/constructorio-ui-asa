@@ -1222,6 +1222,51 @@ describe('useAsaResults persistence', () => {
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
     });
 
+    it('sendMessage with a stored threadId loads that conversation and continues it', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([
+        persisted('latest', [userMsg('u1', 'latest q'), aiMsg('a1', 'latest a')]),
+        { ...persisted('older', [userMsg('u2', 'older q'), aiMsg('a2', 'older a')]), updatedAt: 1 },
+      ]);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('more', 'external', { threadId: 'older' }));
+
+      await waitFor(() =>
+        expect(getAgentResultsStream).toHaveBeenCalledWith('more', {
+          domain: 'chatbot',
+          threadId: 'older',
+        }),
+      );
+      expect(result.current.messages.map((m) => m.text).slice(0, 3)).toEqual([
+        'older q',
+        'older a',
+        'more',
+      ]);
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
+    it('sendMessage with a threadId not in storage continues it on the server', async () => {
+      const { client, getAgentResultsStream } = createMockCioClient({ events: [] });
+      const { store } = createMemoryPersistence([
+        persisted('latest', [userMsg('u1', 'latest q'), aiMsg('a1', 'latest a')]),
+      ]);
+      const { result } = renderWithPersistence(client, store);
+      await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+      act(() => result.current.sendMessage('hi', 'external', { threadId: 'thread-ext' }));
+
+      await waitFor(() =>
+        expect(getAgentResultsStream).toHaveBeenCalledWith('hi', {
+          domain: 'chatbot',
+          threadId: 'thread-ext',
+        }),
+      );
+      expect(result.current.messages[0]).toMatchObject({ role: 'user', text: 'hi' });
+      await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    });
+
     it('switchThread to an unknown id leaves an empty conversation', async () => {
       const { client } = createMockCioClient({ events: [] });
       const { store } = createMemoryPersistence([
