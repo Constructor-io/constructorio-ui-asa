@@ -232,7 +232,10 @@ export interface UseChatReturn {
   sendMessage: (text: string, source?: AssistantSubmitSource, options?: SendMessageOptions) => void;
   /** True while an answer is streaming, here or, with persistence on, in another tab on the same thread. */
   isStreaming: boolean;
-  /** True while this tab's own answer is streaming, the one `abort` can stop. */
+  /**
+   * True while `abort` can stop the answer: this tab's own, or, when the store can reach it, one
+   * streaming in another tab.
+   */
   canAbort: boolean;
   /**
    * Cancel the in-flight request, keeping the conversation. The partial reply is settled
@@ -316,6 +319,19 @@ export interface ChatPersistence {
    * Returns an unsubscribe function.
    */
   subscribe?(listener: () => void): () => void;
+  /** Optional. Ask the tab streaming `messageId` into `threadId` to stop it. */
+  requestAbort?(threadId: string, messageId: string): void;
+  /**
+   * Optional. Notify when another tab asks to stop an answer, see `requestAbort`. Returns an
+   * unsubscribe function. Without both, an answer streaming in another tab cannot be stopped.
+   */
+  subscribeAbort?(listener: (request: AbortRequest) => void): () => void;
+}
+
+/** Another tab asks to stop the answer `messageId` streaming into `threadId`. */
+export interface AbortRequest {
+  threadId: string;
+  messageId: string;
 }
 
 /** Which stored history `clearPersistedConversations` deletes; mirror what the provider was given. */
@@ -484,12 +500,13 @@ export interface ChatInputRenderProps {
   onSubmit: () => void;
   placeholder: string;
   isDisabled: boolean;
-  /**
-   * Whether a reply is currently streaming. Pair it with `onAbort` to offer a cancel
-   * control while it is true — the built-in stop button is off by default, so an override
-   * is often the only way a user can cancel.
-   */
+  /** Whether a reply is currently streaming, here or in another tab; for status and disabled state. */
   isStreaming: boolean;
+  /**
+   * Whether `onAbort` can stop the reply streaming now; show a cancel control only then. The
+   * built-in stop button is off by default, so an override is often the only way a user can cancel.
+   */
+  canAbort: boolean;
   /** Cancel the in-flight reply. Keeps the conversation and the thread. */
   onAbort: () => void;
 }

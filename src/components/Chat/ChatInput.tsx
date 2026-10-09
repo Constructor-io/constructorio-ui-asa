@@ -37,8 +37,7 @@ export default function ChatInput({
     submitOnEnterOnly: true,
   });
 
-  // The stop button only makes sense when there is something to stop and a way to do it.
-  const canAbort = isStreaming && showStopButton && typeof onAbort === 'function';
+  const canAbort = isStreaming && typeof onAbort === 'function';
 
   const renderProps: ChatInputRenderProps = {
     value,
@@ -47,6 +46,7 @@ export default function ChatInput({
     placeholder: translate('CioAsa.input.placeholder', translations),
     isDisabled,
     isStreaming,
+    canAbort,
     onAbort: onAbort ?? (() => {}),
   };
 
@@ -64,7 +64,7 @@ export default function ChatInput({
             disabled={isDisabled}
             aria-label={translate('CioAsa.input.ariaLabel', translations)}
           />
-          {canAbort ? (
+          {canAbort && showStopButton ? (
             <button
               type='button'
               className='cio-asa-chat-input__send cio-asa-chat-input__stop'

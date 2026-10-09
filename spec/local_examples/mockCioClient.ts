@@ -120,6 +120,7 @@ export function createPendingStream(): {
 export function createControllableStream() {
   const queue: StreamEvent[] = [];
   let ended = false;
+  let cancelled = false;
   const waiting: Array<() => void> = [];
   const notify = () => waiting.splice(0).forEach((wake) => wake());
   const next = (): Promise<void> =>
@@ -137,13 +138,17 @@ export function createControllableStream() {
           if (queue.length > 0) return { done: false, value: queue.shift()! };
           return { done: true, value: undefined };
         },
-        cancel: () => Promise.resolve(),
+        cancel: () => {
+          cancelled = true;
+          return Promise.resolve();
+        },
         releaseLock: () => {},
       };
     },
   } as unknown as ReadableStream<StreamEvent>;
   return {
     stream,
+    cancelled: () => cancelled,
     push(event: StreamEvent) {
       queue.push(event);
       notify();

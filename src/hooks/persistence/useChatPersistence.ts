@@ -10,6 +10,7 @@ import {
 import { ChatMessage, ChatPersistence, PersistedChat, PersistenceScope } from '../../types';
 import type { LiveTurn, TurnOwner } from '../agentStream';
 import {
+  FOREIGN_ABORT_TIMEOUT_MS,
   findRekeyedThread,
   getTabId,
   foreignStreamRemainingMs,
@@ -58,7 +59,15 @@ interface Params {
   turnRef: MutableRefObject<LiveTurn | null>;
   /** Stop the answer currently streaming in this tab, if any. */
   cancelStream: () => void;
+  /** Stop this tab's answer as the stop button does: settled and stored. */
+  abortTurn: () => void;
 }
+
+/** Whether `store` can both ask another tab to stop an answer and hear such a request. */
+const canAbortAcrossTabs = (
+  store: ChatPersistence | undefined,
+): store is ChatPersistence & Required<Pick<ChatPersistence, 'requestAbort' | 'subscribeAbort'>> =>
+  Boolean(store?.requestAbort && store.subscribeAbort);
 
 const hasUnsavedWork = (session: ChatSession) =>
   session.isStreaming || session.dirty || session.orphanIds.length > 0;
@@ -77,6 +86,7 @@ export default function useChatPersistence(params: Params) {
     setIsStreaming,
     turnRef,
     cancelStream,
+    abortTurn,
   } = params;
   if (store) getTabId();
   const [isHydrating, setIsHydrating] = useState(Boolean(store));
@@ -138,6 +148,17 @@ export default function useChatPersistence(params: Params) {
     }
   }
 
+  /** Settles the answer another tab left in flight, and writes it back. */
+  const settleForeign = useCallback(
+    (threadId: string) => {
+      if (!mountedRef.current || session.storageThreadId !== threadId) return;
+      if (session.isStreaming) return;
+      session.dirty = true;
+      setMessages((prev) => normalizeHydratedMessages(prev));
+    },
+    [session, setMessages, mountedRef],
+  );
+
   /** Puts a stored conversation on screen and makes it the one this tab continues. */
   const showStoredChat = useCallback(
     (chat: PersistedChat) => {
@@ -152,15 +173,20 @@ export default function useChatPersistence(params: Params) {
         return;
       }
       setMessages(chat.messages);
-      watchForeign(remainingMs, () => {
-        if (!mountedRef.current || session.storageThreadId !== chat.threadId) return;
-        if (session.isStreaming) return;
-        session.dirty = true;
-        setMessages((prev) => normalizeHydratedMessages(prev));
-      });
+      watchForeign(remainingMs, () => settleForeign(chat.threadId));
     },
-    [session, stopForeign, watchForeign, setMessages, mountedRef],
+    [session, stopForeign, watchForeign, settleForeign, setMessages],
   );
+
+  /** Asks the tab streaming the answer on screen to stop it; settles it here if no tab does. */
+  const abortForeign = useCallback(() => {
+    const { current } = storeRef;
+    const threadId = session.storageThreadId;
+    const last = messagesRef.current[messagesRef.current.length - 1];
+    if (!canAbortAcrossTabs(current) || !session.foreignInFlight || !threadId || !last) return;
+    current.requestAbort(threadId, last.id);
+    watchForeign(FOREIGN_ABORT_TIMEOUT_MS, () => settleForeign(threadId));
+  }, [session, storeRef, messagesRef, watchForeign, settleForeign]);
 
   /** Writes the conversation as it is now; `settle` finishes an in-flight answer, `sync` skips awaiting. */
   const persistNow = useCallback(
@@ -414,6 +440,12 @@ export default function useChatPersistence(params: Params) {
     [detachTurn, settleAndPersist],
   );
   useEffect(() => subscribeBackgroundTurns(refreshThreads), [refreshThreads]);
+  useEffect(() => {
+    if (!store?.subscribeAbort) return undefined;
+    return store.subscribeAbort(({ messageId }) => {
+      if (turnRef.current?.assistantId === messageId) abortTurn();
+    });
+  }, [store, turnRef, abortTurn]);
 
   // Follow changes another tab made to the list or to the thread on screen.
   const syncFromStore = useCallback(async () => {
@@ -555,6 +587,8 @@ export default function useChatPersistence(params: Params) {
     threads,
     activeThreadId,
     foreignInFlight,
+    canAbortForeign: foreignInFlight && canAbortAcrossTabs(store),
+    abortForeign,
     beginTurn,
     screenOwner,
     clearHistory,

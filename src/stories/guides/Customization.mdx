@@ -66,7 +66,7 @@ Every UI string is a key in `translations`. Omitted keys fall back to English.
 | Slot | Receives |
 |---|---|
 | \`header\` | \`{ title, onClose? }\` |
-| \`input\` | \`{ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }\` |
+| \`input\` | \`{ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, canAbort, onAbort }\` |
 | \`userMessage\` | \`{ text }\` |
 | \`aiMessage.loader\` | \`{ translations? }\` |
 | \`aiMessage.text\` | \`{ text }\` (also renders the error message) |
@@ -100,12 +100,12 @@ componentOverrides={{
 
 ### Input
 
-`isStreaming` and `onAbort` let you add a stop button.
+`canAbort` and `onAbort` let you add a stop button: show it while `canAbort` is true and call `onAbort` when it is clicked.
 
 ```jsx
 componentOverrides={{
   input: {
-    reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled, isStreaming, onAbort }) => (
+    reactNode: ({ value, onChange, onSubmit, placeholder, isDisabled, canAbort, onAbort }) => (
       <div className='my-input'>
         <input
           value={value}
@@ -114,7 +114,7 @@ componentOverrides={{
           placeholder={placeholder}
           disabled={isDisabled}
         />
-        {isStreaming ? (
+        {canAbort ? (
           <button onClick={onAbort}>Stop</button>
         ) : (
           <button onClick={onSubmit} disabled={isDisabled}>Send</button>

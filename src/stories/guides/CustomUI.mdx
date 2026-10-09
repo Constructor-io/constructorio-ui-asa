@@ -64,7 +64,7 @@ Render `groups` yourself, or pass them to `ResultsBlock` for Constructor's carou
 
 ## Stopping an answer
 
-`abort()` keeps the partial reply and the thread; `clearHistory()` starts over. Gate a stop button on `canAbort`: `isStreaming` is also true while another tab streams on the same thread, which this tab can't stop. For a timeout:
+`abort()` keeps the partial reply and the thread; `clearHistory()` starts over. Gate a stop button on `canAbort`, not `isStreaming`: with `persistConversation` on, the same conversation can be open in several tabs of a signed-in shopper, and `canAbort` is true in all of them while it streams. `abort()` in any of them stops it in the tab it streams in. For a timeout:
 
 ```jsx
 useEffect(() => {
