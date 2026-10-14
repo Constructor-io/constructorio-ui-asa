@@ -1,0 +1,6 @@
+{
+  // Editor-only: the root tsconfig.json is the build config and excludes spec/, so editors
+  // checked test files without the jest types. This points them at the test type-check config.
+  "extends": "../tsconfig.check.json",
+  "include": ["./**/*.ts", "./**/*.tsx", "../src/**/*.ts", "../src/**/*.tsx", "../generateVersion.js"]
+}

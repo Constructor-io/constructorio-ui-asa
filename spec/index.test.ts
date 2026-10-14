@@ -19,6 +19,10 @@ describe('public API barrel', () => {
     expect(typeof publicApi.normalizeItemToProduct).toBe('function');
   });
 
+  it('exports the markdown renderer util', () => {
+    expect(typeof publicApi.renderMarkdown).toBe('function');
+  });
+
   it('re-exports the ConstructorIOClient value', () => {
     expect(publicApi.ConstructorIOClient).toBeDefined();
   });

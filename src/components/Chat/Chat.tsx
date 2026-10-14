@@ -13,6 +13,7 @@ import {
 } from '../../types';
 import { Product, NormalizeOptions, normalizeItemToProduct } from '../../utils/productNormalizer';
 import translate from '../../utils/translate';
+import { markdownToText } from '../../utils/markdown';
 import { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import ChatHeader from './ChatHeader';
 import WelcomeScreen from './WelcomeScreen';
@@ -99,7 +100,7 @@ function getAnnouncement(messages: ChatMessage[], translations?: Translations): 
   }
 
   if (lastMessage.status === 'done' && lastMessage.text) {
-    return `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${lastMessage.text}`;
+    return `${translate('CioAsa.aiMessage.ariaLabel', translations)}: ${markdownToText(lastMessage.text)}`;
   }
 
   return '';
