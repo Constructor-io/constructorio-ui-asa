@@ -1,11 +1,15 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
-// The text comes from an LLM a shopper can steer. Images would load with no click, so a crafted
-// URL could leak data; `style` could cover the page with a fake form.
+// The text comes from an LLM a shopper can steer, so only the tags `marked` outputs are kept.
+// Images, media and SVG would load a URL with no click and could leak data; form controls and
+// `style` could fake a form.
 const purifyConfig = {
-  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'img'],
-  FORBID_ATTR: ['style'],
+  ALLOWED_TAGS:
+    'p br strong em del a ul ol li blockquote hr code pre table thead tbody tr th td h1 h2 h3 h4 h5 h6'.split(
+      ' ',
+    ),
+  ALLOWED_ATTR: ['href', 'tabindex', 'align', 'start'],
 };
 
 // Text the agent reads (catalog, knowledge base, reviews) could plant a phishing link, so only
