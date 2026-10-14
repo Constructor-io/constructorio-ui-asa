@@ -36,6 +36,13 @@ describe('renderMarkdown', () => {
     expect(html.match(/<a /g)).toHaveLength(5);
   });
 
+  it('turns links with other schemes into plain text, even to this host', () => {
+    const html = renderMarkdown('[Text us](sms:+15551234567) [files](ftp://localhost/f)');
+    expect(html).not.toContain('<a');
+    expect(html).toContain('Text us');
+    expect(html).toContain('files');
+  });
+
   it('turns links to other sites into plain text', () => {
     const html = renderMarkdown(
       'Verify your order at [our portal](https://evil.example/login) now.',

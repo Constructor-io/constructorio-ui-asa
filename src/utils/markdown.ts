@@ -14,6 +14,7 @@ function isOnThisSite(href: string): boolean {
   try {
     const url = new URL(href, window.location.href);
     if (url.protocol === 'mailto:' || url.protocol === 'tel:') return true;
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
     const site = window.location.hostname.replace(/^www\./, '');
     return url.hostname === site || url.hostname.endsWith(`.${site}`);
   } catch {
