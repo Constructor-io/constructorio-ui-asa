@@ -1,6 +1,6 @@
 import type { ConstructorIOClient } from '../../types';
 
-type StreamEvent = { type: string; data: Record<string, unknown> };
+export type StreamEvent = { type: string; data: Record<string, unknown> };
 
 const PRODUCT_IMAGE =
   'https://constructorio-integrations.s3.amazonaws.com/tikus-threads/2022-06-29/PANT_ACTIVE-PANT_GWB00623SBL770_1_category.jpg';
@@ -65,12 +65,15 @@ function createEventStream(events: StreamEvent[], delayMs: number): ReadableStre
   });
 }
 
-/** Offline stand-in for the JS client: every turn replays a scripted stream ending in a refinement. */
-export default function createMockAgentClient({ delayMs = 150 }: { delayMs?: number } = {}) {
+/** Offline stand-in for the JS client: every turn replays a scripted stream, by default ending in a refinement. */
+export default function createMockAgentClient({
+  delayMs = 150,
+  script = scriptedTurn,
+}: { delayMs?: number; script?: (intent: string) => StreamEvent[] } = {}) {
   const noop = () => {};
   return {
     agent: {
-      getAgentResultsStream: (intent: string) => createEventStream(scriptedTurn(intent), delayMs),
+      getAgentResultsStream: (intent: string) => createEventStream(script(intent), delayMs),
     },
     tracker: {
       trackAssistantSubmit: noop,

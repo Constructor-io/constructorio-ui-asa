@@ -8,6 +8,7 @@ import {
   Translations,
 } from '../../types';
 import translate from '../../utils/translate';
+import { renderMarkdown } from '../../utils/markdown';
 import TypingIndicator from './TypingIndicator';
 
 export interface AiMessageProps {
@@ -25,6 +26,7 @@ export default function AiMessage({ message, componentOverrides, translations }:
   const errorKey = message.interrupted ? 'CioAsa.error.interrupted' : 'CioAsa.error.message';
   const text = isError ? message.text || translate(errorKey, translations) : message.text || '';
   const hasText = text.length > 0;
+  const html = renderMarkdown(text);
 
   const loaderRenderProps: AiMessageLoaderRenderProps = { translations };
   const textRenderProps: AiMessageTextRenderProps = { text };
@@ -49,7 +51,16 @@ export default function AiMessage({ message, componentOverrides, translations }:
               .filter(Boolean)
               .join(' ')}
             role={isError ? 'alert' : undefined}>
-            <div className='cio-asa-ai-message__text'>{text}</div>
+            {html ? (
+              <div
+                className='cio-asa-ai-message__text'
+                // Sanitized by renderMarkdown
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            ) : (
+              <div className='cio-asa-ai-message__text'>{text}</div>
+            )}
           </div>
         </RenderPropsWrapper>
       )}

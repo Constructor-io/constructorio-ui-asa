@@ -20,6 +20,10 @@ describe('public entry point (SSR)', () => {
     expect(typeof publicApi.normalizeItemToProduct).toBe('function');
   });
 
+  it('renders no markdown on the server, so callers fall back to plain text', () => {
+    expect(publicApi.renderMarkdown('**Bold**')).toBe('');
+  });
+
   it('re-exports the Constructor JS client', () => {
     expect(typeof publicApi.ConstructorIOClient).toBe('function');
   });

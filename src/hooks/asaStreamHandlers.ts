@@ -65,7 +65,7 @@ export function handleMessage(data: any, assistantId: string, setMessages: Messa
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
     status: 'streaming',
-    text: (msg.text || '') + (data?.text || ''),
+    text: [msg.text, data?.text].filter(Boolean).join('\n'),
   }));
 }
 

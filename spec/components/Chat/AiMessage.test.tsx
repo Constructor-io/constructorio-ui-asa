@@ -19,6 +19,20 @@ describe('AiMessage', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('renders the agent markdown, including tables', () => {
+    render(
+      <AiMessage
+        message={makeMessage({
+          status: 'done',
+          text: 'Here is **how** they compare:\n\n| Feature | A |\n|---|---|\n| Price | $10 |',
+        })}
+      />,
+    );
+    expect(screen.getByText('how').tagName).toBe('STRONG');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '$10' })).toBeInTheDocument();
+  });
+
   it('does not show the loader when groups exist even without text', () => {
     render(
       <AiMessage

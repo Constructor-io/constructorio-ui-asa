@@ -12,6 +12,14 @@ The default mapping from a raw search result to the `Product` a card renders. Ex
 
 Deletes stored conversations in every tab, for example on logout. Resolves once recorded. `domain` defaults to `'chatbot'`; without `userId` it clears the current tab's guest history. See [Conversations](?path=/docs/guides-conversations--variants#login-and-logout).
 
+## `renderMarkdown(markdown)`
+
+Turns the agent's markdown (bold, links, lists, tables) into sanitized HTML, the same way `Chat` renders replies. Scripts, images and inline styles are removed, and links to other sites become plain text: only links to the current site, its subdomains stay clickable. For a custom UI that shows `message` events itself. Browser only: on the server it returns `''`, so render the plain text. Style the HTML yourself, or see `AiMessage.css` for the classes `Chat` uses.
+
+```jsx
+<div dangerouslySetInnerHTML={{ __html: renderMarkdown(message.text) }} />
+```
+
 ## `ConstructorIOClient`
 
 Re-exported from `@constructor-io/constructorio-client-javascript`, to build a client for the provider's `cioClient`.

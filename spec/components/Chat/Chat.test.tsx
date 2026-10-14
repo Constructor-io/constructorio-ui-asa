@@ -97,6 +97,19 @@ describe('Chat', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Assistant said: An answer');
   });
 
+  it('announces a markdown reply as plain text', async () => {
+    renderChat({}, [
+      { type: 'message', data: { text: '**Sure**\n\n| Item | Price |\n|---|---|\n| A | $10 |' } },
+    ]);
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'compare' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent('Assistant said: Sure Item Price A $10');
+  });
+
   it('switches to the chat view after sending a message', async () => {
     renderChat({}, [{ type: 'message', data: { text: 'An answer' } }]);
 

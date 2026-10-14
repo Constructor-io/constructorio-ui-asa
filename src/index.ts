@@ -22,6 +22,7 @@ export type {
 // Utils
 export { normalizeItemToProduct } from './utils/productNormalizer';
 export { clearPersistedConversations } from './utils/localStoragePersistence';
+export { renderMarkdown } from './utils/markdown';
 export type { Product, NormalizeOptions } from './utils/productNormalizer';
 
 // Re-exported client value from the JS client (used to construct/type a cioClient)

@@ -148,5 +148,9 @@
   "volta": {
     "node": "22.18.0",
     "npm": "10.9.3"
+  },
+  "dependencies": {
+    "dompurify": "3.4.17",
+    "marked": "15.0.12"
   }
 }

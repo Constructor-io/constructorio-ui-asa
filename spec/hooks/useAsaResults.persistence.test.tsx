@@ -651,12 +651,12 @@ describe('useAsaResults persistence', () => {
       act(() => result.current.sendMessage('hello'));
       await act(async () => {
         pending.push(startEvent('t'));
-        pending.push({ type: 'message', data: { text: 'Hel' } });
+        pending.push({ type: 'message', data: { text: 'Hello' } });
       });
-      await waitFor(() => expect(result.current.messages[1]?.text).toBe('Hel'));
+      await waitFor(() => expect(result.current.messages[1]?.text).toBe('Hello'));
       unmount();
       await waitFor(() =>
-        expect(threads.get('t')?.messages[1]).toMatchObject({ text: 'Hel', status: 'streaming' }),
+        expect(threads.get('t')?.messages[1]).toMatchObject({ text: 'Hello', status: 'streaming' }),
       );
       return { client, pending, store, threads };
     }
@@ -665,14 +665,14 @@ describe('useAsaResults persistence', () => {
       const { pending, threads } = await unmountMidAnswer();
 
       await act(async () => {
-        pending.push({ type: 'message', data: { text: 'lo there' } });
+        pending.push({ type: 'message', data: { text: 'there' } });
         pending.end();
       });
 
       await waitFor(() =>
         expect(threads.get('t')?.messages.map((m) => [m.text, m.status])).toEqual([
           ['hello', 'done'],
-          ['Hello there', 'done'],
+          ['Hello\nthere', 'done'],
         ]),
       );
     });
@@ -682,19 +682,22 @@ describe('useAsaResults persistence', () => {
 
       const { result } = renderWithPersistence(client, store);
       await waitFor(() => expect(result.current.isHydrating).toBe(false));
-      expect(result.current.messages[1]).toMatchObject({ text: 'Hel', status: 'streaming' });
+      expect(result.current.messages[1]).toMatchObject({ text: 'Hello', status: 'streaming' });
       expect(result.current.isStreaming).toBe(true);
       expect(result.current.canAbort).toBe(true);
 
       await act(async () => {
-        pending.push({ type: 'message', data: { text: 'lo' } });
+        pending.push({ type: 'message', data: { text: 'again' } });
         pending.end();
       });
 
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
-      expect(result.current.messages[1]).toMatchObject({ text: 'Hello', status: 'done' });
+      expect(result.current.messages[1]).toMatchObject({ text: 'Hello\nagain', status: 'done' });
       await waitFor(() =>
-        expect(threads.get('t')?.messages[1]).toMatchObject({ text: 'Hello', status: 'done' }),
+        expect(threads.get('t')?.messages[1]).toMatchObject({
+          text: 'Hello\nagain',
+          status: 'done',
+        }),
       );
     });
   });
@@ -1479,25 +1482,30 @@ describe('useAsaResults persistence', () => {
       const { result, pending, store, askThenSwitch } = renderMidAnswerElsewhere();
       await askThenSwitch();
 
-      await act(async () => pending.push({ type: 'message', data: { text: 'Here are' } }));
+      await act(async () =>
+        pending.push({ type: 'message', data: { text: 'Here are some shoes.' } }),
+      );
       await act(() => result.current.switchThread('t'));
-      expect(result.current.messages[1]).toMatchObject({ text: 'Here are', status: 'streaming' });
+      expect(result.current.messages[1]).toMatchObject({
+        text: 'Here are some shoes.',
+        status: 'streaming',
+      });
       expect(result.current.isStreaming).toBe(true);
       expect(result.current.canAbort).toBe(true);
 
       await act(async () => {
-        pending.push({ type: 'message', data: { text: ' some shoes' } });
+        pending.push({ type: 'message', data: { text: 'Pick a size.' } });
         pending.end();
       });
 
       await waitFor(() => expect(result.current.isStreaming).toBe(false));
       expect(result.current.messages[1]).toMatchObject({
-        text: 'Here are some shoes',
+        text: 'Here are some shoes.\nPick a size.',
         status: 'done',
       });
       await waitFor(async () =>
         expect((await store.getThread('t'))?.messages[1]).toMatchObject({
-          text: 'Here are some shoes',
+          text: 'Here are some shoes.\nPick a size.',
           status: 'done',
         }),
       );

@@ -1,6 +1,7 @@
 import { Meta, Canvas, Markdown } from '@storybook/blocks';
 import * as ChatStories from '../examples/Chat.stories';
 import * as RefinementStories from '../examples/FollowUpRefinements.stories';
+import * as FormattedReplyStories from '../examples/FormattedReplies.stories';
 
 <Meta title='Guides/Chat Features' />
 
@@ -80,6 +81,14 @@ const chatRef = useRef(null);
 <Canvas of={ChatStories.CancellingAResponse} />
 
 The partial reply and the thread are kept, so the next question continues the conversation. No beacon is sent for a stopped answer, so it leaves an `assistant_result_load_start` without a matching finish.
+
+## Formatted replies (Markdown)
+
+The agent's markdown renders as formatted text: bold, links, lists and tables. The HTML is sanitized, links to other sites show as plain text, and a table wider than the chat scrolls sideways. A custom UI can render replies the same way with [`renderMarkdown`](?path=/docs/components-utilities-utilities--variants).
+
+Pick a suggestion below to see a comparison table, a wide table that scrolls sideways, lists, and bold text with a link.
+
+<Canvas of={FormattedReplyStories.ComparisonTable} />
 
 ## Errors
 

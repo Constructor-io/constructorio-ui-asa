@@ -345,12 +345,19 @@ describe('asaStreamHandlers', () => {
   });
 
   describe('handleMessage', () => {
-    it('concatenates streamed text tokens', () => {
+    it('joins message events with a newline', () => {
       const setMessages = jest.fn();
-      handleMessage({ text: 'Hello ' }, ASSISTANT_ID, setMessages);
-      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: 'Hi. ' }]);
-      expect(msg.text).toBe('Hi. Hello ');
+      handleMessage({ text: '| a | b |' }, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: 'Compare:' }]);
+      expect(msg.text).toBe('Compare:\n| a | b |');
       expect(msg.status).toBe('streaming');
+    });
+
+    it('starts without a newline when there is no text yet', () => {
+      const setMessages = jest.fn();
+      handleMessage({ text: 'Hello' }, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [{ ...baseMessage, text: '' }]);
+      expect(msg.text).toBe('Hello');
     });
 
     it('handles missing text data as empty string', () => {
