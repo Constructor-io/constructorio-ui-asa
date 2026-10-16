@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
 import { AgentButtonClickPayload, AssistantSubmitSource, AssistantTrackedItem } from '../types';
+import { withLibraryTag } from '../utils/libraryTag';
 
 export interface UseAsaTrackingProps {
   tracker?: Tracker;
@@ -85,10 +86,13 @@ const NOOP_TRACKING: UseAsaTrackingReturn = {
  * Mirrors the tracking-hook pattern used by constructorio-ui-pia.
  */
 export default function useAsaTracking({
-  tracker,
+  tracker: hostTracker,
   section,
   threadId,
 }: UseAsaTrackingProps): UseAsaTrackingReturn {
+  // Tagged even on a host-supplied client, so our events are attributed to the library.
+  const tracker = useMemo(() => hostTracker && withLibraryTag(hostTracker), [hostTracker]);
+
   const base = useMemo(
     () => ({
       ...(section && { section }),
