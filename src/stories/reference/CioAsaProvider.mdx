@@ -15,7 +15,7 @@ Holds the Constructor client and configuration for every ASA component and hook 
 | Prop | Type | |
 |---|---|---|
 | \`apiKey\` | \`string\` | Your Constructor index key. Required unless you pass \`cioClient\` |
-| \`cioClient\` | \`ConstructorIOClient\` | Your own client, e.g. for \`serviceUrl\`, \`segments\` or \`userId\` options. Replaces \`apiKey\` |
+| \`cioClient\` | \`ConstructorIOClient\` | Your own client, e.g. for \`serviceUrl\`, \`segments\` or \`userId\` options. Replaces \`apiKey\`. Tracking events the library sends through it, including from \`useAsaTracking\`, carry \`cio-ui-asa-<version>\` as \`c\`; events you send on its \`tracker\` directly keep its \`version\` |
 | \`staticRequestConfigs\` | \`RequestConfigs\` | Sent with every agent request. Default \`{ domain: 'chatbot' }\`; your own must include \`domain\` |
 | \`callbacks\` | \`AsaCallbacks\` | One per tracking event. See [Callbacks & Tracking](?path=/docs/guides-callbacks-tracking--variants) |
 | \`section\` | \`string\` | Index section on every tracking event. Default \`'Products'\` |

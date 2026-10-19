@@ -67,6 +67,43 @@ describe('withLibraryTag', () => {
     expect(lastEvent().query.get('ui')).toBe('logged-in');
   });
 
+  it('follows an options object the host replaces', () => {
+    const tracker = withLibraryTag(client.tracker);
+    const { tracker: host } = client as unknown as {
+      tracker: { options: Record<string, unknown> };
+    };
+    host.options = { ...host.options, userId: 'replaced' };
+
+    tracker.trackAssistantSubmit(params);
+
+    const { query } = lastEvent();
+    expect(query.get('ui')).toBe('replaced');
+    expect(query.get('c')).toBe(LIBRARY_TAG);
+  });
+
+  it('sends with the host tag, without throwing, when the host freezes its options later', () => {
+    const tracker = withLibraryTag(client.tracker);
+    Object.freeze((client.tracker as unknown as { options: object }).options);
+
+    expect(() => tracker.trackAssistantSubmit(params)).not.toThrow();
+    expect(lastEvent().query.get('c')).toBe('ciojs-client-host');
+  });
+
+  it("retries on the host's tracker when a call fails on the tagged one", () => {
+    const sent: unknown[] = [];
+    const host = {
+      options: { version: 'ciojs-client-host' },
+      // Stands in for a client whose methods only work on the real instance, such as private fields.
+      track(this: typeof host) {
+        if (this !== host) throw new TypeError('Cannot read private member');
+        sent.push(this.options.version);
+      },
+    };
+
+    expect(() => withLibraryTag(host).track()).not.toThrow();
+    expect(sent).toEqual(['ciojs-client-host']);
+  });
+
   it("leaves the host's own events with the host's tag", () => {
     withLibraryTag(client.tracker);
 
