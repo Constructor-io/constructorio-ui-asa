@@ -54,32 +54,6 @@ describe('ChatMessageList', () => {
     expect(screen.getByText('Shoes')).toBeInTheDocument();
   });
 
-  describe('support actions', () => {
-    const supportMsg: ChatMessage = { ...aiMsg, id: 's1', route: 'customer_support' };
-
-    it('renders the buttons under a support answer and passes the message on click', () => {
-      const onClick = jest.fn();
-      render(
-        <ChatMessageList
-          messages={[supportMsg]}
-          supportActions={[{ label: 'Chat with support', onClick }]}
-        />,
-      );
-      fireEvent.click(screen.getByRole('button', { name: 'Chat with support' }));
-      expect(onClick).toHaveBeenCalledWith(supportMsg);
-    });
-
-    it('hides the buttons on answers that were not routed to support', () => {
-      render(
-        <ChatMessageList
-          messages={[aiMsg]}
-          supportActions={[{ label: 'Chat with support', onClick: jest.fn() }]}
-        />,
-      );
-      expect(screen.queryByRole('button', { name: 'Chat with support' })).toBeNull();
-    });
-  });
-
   describe('follow-up refinements', () => {
     const refinement = { question: 'Who are you shopping for?', options: ['Women', 'Men'] };
     const aiWithRefinement: ChatMessage = { ...aiMsg, id: 'r1', refinement };

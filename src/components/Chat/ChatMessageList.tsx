@@ -6,7 +6,6 @@ import {
   ComponentOverrideProps,
   ResultGroupMeta,
   ResultsBlockOverrides,
-  SupportAction,
   Translations,
   UserMessageRenderProps,
 } from '../../types';
@@ -16,7 +15,6 @@ import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
 import FollowUpRefinement from './FollowUpRefinement';
-import SupportActions from './SupportActions';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -36,8 +34,6 @@ interface ChatMessageListProps {
   onSend?: (text: string, source?: AssistantSubmitSource) => void;
   /** Disables refinement chips while a response is streaming. */
   isStreaming?: boolean;
-  /** Buttons shown under answers routed to customer support. */
-  supportActions?: SupportAction[];
 }
 
 export default function ChatMessageList({
@@ -56,7 +52,6 @@ export default function ChatMessageList({
   translations,
   onSend,
   isStreaming = false,
-  supportActions,
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -132,13 +127,6 @@ export default function ChatMessageList({
                 viewMoreText={viewMoreText}
                 saleBadgeText={translate('CioAsa.results.saleBadge', translations)}
                 componentOverrides={resultsBlockOverrides}
-              />
-            )}
-            {message.route === 'customer_support' && !!supportActions?.length && (
-              <SupportActions
-                message={message}
-                actions={supportActions}
-                translations={translations}
               />
             )}
             {refinement && (

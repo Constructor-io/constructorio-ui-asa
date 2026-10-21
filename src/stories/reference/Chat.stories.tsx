@@ -103,15 +103,6 @@ const meta: Meta<typeof Chat> = {
         defaultValue: { summary: 'false' },
       },
     },
-    supportActions: {
-      description:
-        "Buttons shown under answers the agent routed to customer support (`route: 'customer_support'`), " +
-        'e.g. one that opens your support chat. Each is `{ label, onClick }`; `onClick` gets the routed message.',
-      table: {
-        category: 'Content',
-        type: { summary: 'SupportAction[]' },
-      },
-    },
     initialThreadId: {
       description:
         'Resume a specific agent thread. Read once on mount; the thread id is then tracked ' +

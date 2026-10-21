@@ -7,7 +7,6 @@
 @import './components/Chat/UserMessage.css';
 @import './components/Chat/AiMessage.css';
 @import './components/Chat/FollowUpRefinement.css';
-@import './components/Chat/SupportActions.css';
 @import './components/Chat/TypingIndicator.css';
 @import './components/Chat/ChatInput.css';
 @import './components/ResultsBlock/ResultsBlock.css';

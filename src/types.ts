@@ -164,12 +164,6 @@ export interface FollowUpRefinement {
   options: string[];
 }
 
-/** A button shown under answers the agent routed to customer support, e.g. one that opens a support chat. */
-export interface SupportAction {
-  label: string;
-  onClick: (message: ChatMessage) => void;
-}
-
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 
 /**
@@ -433,11 +427,15 @@ export interface AsaCallbacks {
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */
   onResultLoadStart?: (payload: { intent: string; intentResultId?: string }) => void;
-  /** The ASA response stream finished; `searchResultCount` = number of pods loaded. */
+  /**
+   * The ASA response stream finished; `searchResultCount` = number of pods loaded.
+   * `route` is set when the agent routed the answer, e.g. `'customer_support'`.
+   */
   onResultLoadFinish?: (payload: {
     intent: string;
     searchResultCount: number;
     intentResultId?: string;
+    route?: string;
   }) => void;
   /** A product inside a search_result pod was clicked. */
   onResultClick?: (payload: {
@@ -491,7 +489,6 @@ export type Translations = {
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
   'CioAsa.refinement.ariaLabel'?: string;
-  'CioAsa.supportActions.ariaLabel'?: string;
   'CioAsa.error.message'?: string;
   'CioAsa.error.interrupted'?: string;
 };
