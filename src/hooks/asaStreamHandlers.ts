@@ -66,6 +66,7 @@ export function handleMessage(data: any, assistantId: string, setMessages: Messa
     ...msg,
     status: 'streaming',
     text: [msg.text, data?.text].filter(Boolean).join('\n'),
+    ...(typeof data?.route === 'string' && { route: data.route }),
   }));
 }
 

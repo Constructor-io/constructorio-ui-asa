@@ -20,6 +20,7 @@ const defaultTranslations: Translations = {
   'CioAsa.results.addToCart': 'Add to cart',
   'CioAsa.results.saleBadge': 'Sale',
   'CioAsa.refinement.ariaLabel': 'Refine your results',
+  'CioAsa.supportActions.ariaLabel': 'Customer support options',
   'CioAsa.error.message': "I can't assist you with that request.",
   'CioAsa.error.interrupted': 'The answer was interrupted. Please send your question again.',
 };

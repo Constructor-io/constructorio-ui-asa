@@ -8,6 +8,7 @@ import {
   ChatMessage,
   ResultGroupMeta,
   SendMessageOptions,
+  SupportAction,
   ThreadSummary,
   Translations,
 } from '../../types';
@@ -85,6 +86,11 @@ export interface ChatProps {
    * off, cancelling is only reachable via `abort()` on the ref or your own input override.
    */
   showStopButton?: boolean;
+  /**
+   * Buttons shown under answers the agent routed to customer support (`route: 'customer_support'`),
+   * e.g. one that opens your support chat. Each `onClick` gets the routed message.
+   */
+  supportActions?: SupportAction[];
 }
 
 // a11y: text for the screen-reader live region that voices the conversation
@@ -125,6 +131,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       initialPrompt,
       onThreadsChange,
       showStopButton = false,
+      supportActions,
     },
     ref,
   ) => {
@@ -257,6 +264,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 translations={translations}
                 onSend={sendMessage}
                 isStreaming={isStreaming}
+                supportActions={supportActions}
               />
               <ChatInput
                 onSubmit={sendMessage}

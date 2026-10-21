@@ -67,6 +67,20 @@ The agent can end a turn with a narrowing question and options, such as _"Who ar
 - Several in one turn: the last one wins.
 - Restyle with the `aiMessage.followUpRefinement` override and the `CioAsa.refinement.ariaLabel` translation. With `useAsaResults` it is `message.refinement` (`{ question, options }`).
 
+## Customer support buttons
+
+When the agent is set up to route support questions (orders, shipping, returns), it marks those answers with `route: 'customer_support'`. `supportActions` shows your buttons under them, for example one that opens your support chat. Each `onClick` gets the routed message. Other answers show no buttons.
+
+```js
+CioAsa({
+  selector: '#cio-asa',
+  apiKey: 'key_...',
+  supportActions: [{ label: 'Chat with support', onClick: () => zE('messenger', 'open') }],
+});
+```
+
+The route is also kept on each message as `message.route`, and in stored conversations, so the buttons come back with them. Style them with the `cio-asa-support-actions` classes.
+
 ## Stop button
 
 `showStopButton` turns the send button into a stop button while an answer streams. It is off by default. `abort()` on the ref does the same, for your own button or a timeout:

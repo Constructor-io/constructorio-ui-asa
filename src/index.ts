@@ -48,6 +48,7 @@ export type {
   ChatMessage,
   ChatMessageStatus,
   FollowUpRefinement,
+  SupportAction,
   ResultGroup,
   ResultGroupMeta,
   SearchResultEventRequest,

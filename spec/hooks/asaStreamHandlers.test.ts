@@ -360,6 +360,13 @@ describe('asaStreamHandlers', () => {
       expect(msg.text).toBe('Hello');
     });
 
+    it('keeps the route of a routed message', () => {
+      const setMessages = jest.fn();
+      handleMessage({ text: 'Contact us', route: 'customer_support' }, ASSISTANT_ID, setMessages);
+      const msg = applyUpdater(setMessages, [baseMessage]);
+      expect(msg.route).toBe('customer_support');
+    });
+
     it('handles missing text data as empty string', () => {
       const setMessages = jest.fn();
       handleMessage({}, ASSISTANT_ID, setMessages);

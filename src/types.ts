@@ -152,6 +152,8 @@ export interface ChatMessage {
   threadId?: string;
   /** Narrowing question the agent asked at the end of this turn, from a `follow_up_refinement` event. */
   refinement?: FollowUpRefinement;
+  /** Where the agent routed this answer, from the `message` event, e.g. `'customer_support'`. */
+  route?: string;
   /** The answer never arrived: the page was left or the shopper logged out mid-answer. Unset on a failure. */
   interrupted?: boolean;
 }
@@ -160,6 +162,12 @@ export interface ChatMessage {
 export interface FollowUpRefinement {
   question: string;
   options: string[];
+}
+
+/** A button shown under answers the agent routed to customer support, e.g. one that opens a support chat. */
+export interface SupportAction {
+  label: string;
+  onClick: (message: ChatMessage) => void;
 }
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
@@ -483,6 +491,7 @@ export type Translations = {
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
   'CioAsa.refinement.ariaLabel'?: string;
+  'CioAsa.supportActions.ariaLabel'?: string;
   'CioAsa.error.message'?: string;
   'CioAsa.error.interrupted'?: string;
 };
