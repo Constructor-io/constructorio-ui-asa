@@ -1,7 +1,10 @@
+import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import { renderHook } from '@testing-library/react';
 import { Tracker } from '@constructor-io/constructorio-client-javascript/lib/types/constructorio';
 import useAsaTracking from '../../src/hooks/useAsaTracking';
 import { createMockTracker } from '../local_examples/mockCioClient';
+import { LIBRARY_TAG } from '../../src/utils/libraryTag';
+import { DEMO_API_KEY } from '../../src/constants';
 
 describe('useAsaTracking', () => {
   it('returns no-op functions when no tracker is provided', () => {
@@ -238,5 +241,22 @@ describe('useAsaTracking', () => {
       result.current.trackAgentButtonClick({ mode: 'chat', agentDomain: 'chatbot' }),
     ).not.toThrow();
     expect(trackAgentButtonClick).not.toHaveBeenCalled();
+  });
+
+  it("tags events with the library on the host's own client, and leaves the host calls with its tag", () => {
+    const client = new ConstructorIOClient({ apiKey: DEMO_API_KEY, version: 'ciojs-client-host' });
+    const { requests } = client.tracker as unknown as {
+      requests: { queue: (url: string) => void; send: () => void };
+    };
+    const queue = jest.spyOn(requests, 'queue').mockImplementation(() => {});
+    jest.spyOn(requests, 'send').mockImplementation(() => {});
+    const tagOf = (call: number) => new URL(queue.mock.calls[call][0]).searchParams.get('c');
+
+    const { result } = renderHook(() => useAsaTracking({ tracker: client.tracker }));
+    result.current.trackSubmit('shoes');
+    client.tracker.trackAssistantSubmit({ intent: 'shoes' });
+
+    expect(tagOf(0)).toBe(LIBRARY_TAG);
+    expect(tagOf(1)).toBe('ciojs-client-host');
   });
 });

@@ -1,7 +1,7 @@
 import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import { Nullable } from '@constructor-io/constructorio-client-javascript/lib/types';
 import { useEffect, useMemo } from 'react';
-import version from '../version';
+import { LIBRARY_TAG } from '../utils/libraryTag';
 import type { UseCioClientProps } from '../types';
 
 type UseCioClient = (props: UseCioClientProps) => Nullable<ConstructorIOClient> | never;
@@ -23,7 +23,7 @@ const useCioClient: UseCioClient = ({ apiKey, cioClient, cioClientOptions, testC
       return new ConstructorIOClient({
         apiKey,
         sendTrackingEvents: true,
-        version: `cio-ui-asa-${version}`,
+        version: LIBRARY_TAG,
         ...(testCells && { testCells }),
         ...cioClientOptions,
       });
