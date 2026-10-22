@@ -18,7 +18,11 @@ export interface AgentStreamCallbacks {
   /** Fires once, on the first event with content, for load-started tracking. */
   onLoadStart: (intentResultId?: string) => void;
   /** The stream ended normally (not on a server error, a failure, or a cancel). */
-  onFinish: (result: { searchResultCount: number; intentResultId?: string }) => void;
+  onFinish: (result: {
+    searchResultCount: number;
+    intentResultId?: string;
+    route?: string;
+  }) => void;
 }
 
 export interface AgentStreamHandle {
@@ -59,6 +63,7 @@ export function readAgentStream(
   let intentResultId: string | undefined;
   let loadStartFired = false;
   let groupCount = 0;
+  let route: string | undefined;
 
   const patchAssistant = (patch: Partial<ChatMessage>) => {
     updateMessageById(setMessages, assistantId, (m) => ({ ...m, ...patch }));
@@ -78,7 +83,7 @@ export function readAgentStream(
         if (cancelled) break;
         if (res.done) {
           handleStreamEnd(assistantId, setMessages);
-          callbacks.onFinish({ searchResultCount: groupCount, intentResultId });
+          callbacks.onFinish({ searchResultCount: groupCount, intentResultId, route });
           break;
         }
 
@@ -103,7 +108,7 @@ export function readAgentStream(
           pendingGroup = handleSearchResult(data, pendingGroup, assistantId, setMessages);
         } else if (type === 'message') {
           fireLoadStart();
-          handleMessage(data, assistantId, setMessages);
+          route = handleMessage(data, assistantId, setMessages);
         } else if (type === 'follow_up_refinement') {
           fireLoadStart();
           handleFollowUpRefinement(data, assistantId, setMessages);

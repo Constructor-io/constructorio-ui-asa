@@ -43,7 +43,8 @@ function isChatMessage(value: unknown): value is ChatMessage {
     typeof m.text === 'string' &&
     MESSAGE_STATUSES.has(m.status as string) &&
     (m.groups === undefined || (Array.isArray(m.groups) && m.groups.every(isResultGroup))) &&
-    (m.refinement === undefined || isRefinement(m.refinement))
+    (m.refinement === undefined || isRefinement(m.refinement)) &&
+    (m.route === undefined || typeof m.route === 'string')
   );
 }
 

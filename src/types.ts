@@ -152,6 +152,8 @@ export interface ChatMessage {
   threadId?: string;
   /** Narrowing question the agent asked at the end of this turn, from a `follow_up_refinement` event. */
   refinement?: FollowUpRefinement;
+  /** Where the agent routed this answer, from the `message` event, e.g. `'customer_support'`. */
+  route?: string;
   /** The answer never arrived: the page was left or the shopper logged out mid-answer. Unset on a failure. */
   interrupted?: boolean;
 }
@@ -425,11 +427,15 @@ export interface AsaCallbacks {
   onAssistantSubmit?: (payload: { intent: string; source: AssistantSubmitSource }) => void;
   /** The ASA response stream started. */
   onResultLoadStart?: (payload: { intent: string; intentResultId?: string }) => void;
-  /** The ASA response stream finished; `searchResultCount` = number of pods loaded. */
+  /**
+   * The ASA response stream finished; `searchResultCount` = number of pods loaded.
+   * `route` is set when the agent routed the answer, e.g. `'customer_support'`.
+   */
   onResultLoadFinish?: (payload: {
     intent: string;
     searchResultCount: number;
     intentResultId?: string;
+    route?: string;
   }) => void;
   /** A product inside a search_result pod was clicked. */
   onResultClick?: (payload: {

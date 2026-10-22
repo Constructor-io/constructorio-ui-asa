@@ -25,6 +25,20 @@ function harness() {
 const message = (text: string): StreamEvent => ({ type: 'message', data: { text } });
 
 describe('readAgentStream', () => {
+  it('passes the route of a routed answer to onFinish', async () => {
+    const { setMessages, callbacks } = harness();
+    const stream = createEventStream([
+      { type: 'message', data: { text: 'Contact us', route: 'customer_support' } },
+    ]);
+
+    await readAgentStream(stream, 'a1', setMessages, callbacks).done;
+
+    expect(callbacks.onFinish).toHaveBeenCalledWith({
+      searchResultCount: 0,
+      route: 'customer_support',
+    });
+  });
+
   it('reports start, first content and a normal finish', async () => {
     const { assistant, setMessages, callbacks } = harness();
     const stream = createEventStream([

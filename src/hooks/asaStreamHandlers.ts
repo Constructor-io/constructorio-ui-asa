@@ -61,12 +61,20 @@ export function handleSearchResult(
   return null;
 }
 
-export function handleMessage(data: any, assistantId: string, setMessages: MessageUpdater) {
+/** Returns the message's `route`, e.g. `'customer_support'`, when the agent routed it. */
+export function handleMessage(
+  data: any,
+  assistantId: string,
+  setMessages: MessageUpdater,
+): string | undefined {
+  const route = typeof data?.route === 'string' ? data.route : undefined;
   updateMessageById(setMessages, assistantId, (msg) => ({
     ...msg,
     status: 'streaming',
     text: [msg.text, data?.text].filter(Boolean).join('\n'),
+    ...(route && { route }),
   }));
+  return route;
 }
 
 export function handleFollowUpRefinement(

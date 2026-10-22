@@ -28,7 +28,7 @@ export type StreamEvent =
         request?: Record<string, unknown>;
       };
     }
-  | { type: 'message'; data: { text: string } }
+  | { type: 'message'; data: { text: string; route?: string } }
   | {
       type: 'follow_up_refinement';
       data: {
