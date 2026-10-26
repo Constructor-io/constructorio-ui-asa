@@ -48,6 +48,8 @@ export type {
   ChatMessage,
   ChatMessageStatus,
   FollowUpRefinement,
+  CheckoutTrigger,
+  CheckoutTriggerState,
   ResultGroup,
   ResultGroupMeta,
   SearchResultEventRequest,

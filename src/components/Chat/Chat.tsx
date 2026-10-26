@@ -6,6 +6,7 @@ import useLatest from '../../hooks/useLatest';
 import {
   ChatComponentOverrides,
   ChatMessage,
+  CheckoutTrigger,
   ResultGroupMeta,
   SendMessageOptions,
   ThreadSummary,
@@ -85,6 +86,12 @@ export interface ChatProps {
    * off, cancelling is only reachable via `abort()` on the ref or your own input override.
    */
   showStopButton?: boolean;
+  /**
+   * Checkout buttons rendered under the products of each finished assistant turn. `Chat`
+   * renders the buttons only; `onTrigger` receives that turn's products so you can seed
+   * your own checkout flow. See the Checkout guide.
+   */
+  checkoutTriggers?: CheckoutTrigger[];
 }
 
 // a11y: text for the screen-reader live region that voices the conversation
@@ -125,6 +132,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
       initialPrompt,
       onThreadsChange,
       showStopButton = false,
+      checkoutTriggers,
     },
     ref,
   ) => {
@@ -257,6 +265,7 @@ const Chat = forwardRef<ChatHandle, ChatProps>(
                 translations={translations}
                 onSend={sendMessage}
                 isStreaming={isStreaming}
+                checkoutTriggers={checkoutTriggers}
               />
               <ChatInput
                 onSubmit={sendMessage}

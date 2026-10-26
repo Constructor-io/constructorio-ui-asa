@@ -322,6 +322,53 @@ describe('Chat', () => {
     });
   });
 
+  describe('checkout triggers', () => {
+    const productEvents: StreamEvent[] = [
+      { type: 'message', data: { text: 'Here are some picks' } },
+      {
+        type: 'search_result',
+        data: {
+          result_id: 'sr-1',
+          response: { results: [{ value: 'Sneaker', data: { id: 'p1', price: 120 } }] },
+        },
+      },
+    ];
+
+    it('renders the trigger under the products once the stream ends, with those products', async () => {
+      const onTrigger = jest.fn();
+      renderChat({ checkoutTriggers: [{ id: 'buy', label: 'Buy now', onTrigger }] }, productEvents);
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+
+      const button = await screen.findByRole('button', { name: 'Buy now' });
+      await userEvent.click(button);
+
+      expect(onTrigger).toHaveBeenCalledWith(
+        expect.objectContaining({
+          products: [expect.objectContaining({ id: 'p1', name: 'Sneaker' })],
+          isLatest: true,
+          isStreaming: false,
+        }),
+      );
+    });
+
+    it('renders no trigger for a text-only answer', async () => {
+      renderChat({ checkoutTriggers: [{ id: 'buy', label: 'Buy now', onTrigger: jest.fn() }] });
+      await userEvent.type(screen.getByRole('textbox'), 'hello{Enter}');
+      await screen.findByText('An answer');
+      expect(screen.queryByRole('button', { name: 'Buy now' })).not.toBeInTheDocument();
+    });
+
+    it('has no accessibility violations with a trigger', async () => {
+      const { container } = renderChat(
+        { checkoutTriggers: [{ id: 'buy', label: 'Buy now', onTrigger: jest.fn() }] },
+        productEvents,
+      );
+      await userEvent.type(screen.getByRole('textbox'), 'shoes{Enter}');
+      await screen.findByRole('button', { name: 'Buy now' });
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
   describe('submit tracking', () => {
     function renderTrackedChat(
       events: StreamEvent[],
