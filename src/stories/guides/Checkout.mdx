@@ -9,7 +9,7 @@ Pass `checkoutTriggers` to render checkout buttons under the products of each an
 
 The buttons render once an answer has finished and only when it shows products. `Chat` renders the buttons and nothing else. The checkout flow, and where it renders, is yours.
 
-In the examples below, the cart on the right stands in for your app: click a button and it lists the products `onTrigger` received.
+In the examples below, the cart on the right stands in for your app. Every button receives all of the answer's products; "Buy the first pick" keeps one, "Buy all three" keeps them all. That choice is yours to make in `onTrigger`.
 
 <Canvas of={CheckoutStories.MultipleTriggers} />
 

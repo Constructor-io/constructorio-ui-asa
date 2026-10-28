@@ -17,42 +17,83 @@ const decorator = (Story: React.ComponentType) => (
   </CioAsaProvider>
 );
 
-/** Stands in for the host's checkout: lists what the clicked trigger received. */
+/**
+ * A trigger as these stories use it: `pick` is the host's choice of which of the answer's
+ * products go in the cart. The library always hands over every product of the answer.
+ */
+type StoryTrigger = CheckoutTrigger & { pick?: (products: Product[]) => Product[] };
+
+const money = (value: Product['price']) => `$${Number(value ?? 0).toFixed(2)}`;
+
+/** Stands in for the host's checkout: lists what the clicked trigger put in the cart. */
 function FakeCart({ triggerId, products }: { triggerId: string | null; products: Product[] }) {
-  const total = products.reduce(
-    (sum, product) => sum + Number(product.salePrice ?? product.price ?? 0),
-    0,
-  );
+  const total = products.reduce((sum, p) => sum + Number(p.salePrice ?? p.price ?? 0), 0);
   return (
     <aside
       aria-label='Your cart'
       style={{
-        width: '240px',
-        padding: '16px',
+        width: '280px',
+        padding: '20px',
         borderRadius: '12px',
-        background: '#f4f5f7',
+        background: '#ffffff',
+        border: '1px solid #e9eaec',
+        boxShadow: '0 1px 2px rgba(18, 18, 105, 0.055), 0 2px 4px rgba(18, 18, 105, 0.07)',
+        fontFamily: "'Inter', sans-serif",
         fontSize: '13px',
+        lineHeight: '20px',
         color: '#0f1324',
+        boxSizing: 'border-box',
       }}>
-      <strong>Your cart</strong>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontSize: '15px', fontWeight: 600 }}>Your cart</span>
+        {triggerId && (
+          <span style={{ fontSize: '12px', color: '#6b7080' }}>
+            {products.length} {products.length === 1 ? 'item' : 'items'}
+          </span>
+        )}
+      </div>
       {triggerId === null ? (
-        <p style={{ marginBottom: 0 }}>Click a checkout button under the products.</p>
+        <p style={{ margin: '12px 0 0', color: '#6b7080' }}>
+          Click a checkout button under the products.
+        </p>
       ) : (
         <>
-          <p style={{ margin: '4px 0 12px', color: '#6b7080' }}>
-            onTrigger: <code>{triggerId}</code>, {products.length} products
+          <p style={{ margin: '4px 0 16px', fontSize: '12px', color: '#6b7080' }}>
+            from <code style={{ fontSize: '12px' }}>onTrigger</code> of{' '}
+            <code style={{ fontSize: '12px' }}>{triggerId}</code>
           </p>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '8px' }}>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '12px' }}>
             {products.map((product) => (
-              <li
-                key={product.id}
-                style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                <span>{product.name}</span>
-                <span>${product.salePrice ?? product.price}</span>
+              <li key={product.id} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <img
+                  src={product.imageUrl}
+                  alt=''
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    background: '#f4f5f7',
+                    flex: 'none',
+                  }}
+                />
+                <span style={{ flex: 1, minWidth: 0 }}>{product.name}</span>
+                <span style={{ fontWeight: 500 }}>{money(product.salePrice ?? product.price)}</span>
               </li>
             ))}
           </ul>
-          <p style={{ margin: '12px 0 0', fontWeight: 600 }}>Total ${total}</p>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '16px',
+              paddingTop: '12px',
+              borderTop: '1px solid #e9eaec',
+              fontWeight: 600,
+            }}>
+            <span>Total</span>
+            <span>{money(total)}</span>
+          </div>
         </>
       )}
     </aside>
@@ -60,17 +101,16 @@ function FakeCart({ triggerId, products }: { triggerId: string | null; products:
 }
 
 /**
- * Renders the chat next to a fake cart, so a click shows what the host would receive.
- * Every trigger's `onTrigger` is wrapped to fill the cart; the Actions tab still logs it.
+ * Renders the chat next to a fake cart, so a click shows what the host put in it. Each
+ * trigger's `onTrigger` is wrapped to fill the cart with its `pick` of the products, or all
+ * of them. The Actions tab still logs the real call.
  */
 function ChatWithCart({ checkoutTriggers = [], ...props }: ChatProps) {
-  const [received, setReceived] = useState<{ id: string; state: CheckoutTriggerState } | null>(
-    null,
-  );
-  const triggers = checkoutTriggers.map((trigger) => ({
+  const [cart, setCart] = useState<{ id: string; products: Product[] } | null>(null);
+  const triggers = (checkoutTriggers as StoryTrigger[]).map(({ pick, ...trigger }) => ({
     ...trigger,
     onTrigger: (state: CheckoutTriggerState) => {
-      setReceived({ id: trigger.id, state });
+      setCart({ id: trigger.id, products: pick ? pick(state.products) : state.products });
       trigger.onTrigger(state);
     },
   }));
@@ -79,7 +119,7 @@ function ChatWithCart({ checkoutTriggers = [], ...props }: ChatProps) {
       <div style={{ width: '504px', height: '700px', borderRadius: '12px', overflow: 'hidden' }}>
         <Chat {...props} checkoutTriggers={triggers} />
       </div>
-      <FakeCart triggerId={received?.id ?? null} products={received?.state.products ?? []} />
+      <FakeCart triggerId={cart?.id ?? null} products={cart?.products ?? []} />
     </div>
   );
 }
@@ -95,7 +135,7 @@ const meta = {
         component:
           '`checkoutTriggers` renders checkout buttons under the products of each finished answer. ' +
           "`onTrigger` receives that answer's products, so the host can seed its own checkout flow. " +
-          'The cart on the right stands in for the host and shows what the clicked trigger received. ' +
+          'The cart on the right stands in for the host and shows what the clicked trigger put in it. ' +
           "These stories send a prompt on mount and replay a scripted stream, so they don't need network access.",
       },
     },
@@ -148,12 +188,17 @@ export const LatestTurnOnly: Story = {
   play: ({ canvasElement }) => askAndWaitFor(canvasElement, 'Buy these'),
 };
 
-/** Parallel checkout paths from one answer. */
+/** Parallel paths from one answer. Each trigger receives all three products; "Buy the first pick" keeps one. */
 export const MultipleTriggers: Story = {
   args: {
     ...baseArgs,
     checkoutTriggers: [
-      { id: 'buy-first', label: 'Buy the first pick', onTrigger: action('onTrigger: buy-first') },
+      {
+        id: 'buy-first',
+        label: 'Buy the first pick',
+        pick: (products) => products.slice(0, 1),
+        onTrigger: action('onTrigger: buy-first'),
+      } as StoryTrigger,
       { id: 'buy-all', label: 'Buy all three', onTrigger: action('onTrigger: buy-all') },
     ],
   },
