@@ -1,0 +1,182 @@
+import { Meta, Canvas, Markdown } from '@storybook/blocks';
+import * as CheckoutStories from '../examples/CheckoutTriggers.stories';
+
+<Meta title='Guides/Checkout' />
+
+# Checkout
+
+Pass `checkoutTriggers` to render checkout buttons under the products of each answer, so a shopper can buy straight from the chat.
+
+The buttons render once an answer has finished and only when it shows products. `Chat` renders the buttons and nothing else. The checkout flow, and where it renders, is yours.
+
+In the examples below, the cart on the right stands in for your app. Every button receives all of the answer's products; "Buy the first pick" keeps one, "Buy all three" keeps them all. That choice is yours to make in `onTrigger`.
+
+<Canvas of={CheckoutStories.MultipleTriggers} />
+
+## Setup
+
+The example uses [`@constructor-io/constructorio-ui-checkout`](https://github.com/Constructor-io/constructorio-ui-checkout), which is recommended but optional.
+
+```bash
+npm install @constructor-io/constructorio-ui-checkout
+```
+
+```tsx
+import { CioAsaProvider, Chat } from '@constructor-io/constructorio-ui-asa';
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  CioStripePaymentStep,
+  CioFulfillmentStep,
+  PAYMENT_STEP,
+  useCioCheckout,
+} from '@constructor-io/constructorio-ui-checkout';
+
+// 1. Mount both providers once at your app root.
+export default function App() {
+  return (
+    <CioAsaProvider apiKey='YOUR_API_KEY'>
+      <CioCheckoutProvider
+        provider='stripe'
+        steps={[{ id: PAYMENT_STEP }, { id: 'complete' }]}
+        onCreateSession={async (state) => {
+          const res = await fetch('/api/checkout-session', {
+            method: 'POST',
+            body: JSON.stringify({ items: state.cartSnapshot }),
+            headers: { 'Content-Type': 'application/json' },
+          });
+          return res.json(); // { clientSecret, publishableKey }
+        }}>
+        <ShoppingAssistant />
+        <CheckoutModal />
+      </CioCheckoutProvider>
+    </CioAsaProvider>
+  );
+}
+
+// 2. Start the flow from a trigger. `state.products` are the cards of that answer.
+function ShoppingAssistant() {
+  const flow = useCioCheckout();
+
+  return (
+    <Chat
+      checkoutTriggers={[
+        {
+          id: 'buy-these',
+          label: 'Buy these',
+          onTrigger: ({ products }) => {
+            flow.setCart(
+              products.map((product) => ({
+                id: product.id,
+                name: product.name,
+                unitAmount: Math.round(Number(product.salePrice ?? product.price) * 100),
+                quantity: 1,
+              })),
+            );
+            flow.start();
+          },
+        },
+      ]}
+    />
+  );
+}
+
+// 3. Render the active checkout — modal, inline, or a route.
+function CheckoutModal() {
+  const flow = useCioCheckout();
+  if (flow.state.currentStepId === null) return null;
+  return (
+    <Modal onClose={() => flow.clearState()}>
+      <CioCheckoutStep id={PAYMENT_STEP}>
+        <CioStripePaymentStep />
+      </CioCheckoutStep>
+      <CioCheckoutStep id='complete'>
+        <CioFulfillmentStep
+          onFulfill={() => fetch('/api/verify-order').then((res) => res.json())}
+        />
+      </CioCheckoutStep>
+    </Modal>
+  );
+}
+```
+
+`price` and `salePrice` come from your catalog through `normalizeItem`, so map them to the minor unit your payment provider expects. See [Product Results](?path=/docs/guides-product-results--variants) for field mapping.
+
+## `CheckoutTrigger`
+
+One entry per button. Add more for parallel paths (buy the first pick, buy all).
+
+```ts
+type CheckoutTrigger = {
+  id: string;
+  label?: string;
+  disabled?: boolean;
+  triggerWhen?: (state: CheckoutTriggerState) => boolean;
+  renderButton?: (props: {
+    onClick: () => void;
+    label: string;
+    disabled?: boolean;
+    id: string;
+  }) => ReactNode;
+  onTrigger: (state: CheckoutTriggerState) => void;
+};
+```
+
+<Markdown>
+  {`
+| Prop | Required | Description |
+|------|----------|-------------|
+| \`id\` | yes | Stable identifier. Used as the React key and passed to \`renderButton\` |
+| \`onTrigger\` | yes | Fires on click with the state below. Seed your cart from \`state.products\` and start your flow here |
+| \`label\` | no | Button text. Defaults to the \`CioAsa.checkout.triggerLabel\` translation, \`"Checkout"\` |
+| \`disabled\` | no | Disables the button, and is passed through to \`renderButton\` |
+| \`triggerWhen\` | no | Re-evaluated every render with the state below; return \`false\` to hide the button under that answer. Defaults to always visible |
+| \`renderButton\` | no | Replaces the default button. Receives \`{ onClick, label, disabled, id }\`; styling becomes yours |
+`}
+</Markdown>
+
+## `CheckoutTriggerState`
+
+What `triggerWhen` and `onTrigger` receive, per answer.
+
+<Markdown>
+  {`
+| Field | |
+|---|---|
+| \`products\` | The product cards of that answer, every group flattened, as \`normalizeItem\` made them |
+| \`message\` | The assistant turn the buttons sit under (\`ChatMessage\`) |
+| \`messages\` | The whole conversation so far |
+| \`isLatest\` | True when that answer is the last turn |
+| \`isStreaming\` | True while an answer is streaming |
+`}
+</Markdown>
+
+```tsx
+// Only under the latest answer.
+triggerWhen: (state) => state.isLatest;
+
+// Only when every product has a price.
+triggerWhen: (state) => state.products.every((product) => product.price != null);
+
+// Use your own button.
+renderButton: ({ onClick, label, disabled }) => (
+  <MyButton onClick={onClick} disabled={disabled}>
+    {label}
+  </MyButton>
+);
+```
+
+<Canvas of={CheckoutStories.LatestTurnOnly} />
+
+## Styling and translations
+
+```css
+.cio-asa-checkout-triggers {}   /* the row, role="group" */
+.cio-asa-checkout-trigger {}    /* each default button */
+```
+
+`CioAsa.checkout.triggerLabel` sets the default label and `CioAsa.checkout.ariaLabel` names the row. See [Customization](?path=/docs/guides-customization--variants).
+
+`Chat` does not reset your checkout flow. Call `flow.clearState()` from your own close handler.
+
+For the full checkout API, see the [Constructor.io Checkout Library](https://github.com/Constructor-io/constructorio-ui-checkout).

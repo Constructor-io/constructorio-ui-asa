@@ -80,6 +80,17 @@ const meta: Meta<typeof Chat> = {
         'The `group` argument carries the echoed CIO request under `data.request` for building a destination URL.',
       table: { category: 'Callbacks' },
     },
+    checkoutTriggers: {
+      description:
+        'Checkout buttons rendered under the products of each finished answer. `onTrigger` receives ' +
+        "that answer's products. See [Checkout](./?path=/docs/guides-checkout--variants).",
+      control: false,
+      table: {
+        category: 'Callbacks',
+        type: { summary: 'CheckoutTrigger[]' },
+        defaultValue: { summary: 'undefined' },
+      },
+    },
     componentOverrides: {
       description:
         'Replace any part with your own render function. See [Customization](./?path=/docs/guides-customization--variants) for every slot.',

@@ -166,6 +166,49 @@ export interface FollowUpRefinement {
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 
+/** What a checkout trigger receives: the turn it sits under and the products of that turn. */
+export interface CheckoutTriggerState {
+  /** The assistant turn the buttons render under. */
+  message: ChatMessage;
+  /** The product cards of that turn, every group flattened, as `normalizeItem` made them. */
+  products: Product[];
+  /** The whole conversation so far, including `message`. */
+  messages: ChatMessage[];
+  /** True when `message` is the last turn of the conversation. */
+  isLatest: boolean;
+  /** True while an answer is streaming. */
+  isStreaming: boolean;
+}
+
+/**
+ * A checkout entry point rendered under the products of an assistant turn.
+ * You own the checkout flow itself (typically the `@constructor-io/constructorio-ui-checkout`
+ * `CioCheckoutProvider`); `Chat` only renders the button(s) that start it.
+ */
+export interface CheckoutTrigger {
+  /** Stable identifier. Used as the React key and passed to `renderButton`. */
+  id: string;
+  /** Button label. Defaults to the `CioAsa.checkout.triggerLabel` translation, "Checkout". */
+  label?: string;
+  /** Disables the button. Passed through to `renderButton`, which applies it. */
+  disabled?: boolean;
+  /**
+   * Decides whether this trigger renders under a turn. Re-evaluated every render with that
+   * turn's state, so you can gate on its products or on the conversation. Defaults to always
+   * visible; turns with no products never render the bar.
+   */
+  triggerWhen?: (state: CheckoutTriggerState) => boolean;
+  /** Replaces the default button. Receives `{ onClick, label, disabled, id }`; styling becomes yours. */
+  renderButton?: (props: {
+    onClick: () => void;
+    label: string;
+    disabled?: boolean;
+    id: string;
+  }) => ReactNode;
+  /** Fires on click with the turn's state. Seed your cart from `state.products` and start your flow here. */
+  onTrigger: (state: CheckoutTriggerState) => void;
+}
+
 /**
  * Echoed CIO search API request from a `search_result` SSE event — the parameters the
  * backend used to fetch this pod's results.
@@ -489,6 +532,8 @@ export type Translations = {
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
   'CioAsa.refinement.ariaLabel'?: string;
+  'CioAsa.checkout.ariaLabel'?: string;
+  'CioAsa.checkout.triggerLabel'?: string;
   'CioAsa.error.message'?: string;
   'CioAsa.error.interrupted'?: string;
 };

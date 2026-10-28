@@ -133,4 +133,5 @@ export const mockGroupsPodTypes = [
 export const functionArgTypes = {
   componentOverrides: { control: false },
   normalizeItem: { control: false },
+  checkoutTriggers: { control: false },
 } as const;

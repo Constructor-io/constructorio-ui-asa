@@ -67,6 +67,7 @@ This workflow will automatically:
 ## Related Libraries
 
 - [@constructor-io/constructorio-client-javascript](https://github.com/Constructor-io/constructorio-client-javascript) - JavaScript client for Constructor.io API
+- [@constructor-io/constructorio-ui-checkout](https://github.com/Constructor-io/constructorio-ui-checkout) - Checkout UI library, the recommended flow behind `checkoutTriggers`
 - [@constructor-io/constructorio-ui-autocomplete](https://github.com/Constructor-io/constructorio-ui-autocomplete) - Autocomplete UI library
 - [@constructor-io/constructorio-ui-plp](https://github.com/Constructor-io/constructorio-ui-plp) - Product Listing Page UI library
 - [@constructor-io/constructorio-ui-quizzes](https://github.com/Constructor-io/constructorio-ui-quizzes) - Quizzes UI library

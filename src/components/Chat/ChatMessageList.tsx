@@ -3,6 +3,8 @@ import {
   AiMessageOverrides,
   AssistantSubmitSource,
   ChatMessage,
+  CheckoutTrigger,
+  CheckoutTriggerState,
   ComponentOverrideProps,
   ResultGroupMeta,
   ResultsBlockOverrides,
@@ -10,11 +12,12 @@ import {
   UserMessageRenderProps,
 } from '../../types';
 import translate from '../../utils/translate';
-import { Product, NormalizeOptions } from '../../utils/productNormalizer';
+import { Product, NormalizeOptions, normalizeItemToProduct } from '../../utils/productNormalizer';
 import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
 import FollowUpRefinement from './FollowUpRefinement';
+import CheckoutTriggerBar from './CheckoutTriggerBar';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -34,6 +37,8 @@ interface ChatMessageListProps {
   onSend?: (text: string, source?: AssistantSubmitSource) => void;
   /** Disables refinement chips while a response is streaming. */
   isStreaming?: boolean;
+  /** Checkout buttons rendered under the products of each finished assistant turn. */
+  checkoutTriggers?: CheckoutTrigger[];
 }
 
 export default function ChatMessageList({
@@ -52,6 +57,7 @@ export default function ChatMessageList({
   translations,
   onSend,
   isStreaming = false,
+  checkoutTriggers,
 }: ChatMessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -103,6 +109,25 @@ export default function ChatMessageList({
         const hasGroups = !!message.groups?.length;
         const isLatest = index === messages.length - 1;
         const refinement = onSend ? message.refinement : undefined;
+        // Checkout buttons wait for the turn to finish, so a shopper never buys from a half-loaded list.
+        const showCheckout = !!checkoutTriggers?.length && hasGroups && message.status === 'done';
+        const checkoutState: CheckoutTriggerState | null = showCheckout
+          ? {
+              message,
+              products: message.groups!.flatMap(
+                (group) =>
+                  group.products ??
+                  group.searchResults.map((item) =>
+                    (normalizeItem ?? normalizeItemToProduct)(item, {
+                      saleBadgeText: translate('CioAsa.results.saleBadge', translations),
+                    }),
+                  ),
+              ),
+              messages,
+              isLatest,
+              isStreaming,
+            }
+          : null;
 
         return (
           <div key={message.id} className='cio-asa-ai-message-group'>
@@ -127,6 +152,13 @@ export default function ChatMessageList({
                 viewMoreText={viewMoreText}
                 saleBadgeText={translate('CioAsa.results.saleBadge', translations)}
                 componentOverrides={resultsBlockOverrides}
+              />
+            )}
+            {checkoutState && (
+              <CheckoutTriggerBar
+                triggers={checkoutTriggers!}
+                state={checkoutState}
+                translations={translations}
               />
             )}
             {refinement && (

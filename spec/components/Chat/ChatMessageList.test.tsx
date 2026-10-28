@@ -94,6 +94,112 @@ describe('ChatMessageList', () => {
     });
   });
 
+  describe('checkout triggers', () => {
+    const triggers = [{ id: 'checkout', label: 'Buy now', onTrigger: jest.fn() }];
+    const group = () => screen.queryByRole('group', { name: 'Checkout options' });
+
+    beforeEach(() => triggers[0].onTrigger.mockClear());
+
+    it('renders the bar below the results of a finished turn with products', () => {
+      render(<ChatMessageList messages={[aiWithGroups]} checkoutTriggers={triggers} />);
+      const results = document.querySelector('.cio-asa-results-block')!;
+      expect(results.nextElementSibling).toBe(group());
+    });
+
+    it('renders the bar before the refinement of that turn', () => {
+      const refinement = { question: 'Who is it for?', options: ['Men'] };
+      render(
+        <ChatMessageList
+          messages={[{ ...aiWithGroups, refinement }]}
+          checkoutTriggers={triggers}
+          onSend={jest.fn()}
+        />,
+      );
+      expect(group()!.nextElementSibling).toBe(
+        screen.getByRole('group', { name: 'Refine your results' }),
+      );
+    });
+
+    it('passes the turn, its normalized products and the conversation to onTrigger', () => {
+      const messages = [userMsg, aiWithGroups];
+      render(<ChatMessageList messages={messages} checkoutTriggers={triggers} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Buy now' }));
+      expect(triggers[0].onTrigger).toHaveBeenCalledWith({
+        message: aiWithGroups,
+        products: [expect.objectContaining({ id: '1', name: 'Sneaker' })],
+        messages,
+        isLatest: true,
+        isStreaming: false,
+      });
+    });
+
+    it('uses normalizeItem for the products it passes', () => {
+      const normalizeItem = jest.fn((item) => ({ id: `x-${item.data.id}`, name: item.value }));
+      render(
+        <ChatMessageList
+          messages={[aiWithGroups]}
+          checkoutTriggers={triggers}
+          normalizeItem={normalizeItem}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Buy now' }));
+      expect(triggers[0].onTrigger.mock.calls[0][0].products).toEqual([
+        { id: 'x-1', name: 'Sneaker' },
+      ]);
+    });
+
+    it('prefers the stored products of a restored turn', () => {
+      const restored: ChatMessage = {
+        ...aiWithGroups,
+        groups: [
+          {
+            ...aiWithGroups.groups![0],
+            searchResults: [],
+            products: [{ id: 's', name: 'Stored' }],
+          },
+        ],
+      };
+      render(<ChatMessageList messages={[restored]} checkoutTriggers={triggers} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Buy now' }));
+      expect(triggers[0].onTrigger.mock.calls[0][0].products).toEqual([
+        { id: 's', name: 'Stored' },
+      ]);
+    });
+
+    it('marks an earlier turn as not latest', () => {
+      render(
+        <ChatMessageList
+          messages={[aiWithGroups, { ...userMsg, id: 'u2' }]}
+          checkoutTriggers={triggers}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Buy now' }));
+      expect(triggers[0].onTrigger.mock.calls[0][0].isLatest).toBe(false);
+    });
+
+    it('does not render for a turn without products', () => {
+      render(<ChatMessageList messages={[aiMsg]} checkoutTriggers={triggers} />);
+      expect(group()).not.toBeInTheDocument();
+    });
+
+    it('does not render until the turn is done', () => {
+      const streaming: ChatMessage = { ...aiWithGroups, status: 'streaming' };
+      const { rerender } = render(
+        <ChatMessageList messages={[streaming]} checkoutTriggers={triggers} isStreaming />,
+      );
+      expect(group()).not.toBeInTheDocument();
+      rerender(<ChatMessageList messages={[aiWithGroups]} checkoutTriggers={triggers} />);
+      expect(group()).toBeInTheDocument();
+    });
+
+    it('does not render without triggers', () => {
+      const { rerender } = render(<ChatMessageList messages={[aiWithGroups]} />);
+      expect(group()).not.toBeInTheDocument();
+      rerender(<ChatMessageList messages={[aiWithGroups]} checkoutTriggers={[]} />);
+      expect(group()).not.toBeInTheDocument();
+    });
+  });
+
   describe('auto-scroll', () => {
     it('scrolls to the bottom when a new message arrives while near the bottom', () => {
       const { rerender } = render(<ChatMessageList messages={[userMsg]} />);

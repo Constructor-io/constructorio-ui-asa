@@ -40,6 +40,7 @@ const preview: Preview = {
             'Integration Guide',
             'Product Results',
             'Chat Features',
+            'Checkout',
             'Callbacks & Tracking',
             'Customization',
             'Conversations',
