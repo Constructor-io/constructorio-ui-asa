@@ -1,4 +1,4 @@
-import type { ChatMessage, PersistedChat } from '../../src/types';
+import type { ChatMessage, ClarificationQuiz, PersistedChat } from '../../src/types';
 import { PERSISTED_CHAT_VERSION } from '../../src/utils/chatThreads';
 
 export class FakeStorage implements Storage {
@@ -63,3 +63,40 @@ export function chat(
 ): PersistedChat {
   return { version: PERSISTED_CHAT_VERSION, threadId, messages, createdAt: updatedAt, updatedAt };
 }
+
+/** The quiz the live sewing-machine domain sends, as the library stores it. */
+export const sewingQuiz: ClarificationQuiz = {
+  quizId: 'quiz-1',
+  questions: [
+    {
+      id: 'question_1',
+      question: 'How long have you been sewing?',
+      answerType: 'single_select',
+      options: [
+        { id: 'option_1', label: "I'm just starting" },
+        { id: 'option_2', label: 'A little while' },
+        { id: 'option_3', label: 'For years' },
+      ],
+      allowFreeText: true,
+    },
+    {
+      id: 'question_2',
+      question: 'What do you want to make?',
+      answerType: 'multi_select',
+      options: [
+        { id: 'option_1', label: 'Clothes' },
+        { id: 'option_2', label: 'Quilts' },
+        { id: 'option_3', label: 'Home decor' },
+        { id: 'option_4', label: 'Mending and hems' },
+      ],
+      allowFreeText: true,
+    },
+    {
+      id: 'question_3',
+      question: 'What would you like to spend?',
+      answerType: 'free_text',
+      options: [],
+      allowFreeText: false,
+    },
+  ],
+};

@@ -197,7 +197,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
    *
    * A reply that had streamed nothing yet is dropped rather than settled — it would
    * otherwise render as a blank bubble, and a cancelled turn would read as a glitch.
-   * "Nothing" means no text, no product groups and no follow-up refinement; any one of
+   * "Nothing" means no text, no product groups, no follow-up refinement and no quiz; any one of
    * them is content worth keeping. The user's own message always stays.
    *
    * No beacon is sent: there is no "aborted" ASA event, and reporting the load as

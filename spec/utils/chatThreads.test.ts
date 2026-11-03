@@ -18,7 +18,7 @@ import {
 import type { ChatMessage, PersistedChat } from '../../src/types';
 import { createLocalStoragePersistence } from '../../src/utils/localStoragePersistence';
 import { normalizeItemToProduct } from '../../src/utils/productNormalizer';
-import { FakeStorage, chat, msg, turns } from './chatFixtures';
+import { FakeStorage, chat, msg, sewingQuiz, turns } from './chatFixtures';
 
 describe('thread and message helpers', () => {
   it('keeps one tab id per tab, in sessionStorage only while the page is hidden', () => {
@@ -89,20 +89,23 @@ describe('thread and message helpers', () => {
   });
 
   it('settles in-flight statuses on hydrate', () => {
-    const [streamingWithText, loadingEmpty, done, refinementOnly] = normalizeHydratedMessages([
-      msg('assistant', 'partial', 'streaming'),
-      msg('assistant', '', 'loading'),
-      msg('assistant', 'ok', 'done'),
-      {
-        ...msg('assistant', '', 'streaming'),
-        refinement: { question: 'Who is it for?', options: ['Men', 'Women'] },
-      },
-    ]);
+    const [streamingWithText, loadingEmpty, done, refinementOnly, quizOnly] =
+      normalizeHydratedMessages([
+        msg('assistant', 'partial', 'streaming'),
+        msg('assistant', '', 'loading'),
+        msg('assistant', 'ok', 'done'),
+        {
+          ...msg('assistant', '', 'streaming'),
+          refinement: { question: 'Who is it for?', options: ['Men', 'Women'] },
+        },
+        { ...msg('assistant', '', 'streaming'), quiz: sewingQuiz },
+      ]);
     expect(streamingWithText.status).toBe('done');
     expect(streamingWithText.interrupted).toBeUndefined();
     expect(loadingEmpty).toMatchObject({ status: 'error', interrupted: true });
     expect(done.status).toBe('done');
     expect(refinementOnly.status).toBe('done');
+    expect(quizOnly.status).toBe('done');
   });
 
   it('continues message counters from the highest restored id', () => {

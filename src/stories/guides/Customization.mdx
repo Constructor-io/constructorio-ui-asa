@@ -19,6 +19,7 @@ Every element has a `cio-asa-`-prefixed BEM class. `Chat` also takes `className`
 .cio-asa-ai-message__bubble--error {}     /* error state */
 .cio-asa-product-card {}
 .cio-asa-follow-up-refinement__chip {}    /* :disabled for earlier ones */
+.cio-asa-clarification-quiz__chip {}      /* [aria-pressed='true'] when picked */
 .cio-asa-checkout-trigger {}              /* checkout buttons under an answer */
 ```
 
@@ -53,6 +54,13 @@ Every UI string is a key in `translations`. Omitted keys fall back to English.
 | \`CioAsa.results.addToCart\` | Add to cart |
 | \`CioAsa.results.saleBadge\` | Sale |
 | \`CioAsa.refinement.ariaLabel\` | Refine your results |
+| \`CioAsa.quiz.ariaLabel\` | A few questions |
+| \`CioAsa.quiz.progress\` | Question {current} of {total} |
+| \`CioAsa.quiz.previous\` | Previous question |
+| \`CioAsa.quiz.next\` | Next question |
+| \`CioAsa.quiz.submit\` | Send answers |
+| \`CioAsa.quiz.otherPlaceholder\` | Something else? |
+| \`CioAsa.quiz.freeTextPlaceholder\` | Type your answer |
 | \`CioAsa.checkout.ariaLabel\` | Checkout options |
 | \`CioAsa.checkout.triggerLabel\` | Checkout |
 | \`CioAsa.error.message\` | I can't assist you with that request. |
@@ -74,6 +82,7 @@ Every UI string is a key in `translations`. Omitted keys fall back to English.
 | \`aiMessage.loader\` | \`{ translations? }\` |
 | \`aiMessage.text\` | \`{ text }\` (also renders the error message) |
 | \`aiMessage.followUpRefinement\` | \`{ question, options, onOptionClick, isDisabled }\` |
+| \`aiMessage.clarificationQuiz\` | \`{ quiz, onSubmit, isDisabled }\`; \`onSubmit\` takes answers by question id: \`{ [id]: { optionIds, text } }\` |
 | \`welcomeScreen.title\` | \`{ text }\` |
 | \`welcomeScreen.input\` | \`{ value, onChange, onSubmit, placeholder, isDisabled }\` |
 | \`welcomeScreen.suggestedQuestions\` | \`{ suggestions, onSuggestionClick }\` |

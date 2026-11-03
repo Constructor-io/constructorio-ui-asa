@@ -1,4 +1,10 @@
-import type { ChatMessage, FollowUpRefinement, PersistedChat, ResultGroup } from '../types';
+import type {
+  ChatMessage,
+  ClarificationQuiz,
+  FollowUpRefinement,
+  PersistedChat,
+  ResultGroup,
+} from '../types';
 import type { Product } from './productNormalizer';
 import { PERSISTED_CHAT_VERSION } from './chatThreads';
 
@@ -34,6 +40,25 @@ function isRefinement(value: unknown): value is FollowUpRefinement {
   );
 }
 
+function isQuiz(value: unknown): value is ClarificationQuiz {
+  if (!value || typeof value !== 'object') return false;
+  const quiz = value as Partial<ClarificationQuiz>;
+  return (
+    typeof quiz.quizId === 'string' &&
+    Array.isArray(quiz.questions) &&
+    quiz.questions.every(
+      (q) =>
+        Boolean(q) &&
+        typeof q.id === 'string' &&
+        typeof q.question === 'string' &&
+        typeof q.answerType === 'string' &&
+        typeof q.allowFreeText === 'boolean' &&
+        Array.isArray(q.options) &&
+        q.options.every((o) => typeof o?.id === 'string' && typeof o?.label === 'string'),
+    )
+  );
+}
+
 function isChatMessage(value: unknown): value is ChatMessage {
   if (!value || typeof value !== 'object') return false;
   const m = value as Partial<ChatMessage>;
@@ -44,6 +69,7 @@ function isChatMessage(value: unknown): value is ChatMessage {
     MESSAGE_STATUSES.has(m.status as string) &&
     (m.groups === undefined || (Array.isArray(m.groups) && m.groups.every(isResultGroup))) &&
     (m.refinement === undefined || isRefinement(m.refinement)) &&
+    (m.quiz === undefined || isQuiz(m.quiz)) &&
     (m.route === undefined || typeof m.route === 'string')
   );
 }

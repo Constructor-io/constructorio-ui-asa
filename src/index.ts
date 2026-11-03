@@ -48,6 +48,9 @@ export type {
   ChatMessage,
   ChatMessageStatus,
   FollowUpRefinement,
+  ClarificationQuiz,
+  ClarificationQuizQuestion,
+  ClarificationQuizAnswers,
   CheckoutTrigger,
   CheckoutTriggerState,
   ResultGroup,
@@ -85,6 +88,7 @@ export type {
   AiMessageLoaderRenderProps,
   AiMessageTextRenderProps,
   FollowUpRefinementRenderProps,
+  ClarificationQuizRenderProps,
   ResultsGroupTitleRenderProps,
   ResultsViewMoreRenderProps,
 } from './types';

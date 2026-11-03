@@ -38,6 +38,21 @@ export type StreamEvent =
         options: string[];
       };
     }
+  | {
+      type: 'clarification_quiz';
+      data: {
+        intent_result_id?: string;
+        thread_id?: string;
+        quiz_id?: string;
+        questions: {
+          id: string;
+          question: string;
+          answer_type: string;
+          options?: { id: string; label: string }[];
+          allow_free_text?: boolean;
+        }[];
+      };
+    }
   | { type: 'server_error'; data?: Record<string, unknown> };
 
 export type MockTracker = {

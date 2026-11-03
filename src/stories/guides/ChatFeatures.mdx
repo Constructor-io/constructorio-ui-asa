@@ -1,6 +1,7 @@
 import { Meta, Canvas, Markdown } from '@storybook/blocks';
 import * as ChatStories from '../examples/Chat.stories';
 import * as RefinementStories from '../examples/FollowUpRefinements.stories';
+import * as QuizStories from '../examples/ClarificationQuiz.stories';
 import * as FormattedReplyStories from '../examples/FormattedReplies.stories';
 
 <Meta title='Guides/Chat Features' />
@@ -66,6 +67,18 @@ The agent can end a turn with a narrowing question and options, such as _"Who ar
 - Only the latest refinement is clickable, and not while an answer streams. Earlier ones stay visible, disabled.
 - Several in one turn: the last one wins.
 - Restyle with the `aiMessage.followUpRefinement` override and the `CioAsa.refinement.ariaLabel` translation. With `useAsaResults` it is `message.refinement` (`{ question, options }`).
+
+## Clarification quiz
+
+For a broad request, the agent can ask a few questions before it searches. They render as a step-by-step quiz under the answer.
+
+<Canvas of={QuizStories.Default} />
+
+- The shopper can pick, type, skip and go back. Submit sends every answer as one follow-up message in the same thread, for example _"How long have you been sewing? I'm just starting; What do you want to make? Clothes | Mending and hems"_. If every question is skipped, it sends _"No preference"_.
+- The submit reaches `onAssistantSubmit` with `source: 'refinement'`.
+- Only the latest quiz can be answered, and not while an answer streams.
+- The agent sends a quiz only on a domain set up for it. Ask your Constructor contact to turn it on.
+- Restyle with the `aiMessage.clarificationQuiz` override and the `CioAsa.quiz.*` translations. With `useAsaResults` it is `message.quiz` (`{ quizId, questions }`).
 
 ## Customer support route
 

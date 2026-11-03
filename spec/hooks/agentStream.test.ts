@@ -66,6 +66,25 @@ describe('readAgentStream', () => {
     expect(assistant().groups?.[0].group).toEqual({ display_name: 'Shoes', value: 'shoes' });
   });
 
+  it('stores a clarification quiz and counts it as the first content', async () => {
+    const { assistant, setMessages, callbacks } = harness();
+    const stream = createEventStream([
+      {
+        type: 'clarification_quiz',
+        data: {
+          intent_result_id: 'ir1',
+          quiz_id: 'q1',
+          questions: [{ id: 'q', question: 'Budget?', answer_type: 'free_text' }],
+        },
+      },
+    ]);
+
+    await readAgentStream(stream, 'a1', setMessages, callbacks).done;
+
+    expect(callbacks.onLoadStart).toHaveBeenCalledWith('ir1');
+    expect(assistant()).toMatchObject({ status: 'done', quiz: { quizId: 'q1' } });
+  });
+
   it('accepts the legacy group event shape', async () => {
     const { assistant, setMessages, callbacks } = harness();
     const stream = createEventStream([

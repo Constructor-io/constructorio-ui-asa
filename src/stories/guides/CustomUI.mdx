@@ -51,6 +51,7 @@ interface ChatMessage {
   text: string;
   groups?: ResultGroup[]; // assistant messages with products
   refinement?: { question: string; options: string[] }; // a follow-up refinement
+  quiz?: ClarificationQuiz; // questions asked before searching
   status: 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 }
 

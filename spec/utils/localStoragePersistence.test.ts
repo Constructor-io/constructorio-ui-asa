@@ -7,7 +7,7 @@ import {
   storageAreaFor,
 } from '../../src/utils/localStoragePersistence';
 import { IN_FLIGHT_GRACE_MS, PERSISTED_CHAT_VERSION, getTabId } from '../../src/utils/chatThreads';
-import { FakeStorage, chat, msg, turns } from './chatFixtures';
+import { FakeStorage, chat, msg, sewingQuiz, turns } from './chatFixtures';
 import FakeBroadcastChannel from './fakeBroadcastChannel';
 
 describe('persistenceNamespace', () => {
@@ -532,6 +532,22 @@ describe('createLocalStoragePersistence', () => {
     );
 
     expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['good']);
+  });
+
+  it('keeps a stored quiz and drops a malformed one', async () => {
+    const key = `cio-asa:chat:v${PERSISTED_CHAT_VERSION}`;
+    const store = createLocalStoragePersistence({ storage });
+    const good = { ...chat('good', turns(1)), owner: 'tab-1' };
+    good.messages[1].quiz = sewingQuiz;
+    const badQuiz = chat('bad-quiz', turns(1));
+    (badQuiz.messages[1] as { quiz: unknown }).quiz = { quizId: 'q', questions: [{ id: 'x' }] };
+    storage.setItem(
+      key,
+      JSON.stringify({ version: PERSISTED_CHAT_VERSION, threads: { good, 'bad-quiz': badQuiz } }),
+    );
+
+    expect((await store.listThreads()).map((t) => t.threadId)).toEqual(['good']);
+    expect(await store.getThread('good')).toEqual(good);
   });
 
   it('drops records whose result groups or refinement are malformed', async () => {

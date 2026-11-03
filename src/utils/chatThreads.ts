@@ -114,7 +114,8 @@ export function isInFlight(messages: ChatMessage[]): boolean {
 export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.map((m) => {
     if (m.status !== 'loading' && m.status !== 'streaming') return m;
-    const hasContent = Boolean(m.text) || Boolean(m.groups?.length) || Boolean(m.refinement);
+    const hasContent =
+      Boolean(m.text) || Boolean(m.groups?.length) || Boolean(m.refinement) || Boolean(m.quiz);
     return hasContent ? { ...m, status: 'done' } : { ...m, status: 'error', interrupted: true };
   });
 }
@@ -123,7 +124,7 @@ export function normalizeHydratedMessages(messages: ChatMessage[]): ChatMessage[
 export function settleCancelledReply(messages: ChatMessage[], assistantId: string): ChatMessage[] {
   return messages.flatMap((m) => {
     if (m.id !== assistantId) return [m];
-    if (!m.text && !m.groups?.length && !m.refinement) return [];
+    if (!m.text && !m.groups?.length && !m.refinement && !m.quiz) return [];
     return [{ ...m, status: 'done' as const }];
   });
 }

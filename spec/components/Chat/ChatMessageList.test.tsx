@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ChatMessageList from '../../../src/components/Chat/ChatMessageList';
 import { ChatMessage } from '../../../src/types';
+import { sewingQuiz } from '../../utils/chatFixtures';
 
 function setScrollGeometry(
   el: HTMLElement,
@@ -91,6 +92,34 @@ describe('ChatMessageList', () => {
     it('hides refinements when no onSend handler is provided', () => {
       render(<ChatMessageList messages={[aiWithRefinement]} />);
       expect(screen.queryByRole('group', { name: 'Refine your results' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('clarification quiz', () => {
+    const aiWithQuiz: ChatMessage = { ...aiMsg, id: 'q1', text: '', quiz: sewingQuiz };
+    const send = () => screen.getByRole('button', { name: 'Send answers' });
+
+    it('sends the answers as a refinement follow-up', () => {
+      const onSend = jest.fn();
+      render(<ChatMessageList messages={[aiWithQuiz]} onSend={onSend} />);
+      fireEvent.click(screen.getByRole('button', { name: 'For years' }));
+      fireEvent.click(send());
+      expect(onSend).toHaveBeenCalledWith('How long have you been sewing? For years', 'refinement');
+    });
+
+    it('disables the quiz once a later turn exists or while streaming', () => {
+      const laterUser: ChatMessage = { ...userMsg, id: 'u2' };
+      const { rerender } = render(
+        <ChatMessageList messages={[aiWithQuiz, laterUser]} onSend={jest.fn()} />,
+      );
+      expect(send()).toBeDisabled();
+      rerender(<ChatMessageList messages={[aiWithQuiz]} onSend={jest.fn()} isStreaming />);
+      expect(send()).toBeDisabled();
+    });
+
+    it('hides the quiz when no onSend handler is provided', () => {
+      render(<ChatMessageList messages={[aiWithQuiz]} />);
+      expect(screen.queryByRole('group', { name: 'A few questions' })).not.toBeInTheDocument();
     });
   });
 

@@ -17,6 +17,7 @@ import ResultsBlock, { AspectRatio } from '../ResultsBlock/ResultsBlock';
 import UserMessage from './UserMessage';
 import AiMessage from './AiMessage';
 import FollowUpRefinement from './FollowUpRefinement';
+import ClarificationQuiz from './ClarificationQuiz';
 import CheckoutTriggerBar from './CheckoutTriggerBar';
 
 interface ChatMessageListProps {
@@ -33,9 +34,9 @@ interface ChatMessageListProps {
   userMessageOverrides?: ComponentOverrideProps<UserMessageRenderProps>;
   resultsBlockOverrides?: ResultsBlockOverrides;
   translations?: Translations;
-  /** Sends a refinement option as a follow-up message. Chips are hidden when omitted. */
+  /** Sends a refinement option or quiz answers as a follow-up message. Both are hidden when omitted. */
   onSend?: (text: string, source?: AssistantSubmitSource) => void;
-  /** Disables refinement chips while a response is streaming. */
+  /** Disables refinement chips and the quiz while a response is streaming. */
   isStreaming?: boolean;
   /** Checkout buttons rendered under the products of each finished assistant turn. */
   checkoutTriggers?: CheckoutTrigger[];
@@ -109,6 +110,7 @@ export default function ChatMessageList({
         const hasGroups = !!message.groups?.length;
         const isLatest = index === messages.length - 1;
         const refinement = onSend ? message.refinement : undefined;
+        const quiz = onSend ? message.quiz : undefined;
         // Checkout buttons wait for the turn to finish, so a shopper never buys from a half-loaded list.
         const showCheckout = !!checkoutTriggers?.length && hasGroups && message.status === 'done';
         const checkoutState: CheckoutTriggerState | null = showCheckout
@@ -168,6 +170,15 @@ export default function ChatMessageList({
                 isDisabled={!isLatest || isStreaming}
                 translations={translations}
                 componentOverrides={aiMessageOverrides?.followUpRefinement}
+              />
+            )}
+            {quiz && (
+              <ClarificationQuiz
+                quiz={quiz}
+                onSubmit={(text) => onSend!(text, 'refinement')}
+                isDisabled={!isLatest || isStreaming}
+                translations={translations}
+                componentOverrides={aiMessageOverrides?.clarificationQuiz}
               />
             )}
           </div>
