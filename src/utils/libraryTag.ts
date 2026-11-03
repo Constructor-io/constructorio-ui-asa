@@ -1,6 +1,6 @@
 import version from '../version';
 
-/** The client tag (`c`) on this library's tracking events. */
+/** The client tag (`c`) on this library's tracking events and API requests. */
 export const LIBRARY_TAG = `cio-ui-asa-${version}`;
 
 type Options = Record<PropertyKey, unknown>;
@@ -32,7 +32,7 @@ function tagOptions(options: Options): Options {
 }
 
 /**
- * The given tracker, but events sent through it carry LIBRARY_TAG as their client tag, so they can
+ * The given tracker (or SDK module), but events sent through it carry LIBRARY_TAG as their client tag, so they can
  * be told apart from the host's own events even when the host supplies its own `cioClient`.
  *
  * Everything else (identity, segments, test cells, service URL, request queue, listeners) is still
@@ -87,4 +87,20 @@ export function withLibraryTag<T extends object>(tracker: T): T {
   });
 
   return wrapper;
+}
+
+const taggedModules = new WeakMap<object, object>();
+
+/**
+ * withLibraryTag for an SDK module whose requests read `this.options.version` when sent (e.g.
+ * `client.agent`), so this library's API requests carry LIBRARY_TAG like its tracking events,
+ * even on the host's `cioClient`. One wrapper per module, so hooks can call it on every request.
+ */
+export function withLibraryRequests<T extends object>(module: T): T {
+  let tagged = taggedModules.get(module) as T | undefined;
+  if (!tagged) {
+    tagged = withLibraryTag(module);
+    taggedModules.set(module, tagged);
+  }
+  return tagged;
 }

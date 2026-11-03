@@ -1,8 +1,10 @@
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import type ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
+import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import useAsaResults from '../../src/hooks/useAsaResults';
 import CioAsaProvider from '../../src/components/CioAsaProvider/CioAsaProvider';
+import { LIBRARY_TAG } from '../../src/utils/libraryTag';
+import { DEMO_API_KEY } from '../../src/constants';
 import {
   createMockCioClient,
   createPendingStream,
@@ -715,5 +717,27 @@ describe('useAsaResults', () => {
 
       expect(cancel).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("sends its agent requests with the library tag on the host's own client", () => {
+    const urls: string[] = [];
+    const RealEventSource = (global as { EventSource?: unknown }).EventSource;
+    (global as { EventSource?: unknown }).EventSource = jest.fn((url: string) => {
+      urls.push(url);
+      return { addEventListener: jest.fn(), close: jest.fn() };
+    });
+    try {
+      const hostClient = new ConstructorIOClient({
+        apiKey: DEMO_API_KEY,
+        version: 'ciojs-client-host',
+      });
+      const { result } = renderUseAsaResults(hostClient);
+
+      act(() => result.current.sendMessage('hello'));
+
+      expect(new URL(urls[0]).searchParams.get('c')).toBe(LIBRARY_TAG);
+    } finally {
+      (global as { EventSource?: unknown }).EventSource = RealEventSource;
+    }
   });
 });

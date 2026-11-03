@@ -14,6 +14,7 @@ import { ChatSession, createChatSession, nextMessageId } from '../utils/chatSess
 import { normalizeItemToProduct } from '../utils/productNormalizer';
 import { isLocalThreadId, settleCancelledReply } from '../utils/chatThreads';
 import useLatest from './useLatest';
+import { withLibraryRequests } from '../utils/libraryTag';
 
 export default function useAsaResults(options?: UseAsaResultsOptions): UseChatReturn {
   const contextValue = useCioAsaContext();
@@ -123,7 +124,7 @@ export default function useAsaResults(options?: UseAsaResultsOptions): UseChatRe
       const agentParams = { ...staticRequestConfigsRef.current };
       delete agentParams.intent;
       delete agentParams.threadId;
-      const stream = cioClient.agent.getAgentResultsStream(intent, {
+      const stream = withLibraryRequests(cioClient.agent).getAgentResultsStream(intent, {
         ...agentParams,
         domain,
         ...(session.serverThreadId && { threadId: session.serverThreadId }),

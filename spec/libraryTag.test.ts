@@ -1,6 +1,6 @@
 import ConstructorIOClient from '@constructor-io/constructorio-client-javascript';
 import type { ConstructorClientOptions } from '@constructor-io/constructorio-client-javascript/lib/types';
-import { LIBRARY_TAG, withLibraryTag } from '../src/utils/libraryTag';
+import { LIBRARY_TAG, withLibraryRequests, withLibraryTag } from '../src/utils/libraryTag';
 import { DEMO_API_KEY } from '../src/constants';
 
 type QueueArgs = [url: string, method: string, body?: Record<string, unknown>];
@@ -122,5 +122,55 @@ describe('withLibraryTag', () => {
     const own = new ConstructorIOClient({ apiKey: DEMO_API_KEY, version: LIBRARY_TAG });
 
     expect(withLibraryTag(own.tracker)).toBe(own.tracker);
+  });
+});
+
+describe('withLibraryRequests', () => {
+  let client: InstanceType<typeof ConstructorIOClient>;
+  const urls: string[] = [];
+  const RealEventSource = (global as { EventSource?: unknown }).EventSource;
+
+  // Captures the URL each stream opens, without connecting.
+  beforeAll(() => {
+    (global as { EventSource?: unknown }).EventSource = jest.fn((url: string) => {
+      urls.push(url);
+      return { addEventListener: jest.fn(), close: jest.fn() };
+    });
+  });
+  afterAll(() => {
+    (global as { EventSource?: unknown }).EventSource = RealEventSource;
+  });
+
+  beforeEach(() => {
+    urls.length = 0;
+    client = new ConstructorIOClient({
+      apiKey: DEMO_API_KEY,
+      version: 'ciojs-client-host',
+      clientId: 'host-client-id',
+      sessionId: 7,
+    });
+  });
+
+  const lastQuery = () => new URL(urls[urls.length - 1]).searchParams;
+
+  it('sends agent requests with the library tag, keeping the host identity', () => {
+    withLibraryRequests(client.agent).getAgentResultsStream('shoes', { domain: 'chatbot' });
+
+    const query = lastQuery();
+    expect(query.get('c')).toBe(LIBRARY_TAG);
+    expect(query.get('key')).toBe(DEMO_API_KEY);
+    expect(query.get('i')).toBe('host-client-id');
+    expect(query.get('s')).toBe('7');
+  });
+
+  it("leaves the host's own requests with the host's tag", () => {
+    withLibraryRequests(client.agent);
+    client.agent.getAgentResultsStream('shoes', { domain: 'chatbot' });
+
+    expect(lastQuery().get('c')).toBe('ciojs-client-host');
+  });
+
+  it('returns one wrapper per module', () => {
+    expect(withLibraryRequests(client.agent)).toBe(withLibraryRequests(client.agent));
   });
 });
