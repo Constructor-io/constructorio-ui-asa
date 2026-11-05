@@ -152,6 +152,8 @@ export interface ChatMessage {
   threadId?: string;
   /** Narrowing question the agent asked at the end of this turn, from a `follow_up_refinement` event. */
   refinement?: FollowUpRefinement;
+  /** Questions the agent asked before searching, from a `clarification_quiz` event. */
+  quiz?: ClarificationQuiz;
   /** Where the agent routed this answer, from the `message` event, e.g. `'customer_support'`. */
   route?: string;
   /** The answer never arrived: the page was left or the shopper logged out mid-answer. Unset on a failure. */
@@ -163,6 +165,26 @@ export interface FollowUpRefinement {
   question: string;
   options: string[];
 }
+
+/** A multi-step quiz the agent sends before searching, from a `clarification_quiz` event. */
+export interface ClarificationQuiz {
+  quizId: string;
+  /** In order; list position is the progress shown to the shopper. */
+  questions: ClarificationQuizQuestion[];
+}
+
+export interface ClarificationQuizQuestion {
+  id: string;
+  question: string;
+  answerType: 'single_select' | 'multi_select' | 'free_text';
+  /** Empty for `free_text`. */
+  options: { id: string; label: string }[];
+  /** A select question also takes a typed answer. */
+  allowFreeText: boolean;
+}
+
+/** The shopper's answers, by question id. A question left out, or with nothing picked or typed, is skipped. */
+export type ClarificationQuizAnswers = Record<string, { optionIds: string[]; text: string }>;
 
 export type ChatMessageStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error';
 
@@ -532,6 +554,14 @@ export type Translations = {
   'CioAsa.results.addToCart'?: string;
   'CioAsa.results.saleBadge'?: string;
   'CioAsa.refinement.ariaLabel'?: string;
+  'CioAsa.quiz.ariaLabel'?: string;
+  /** `{current}` and `{total}` are replaced with numbers. */
+  'CioAsa.quiz.progress'?: string;
+  'CioAsa.quiz.previous'?: string;
+  'CioAsa.quiz.next'?: string;
+  'CioAsa.quiz.submit'?: string;
+  'CioAsa.quiz.otherPlaceholder'?: string;
+  'CioAsa.quiz.freeTextPlaceholder'?: string;
   'CioAsa.checkout.ariaLabel'?: string;
   'CioAsa.checkout.triggerLabel'?: string;
   'CioAsa.error.message'?: string;
@@ -600,6 +630,14 @@ export interface FollowUpRefinementRenderProps {
   isDisabled: boolean;
 }
 
+export interface ClarificationQuizRenderProps {
+  quiz: ClarificationQuiz;
+  /** Sends the answers as one follow-up message. No-op while `isDisabled`. */
+  onSubmit: (answers: ClarificationQuizAnswers) => void;
+  /** True for earlier turns and while a response is streaming. */
+  isDisabled: boolean;
+}
+
 export interface ResultsGroupTitleRenderProps {
   label: string;
 }
@@ -625,6 +663,7 @@ export interface AiMessageOverrides {
   loader?: ComponentOverrideProps<AiMessageLoaderRenderProps>;
   text?: ComponentOverrideProps<AiMessageTextRenderProps>;
   followUpRefinement?: ComponentOverrideProps<FollowUpRefinementRenderProps>;
+  clarificationQuiz?: ComponentOverrideProps<ClarificationQuizRenderProps>;
 }
 
 export interface ResultsBlockOverrides {

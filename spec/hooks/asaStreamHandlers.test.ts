@@ -1,6 +1,7 @@
 import {
   handleSearchResult,
   handleMessage,
+  handleClarificationQuiz,
   handleFollowUpRefinement,
   handleServerError,
   handleStreamEnd,
@@ -32,6 +33,105 @@ function applyUpdater(
 }
 
 describe('asaStreamHandlers', () => {
+  describe('handleClarificationQuiz', () => {
+    const question = (overrides: Record<string, unknown> = {}) => ({
+      id: 'question_1',
+      question: ' How long have you been sewing? ',
+      answer_type: 'single_select',
+      options: [
+        { id: 'option_1', label: "I'm just starting" },
+        { id: 'option_2', label: 'For years' },
+      ],
+      allow_free_text: true,
+      ...overrides,
+    });
+
+    it('stores the quiz on the assistant message', () => {
+      const setMessages = jest.fn();
+      handleClarificationQuiz(
+        {
+          quiz_id: 'quiz-1',
+          questions: [
+            question(),
+            {
+              id: 'question_2',
+              question: 'Budget?',
+              answer_type: 'free_text',
+              allow_free_text: true,
+            },
+          ],
+        },
+        ASSISTANT_ID,
+        setMessages,
+      );
+
+      const msg = applyUpdater(setMessages);
+      expect(msg.status).toBe('streaming');
+      expect(msg.quiz).toEqual({
+        quizId: 'quiz-1',
+        questions: [
+          {
+            id: 'question_1',
+            question: 'How long have you been sewing?',
+            answerType: 'single_select',
+            options: [
+              { id: 'option_1', label: "I'm just starting" },
+              { id: 'option_2', label: 'For years' },
+            ],
+            allowFreeText: true,
+          },
+          {
+            id: 'question_2',
+            question: 'Budget?',
+            answerType: 'free_text',
+            options: [],
+            allowFreeText: false,
+          },
+        ],
+      });
+    });
+
+    it('drops malformed questions and options', () => {
+      const setMessages = jest.fn();
+      handleClarificationQuiz(
+        {
+          quiz_id: 'quiz-1',
+          questions: [
+            null,
+            question({ id: '' }),
+            question({ question: '   ' }),
+            question({ answer_type: 'rating' }),
+            question({ id: 'no-options', options: [{ id: 'x', label: '' }, 'loose'] }),
+            question({ id: 'kept', options: [{ id: 'a', label: 'A' }, { id: 'b' }] }),
+          ],
+        },
+        ASSISTANT_ID,
+        setMessages,
+      );
+
+      const { questions } = applyUpdater(setMessages).quiz!;
+      expect(questions.map((q) => q.id)).toEqual(['kept']);
+      expect(questions[0].options).toEqual([{ id: 'a', label: 'A' }]);
+    });
+
+    it('uses the message id when the quiz has no id', () => {
+      const setMessages = jest.fn();
+      handleClarificationQuiz({ questions: [question()] }, ASSISTANT_ID, setMessages);
+      expect(applyUpdater(setMessages).quiz!.quizId).toBe(ASSISTANT_ID);
+    });
+
+    it.each([
+      ['no questions', { questions: [] }],
+      ['no valid question', { questions: [question({ options: [] })] }],
+      ['a malformed payload', { questions: 'oops' }],
+      ['no payload', undefined],
+    ])('ignores a quiz with %s', (_label, data) => {
+      const setMessages = jest.fn();
+      handleClarificationQuiz(data, ASSISTANT_ID, setMessages);
+      expect(setMessages).not.toHaveBeenCalled();
+    });
+  });
+
   describe('handleFollowUpRefinement', () => {
     it('stores the question and options on the assistant message', () => {
       const setMessages = jest.fn();

@@ -1,5 +1,11 @@
 import { Dispatch, SetStateAction } from 'react';
-import { ResultGroup, ResultGroupMeta, ChatMessage, SearchResultEventRequest } from '../types';
+import {
+  ResultGroup,
+  ResultGroupMeta,
+  ChatMessage,
+  ClarificationQuizQuestion,
+  SearchResultEventRequest,
+} from '../types';
 
 export type MessageUpdater = Dispatch<SetStateAction<ChatMessage[]>>;
 
@@ -91,6 +97,43 @@ export function handleFollowUpRefinement(
     ...msg,
     status: 'streaming',
     refinement: { question, options },
+  }));
+}
+
+const ANSWER_TYPES = new Set(['single_select', 'multi_select', 'free_text']);
+const isText = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
+
+function toQuizQuestion(q: any): ClarificationQuizQuestion | null {
+  if (!isText(q?.id) || !isText(q?.question) || !ANSWER_TYPES.has(q?.answer_type)) return null;
+  const options = Array.isArray(q.options)
+    ? q.options
+        .filter((o: any) => isText(o?.id) && isText(o?.label))
+        .map((o: any) => ({ id: o.id, label: o.label.trim() }))
+    : [];
+  if (q.answer_type !== 'free_text' && options.length === 0) return null;
+  return {
+    id: q.id,
+    question: q.question.trim(),
+    answerType: q.answer_type,
+    options: q.answer_type === 'free_text' ? [] : options,
+    allowFreeText: q.answer_type !== 'free_text' && q.allow_free_text === true,
+  };
+}
+
+/** Stores the quiz, keeping only well-formed questions and options; ignores a quiz with none left. */
+export function handleClarificationQuiz(
+  data: any,
+  assistantId: string,
+  setMessages: MessageUpdater,
+) {
+  const questions = Array.isArray(data?.questions)
+    ? data.questions.map(toQuizQuestion).filter(Boolean)
+    : [];
+  if (questions.length === 0) return;
+  updateMessageById(setMessages, assistantId, (msg) => ({
+    ...msg,
+    status: 'streaming',
+    quiz: { quizId: isText(data?.quiz_id) ? data.quiz_id : assistantId, questions },
   }));
 }
 

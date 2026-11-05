@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { ChatMessage, ResultGroupMeta } from '../types';
 import {
+  handleClarificationQuiz,
   handleFollowUpRefinement,
   handleMessage,
   handleSearchResult,
@@ -11,6 +12,12 @@ import {
 } from './asaStreamHandlers';
 
 type SetMessages = Dispatch<SetStateAction<ChatMessage[]>>;
+
+/** Events that put a question to the shopper on the assistant message. */
+const QUESTION_HANDLERS = new Map([
+  ['follow_up_refinement', handleFollowUpRefinement],
+  ['clarification_quiz', handleClarificationQuiz],
+]);
 
 export interface AgentStreamCallbacks {
   /** The `start` event arrived, possibly carrying the server thread id. */
@@ -109,9 +116,9 @@ export function readAgentStream(
         } else if (type === 'message') {
           fireLoadStart();
           route = handleMessage(data, assistantId, setMessages);
-        } else if (type === 'follow_up_refinement') {
+        } else if (QUESTION_HANDLERS.has(type)) {
           fireLoadStart();
-          handleFollowUpRefinement(data, assistantId, setMessages);
+          QUESTION_HANDLERS.get(type)!(data, assistantId, setMessages);
         } else if (type === 'server_error') {
           handleServerError(assistantId, setMessages);
           break;
