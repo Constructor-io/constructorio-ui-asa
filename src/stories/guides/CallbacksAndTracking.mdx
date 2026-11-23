@@ -36,6 +36,10 @@ Each event also fires a matching callback on the provider, right after the beaco
 
 Callbacks are typed by `AsaCallbacks` and don't mirror the beacon exactly: no `section` or `threadId`, `onResultClick` nests the product under `item`, and a refinement click is `source: 'refinement'` where the beacon sends `follow_up`.
 
+### Session number
+
+Without your own `cioClient`, the provider's client uses the session number of your site's Constructor beacon, read from its `ConstructorioID_session` cookie. Agent events then join the add-to-cart and purchase events of the same visit. The client only reads the cookie; it never writes its own copy. With your own `cioClient`, its own id settings apply.
+
 ## Submit sources
 
 Every way a question is asked sends `assistant_submit`, so clicked questions count alongside typed ones:

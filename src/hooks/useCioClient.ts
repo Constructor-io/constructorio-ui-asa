@@ -2,6 +2,7 @@ import ConstructorIOClient from '@constructor-io/constructorio-client-javascript
 import { Nullable } from '@constructor-io/constructorio-client-javascript/lib/types';
 import { useEffect, useMemo } from 'react';
 import { LIBRARY_TAG } from '../utils/libraryTag';
+import { beaconIdOptions } from '../utils/beaconSession';
 import type { UseCioClientProps } from '../types';
 
 type UseCioClient = (props: UseCioClientProps) => Nullable<ConstructorIOClient> | never;
@@ -20,11 +21,14 @@ const useCioClient: UseCioClient = ({ apiKey, cioClient, cioClientOptions, testC
   const memoizedCioClient = useMemo(() => {
     if (cioClient) return cioClient;
     if (apiKey && typeof window !== 'undefined') {
+      // Share the site beacon's session number unless the caller chose their own id storage.
+      const idOptions = cioClientOptions?.idOptions ? undefined : beaconIdOptions();
       return new ConstructorIOClient({
         apiKey,
         sendTrackingEvents: true,
         version: LIBRARY_TAG,
         ...(testCells && { testCells }),
+        ...(idOptions && { idOptions }),
         ...cioClientOptions,
       });
     }
